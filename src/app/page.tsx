@@ -1,175 +1,447 @@
 'use client';
 
-import { useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
+import {
+  CalendarSidebar,
+  CalendarToolbar,
+  Card,
+  CreateEventModal,
+  DaySchedule,
+  EventDetailsModal,
+  Footer,
+  Header,
+  MonthGrid,
+  PageTitleBar,
+  Sidebar,
+  WeekGrid,
+} from "@mairie360/lib-components";
+
+type CalendarViewMode = "month" | "week" | "day";
+type CalendarAssigneeId = string | number;
+type CalendarDateInput = Date | string;
+
+type CalendarRecurrence = {
+  frequency: "none" | "daily" | "weekly" | "monthly";
+  interval?: number;
+  daysOfWeek?: number[];
+  endsOn?: CalendarDateInput;
+};
+
+type CalendarAssignee = {
+  id: CalendarAssigneeId;
+  name: string;
+  email?: string;
+  role?: string;
+  avatarUrl?: string;
+};
+
+type CalendarEventItem = {
+  id: string | number;
+  title: ReactNode;
+  date: CalendarDateInput;
+  endDate?: CalendarDateInput;
+  category?: string;
+  startTime?: string;
+  endTime?: string;
+  location?: string;
+  description?: ReactNode;
+  assigneeIds?: CalendarAssigneeId[];
+  assignees?: CalendarAssignee[];
+  recurrence?: CalendarRecurrence;
+  colorClassName?: string;
+};
+
+type CreateCalendarEventValues = {
+  title: string;
+  description: string;
+  date: string;
+  endDate: string;
+  category: string;
+  startTime: string;
+  endTime: string;
+  location: string;
+  assigneeIds: CalendarAssigneeId[];
+  recurrence: CalendarRecurrence;
+};
+
+const initialDate = new Date(2026, 5, 15);
+
+const people: CalendarAssignee[] = [
+  {
+    id: "as",
+    name: "Admin Systeme",
+    email: "admin@mairie360.fr",
+    role: "Administrateur",
+  },
+  {
+    id: "ma",
+    name: "Marie Armand",
+    email: "marie.armand@mairie360.fr",
+    role: "Coordination",
+  },
+  {
+    id: "jl",
+    name: "Jean Laurent",
+    email: "jean.laurent@mairie360.fr",
+    role: "Animation",
+  },
+];
+
+const categories = [
+  { label: "Réunion", value: "meeting" },
+  { label: "Animation", value: "activity" },
+  { label: "Cérémonie", value: "ceremony" },
+  { label: "Autre", value: "other" },
+];
+
+const eventColors: Record<string, string> = {
+  meeting: "bg-[#e9f2ff] text-[#1256a6]",
+  activity: "bg-[#eaf7ee] text-[#257444]",
+  ceremony: "bg-[#fff5d8] text-[#8a5d00]",
+  other: "bg-[#f3f4f6] text-[#4c5258]",
+};
+
+function parseDateInput(date: CalendarDateInput = new Date()) {
+  if (date instanceof Date) {
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  }
+
+  const normalizedDate = date.trim();
+  const serverDateMatch = normalizedDate.match(/^(\d{2})[-/](\d{2})[-/](\d{4})$/);
+  if (serverDateMatch) {
+    const [, day, month, year] = serverDateMatch;
+    return new Date(Number(year), Number(month) - 1, Number(day));
+  }
+
+  const isoDateMatch = normalizedDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (isoDateMatch) {
+    const [, year, month, day] = isoDateMatch;
+    return new Date(Number(year), Number(month) - 1, Number(day));
+  }
+
+  const parsedDate = new Date(normalizedDate);
+  return new Date(parsedDate.getFullYear(), parsedDate.getMonth(), parsedDate.getDate());
+}
+
+function addDays(date: CalendarDateInput, amount: number) {
+  const nextDate = parseDateInput(date);
+  nextDate.setDate(nextDate.getDate() + amount);
+  return nextDate;
+}
+
+function addMonths(date: CalendarDateInput, amount: number) {
+  const parsedDate = parseDateInput(date);
+  return new Date(parsedDate.getFullYear(), parsedDate.getMonth() + amount, 1);
+}
+
+function formatDateForServer(date: CalendarDateInput) {
+  const parsedDate = parseDateInput(date);
+  const day = `${parsedDate.getDate()}`.padStart(2, "0");
+  const month = `${parsedDate.getMonth() + 1}`.padStart(2, "0");
+  const year = parsedDate.getFullYear();
+  return `${day}-${month}-${year}`;
+}
+
+function formatMonthYear(date: CalendarDateInput) {
+  const parsedDate = parseDateInput(date);
+  const month = new Intl.DateTimeFormat("fr-FR", { month: "long" }).format(parsedDate);
+  return `${month.charAt(0).toUpperCase()}${month.slice(1)} ${parsedDate.getFullYear()}`;
+}
+
+function formatFullDate(date: CalendarDateInput) {
+  const parsedDate = parseDateInput(date);
+  return new Intl.DateTimeFormat("fr-FR", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(parsedDate);
+}
+
+function startOfWeek(date: CalendarDateInput) {
+  const parsedDate = parseDateInput(date);
+  const day = parsedDate.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  return addDays(parsedDate, diff);
+}
+
+function getPeriodTitle(view: CalendarViewMode, date: CalendarDateInput) {
+  if (view === "week") {
+    return `Semaine du ${formatFullDate(startOfWeek(date))}`;
+  }
+
+  if (view === "day") {
+    return formatFullDate(date);
+  }
+
+  return formatMonthYear(date);
+}
+
+function eventOccursOnDate(event: CalendarEventItem, date: CalendarDateInput) {
+  const dateToCheck = parseDateInput(date);
+  const start = parseDateInput(event.date);
+  const end = event.endDate ? parseDateInput(event.endDate) : start;
+
+  return start.getTime() <= dateToCheck.getTime() && end.getTime() >= dateToCheck.getTime();
+}
+
+function countEventsBetween(events: CalendarEventItem[], startDate: Date, endDate: Date) {
+  let count = 0;
+
+  for (let date = parseDateInput(startDate); date.getTime() <= endDate.getTime(); date = addDays(date, 1)) {
+    count += events.filter((event) => eventOccursOnDate(event, date)).length;
+  }
+
+  return count;
+}
+
+function buildStats(events: CalendarEventItem[], selectedDate: Date) {
+  if (events.length === 0) {
+    return [
+      { label: "Ce mois", value: "12 événements" },
+      { label: "Cette semaine", value: "3 événements" },
+      { label: "Aujourd'hui", value: "1 événement" },
+    ];
+  }
+
+  const monthStart = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
+  const monthEnd = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0);
+  const weekStart = startOfWeek(selectedDate);
+  const weekEnd = addDays(weekStart, 6);
+  const todayCount = countEventsBetween(events, selectedDate, selectedDate);
+  const weekCount = countEventsBetween(events, weekStart, weekEnd);
+  const monthCount = countEventsBetween(events, monthStart, monthEnd);
+  const labelFor = (count: number) => `${count} événement${count > 1 ? "s" : ""}`;
+
+  return [
+    { label: "Ce mois", value: labelFor(monthCount) },
+    { label: "Cette semaine", value: labelFor(weekCount) },
+    { label: "Aujourd'hui", value: labelFor(todayCount) },
+  ];
+}
+
+function resolveAssignees(assigneeIds: CalendarAssigneeId[]) {
+  return people.filter((person) =>
+    assigneeIds.some((assigneeId) => String(assigneeId) === String(person.id)),
+  );
+}
+
+function addOneHour(time: string) {
+  const [hours = "0", minutes = "0"] = time.split(":");
+  const date = new Date(2026, 0, 1, Number(hours), Number(minutes));
+  date.setHours(date.getHours() + 1);
+  return `${date.getHours()}`.padStart(2, "0") + ":" + `${date.getMinutes()}`.padStart(2, "0");
+}
+
+function buildCreateInitialValues(date: CalendarDateInput, startTime = "09:00") {
+  return {
+    date: formatDateForServer(date),
+    endDate: "",
+    startTime,
+    endTime: addOneHour(startTime),
+  };
+}
 
 export default function Page() {
-  const [currentDate, setCurrentDate] = useState(new Date(2025, 2));
-  const [viewMode, setViewMode] = useState("month");
+  const [view, setView] = useState<CalendarViewMode>("month");
+  const [currentDate, setCurrentDate] = useState<Date>(initialDate);
+  const [selectedDate, setSelectedDate] = useState<Date>(initialDate);
+  const [events, setEvents] = useState<CalendarEventItem[]>([]);
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [createInitialValues, setCreateInitialValues] = useState(() =>
+    buildCreateInitialValues(initialDate),
+  );
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEventItem | null>(null);
 
-  const prevPeriod = () => {
-    setCurrentDate((prev) => {
-      const newDate = new Date(prev);
-      if (viewMode === "month") return new Date(newDate.getFullYear(), newDate.getMonth() - 1);
-      if (viewMode === "week") {
-        newDate.setDate(newDate.getDate() - 7);
-        return new Date(newDate);
-      }
-      newDate.setDate(newDate.getDate() - 1);
-      return new Date(newDate);
+  const stats = useMemo(() => buildStats(events, selectedDate), [events, selectedDate]);
+  const periodTitle = useMemo(() => getPeriodTitle(view, currentDate), [currentDate, view]);
+
+  const handlePrevious = () => {
+    setCurrentDate((date) => {
+      if (view === "month") return addMonths(date, -1);
+      if (view === "week") return addDays(date, -7);
+      return addDays(date, -1);
     });
   };
-  
-  const nextPeriod = () => {
-    setCurrentDate((prev) => {
-      const newDate = new Date(prev);
-      if (viewMode === "month") return new Date(newDate.getFullYear(), newDate.getMonth() + 1);
-      if (viewMode === "week") {
-        newDate.setDate(newDate.getDate() + 7);
-        return new Date(newDate);
-      }
-      newDate.setDate(newDate.getDate() + 1);
-      return new Date(newDate);
+
+  const handleNext = () => {
+    setCurrentDate((date) => {
+      if (view === "month") return addMonths(date, 1);
+      if (view === "week") return addDays(date, 7);
+      return addDays(date, 1);
     });
   };
-  
-  const today = new Date();
-  const isToday = (date: Date) =>
-    today.getDate() === date.getDate() &&
-    today.getMonth() === date.getMonth() &&
-    today.getFullYear() === date.getFullYear();
 
-  const monthName = currentDate.toLocaleString("en-US", { month: "long" });
-  const year = currentDate.getFullYear();
-  const daysInMonth = new Date(year, currentDate.getMonth() + 1, 0).getDate();
-  const firstDay = new Date(year, currentDate.getMonth(), 1).getDay();
+  const handleSelectDate = (date: Date) => {
+    setSelectedDate(date);
+    setCurrentDate(date);
+  };
 
-  const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-  const currentDay = currentDate.getDate();
-  const currentWeekStart = new Date(currentDate);
-  currentWeekStart.setDate(currentWeekStart.getDate() - currentWeekStart.getDay());
+  const openCreateModal = (date = selectedDate, startTime = "09:00") => {
+    setCreateInitialValues(buildCreateInitialValues(date, startTime));
+    setCreateModalOpen(true);
+  };
 
-  const changeViewMode = (mode : string) => {
-    if (mode === "week") {
-      const today = new Date();
-      const startOfWeek = new Date(today);
-      startOfWeek.setDate(today.getDate() - today.getDay());
-      setCurrentDate(startOfWeek);
-    } else if (mode === "day") {
-      setCurrentDate(new Date());
-    }
-    setViewMode(mode);
+  const handleSelectSlot = (date: Date, time: string) => {
+    handleSelectDate(date);
+    openCreateModal(date, time);
+  };
+
+  const handleCreateEvent = (values: CreateCalendarEventValues) => {
+    const category = values.category || "other";
+    const event: CalendarEventItem = {
+      id: `event-${Date.now()}`,
+      title: values.title,
+      description: values.description,
+      date: values.date,
+      endDate: values.endDate || undefined,
+      category,
+      startTime: values.startTime,
+      endTime: values.endTime,
+      location: values.location,
+      assigneeIds: values.assigneeIds,
+      assignees: resolveAssignees(values.assigneeIds),
+      recurrence: values.recurrence,
+      colorClassName: eventColors[category] || eventColors.other,
+    };
+
+    setEvents((currentEvents) => [...currentEvents, event]);
+    setCreateModalOpen(false);
+    setSelectedDate(parseDateInput(values.date));
+    setCurrentDate(parseDateInput(values.date));
+  };
+
+  const handleEventClick = (event: unknown) => {
+    setSelectedEvent(event as CalendarEventItem);
+  };
+
+  const handleSaveEvent = (updatedEventPayload: unknown) => {
+    const updatedEvent = updatedEventPayload as CalendarEventItem;
+
+    setEvents((currentEvents) =>
+      currentEvents.map((event) =>
+        String(event.id) === String(updatedEvent.id)
+          ? {
+              ...event,
+              ...updatedEvent,
+              colorClassName: eventColors[updatedEvent.category || "other"] || eventColors.other,
+              assignees: resolveAssignees(updatedEvent.assigneeIds || []),
+            }
+          : event,
+      ),
+    );
+    setSelectedEvent(null);
   };
 
   return (
-    <div className="flex h-full flex-col md:flex-row">
-      {/* Sidebar */}
-      <aside className="w-full md:w-64 shadow-md p-6 flex flex-col items-center md:items-start justify-start gap-4">
-        <h2 className="text-lg w-full font-semibold text-center md:text-left">Calendars</h2>
-        <ul className="flex flex-col gap-2 w-full">
-          <li className="p-2 rounded-md bg-primary text-white w-full text-center md:text-left">Work</li>
-          <li className="p-2 rounded-md cursor-pointer hover:bg-primary hover:text-white w-full text-center md:text-left">Personal</li>
-          <li className="p-2 rounded-md cursor-pointer hover:bg-primary hover:text-white w-full text-center md:text-left">Meetings</li>
-        </ul>
-      </aside>
-
-      {/* Main Content */}
-      <main className="flex-1 p-6">
-        {/* Header with filters and navigation */}
-        <div className="flex flex-col md:flex-row items-center justify-between mb-4 gap-4">
-          <div className="flex gap-4">
-            <button onClick={prevPeriod} className="btn p-2 rounded-md">&lt; Prev</button>
-            <h1 className="text-xl md:text-2xl font-bold text-center">
-              {viewMode === "month" && `${monthName} ${year}`}
-              {viewMode === "week" && `Week of ${currentWeekStart.toLocaleDateString()}`}
-              {viewMode === "day" && `Day ${currentDay} - ${monthName} ${year}`}
-            </h1>
-            <button onClick={nextPeriod} className="btn p-2 rounded-md">Next &gt;</button>
-          </div>
-
-          <div className="flex items-center">
-            <label htmlFor="viewMode" className="sr-only">
-              Select View Mode
-            </label>
-            <select 
-              id="viewMode"
-              onChange={(e) => changeViewMode(e.target.value)} 
-              value={viewMode}
-              className="p-2 border rounded-md bg-transparent appearance-none text-center text-black dark:text-white"
-            >
-              <option value="month" className="bg-white dark:bg-gray-800">Month View</option>
-              <option value="week" className="bg-white dark:bg-gray-800">Week View</option>
-              <option value="day" className="bg-white dark:bg-gray-800">Day View</option>
-            </select>
-            <div className="ml-4 h-6 w-px dark:bg-white bg-black"></div>
-            <button className="ml-4 p-2 bg-primary text-white rounded-md">Add Event</button>
-          </div>
+    <div className="min-h-screen bg-[#f5f3f0] text-[#172033]">
+      <div className="flex min-h-screen">
+        <div className="desktop-sidebar shrink-0">
+          <Sidebar activeItem="calendar" isAdmin brandLogoSrc={null} />
         </div>
 
-        {/* Calendar Grid */}
-        <div className="border p-4 rounded-lg shadow-md">
-          {/* Month View */}
-          {viewMode === "month" && (
-            <div className="grid grid-cols-7 gap-1 text-sm">
-              {weekDays.map((day) => (
-                <div key={day} className="text-center font-semibold">{day}</div>
-              ))}
-              {Array.from({ length: firstDay }).map((_, i) => (
-                <div key={`empty-${i}`} className="p-4"></div>
-              ))}
-              {Array.from({ length: daysInMonth }, (_, i) => {
-                const dayDate = new Date(year, currentDate.getMonth(), i + 1);
-                return (
-                  <div 
-                    key={i} 
-                    className={`p-4 text-center rounded-md border-2 ${
-                      isToday(dayDate) ? "bg-primary text-white font-bold" : ""
-                    }`}
-                  >
-                    {i + 1}
-                  </div>
-                );
-              })}
-            </div>
-          )}
+        <div className="flex min-h-screen min-w-0 flex-1 flex-col">
+          <Header
+            isAdmin
+            user={{
+              name: "Admin Systeme",
+              email: "admin@mairie360.fr",
+              role: "admin",
+            }}
+          />
 
-          {/* Week View */}
-          {viewMode === "week" && (
-            <div className="grid grid-cols-7 gap-1">
-              {weekDays.map((day) => (
-                <div key={day} className="text-center font-semibold">{day}</div>
-              ))}
-              {weekDays.map((day, i) => {
-                const weekDayDate = new Date(currentWeekStart);
-                weekDayDate.setDate(currentWeekStart.getDate() + i);
-                return (
-                  <div
-                    key={day}
-                    className={`p-4 text-center rounded-md border-2 ${
-                      isToday(weekDayDate) ? "bg-primary text-white font-bold" : ""
-                    }`}
-                  >
-                    {weekDayDate.getDate()}
-                  </div>
-                );
-              })}
-            </div>
-          )}
+          <main className="calendar-main flex-1">
+            <PageTitleBar
+              title="Calendrier & Événements"
+              subtitle="Planifiez et organisez vos activités"
+              actionLabel="Nouvel événement"
+              className="calendar-title-bar"
+              onAction={() => openCreateModal()}
+            />
 
-          {/* Day View */}
-          {viewMode === "day" && (
-            <div className="text-center">
-              <div className="text-lg font-semibold">{weekDays[currentDate.getDay()]}</div>
-              <div
-                className={`p-6 text-xl font-bold border rounded-md border-2 ${
-                  isToday(currentDate) ? "bg-primary text-white" : ""
-                }`}
-              >
-                {currentDate.getDate()}
-              </div>
+            <div className="mt-7 grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_350px]">
+              <Card className="min-h-[620px] overflow-hidden rounded-lg">
+                <div className="px-6 pb-8 pt-6">
+                  <CalendarToolbar
+                    title={periodTitle}
+                    view={view}
+                    onPrevious={handlePrevious}
+                    onNext={handleNext}
+                    onViewChange={(nextView) => setView(nextView)}
+                  />
+
+                  <div className="mt-9 overflow-x-auto">
+                    {view === "month" && (
+                      <MonthGrid
+                        currentDate={currentDate}
+                        selectedDate={selectedDate}
+                        events={events}
+                        onSelectDate={handleSelectDate}
+                        onEventClick={handleEventClick}
+                      />
+                    )}
+
+                    {view === "week" && (
+                      <WeekGrid
+                        currentDate={currentDate}
+                        selectedDate={selectedDate}
+                        events={events}
+                        onSelectDate={handleSelectDate}
+                        onSelectSlot={handleSelectSlot}
+                        onEventClick={handleEventClick}
+                      />
+                    )}
+
+                    {view === "day" && (
+                      <DaySchedule
+                        currentDate={selectedDate}
+                        events={events}
+                        onSelectSlot={handleSelectSlot}
+                        onEventClick={handleEventClick}
+                      />
+                    )}
+                  </div>
+                </div>
+              </Card>
+
+              <CalendarSidebar
+                events={events}
+                currentDate={selectedDate}
+                stats={stats}
+                showEmptyState={false}
+                onEventClick={handleEventClick}
+              />
             </div>
-          )}
+          </main>
+
+          <Footer year={2026} version="2.1.0" className="app-footer" />
         </div>
-      </main>
+      </div>
+
+      <CreateEventModal
+        isOpen={createModalOpen}
+        people={people}
+        categories={categories}
+        initialValues={createInitialValues}
+        title="Nouvel événement"
+        subtitle="Ajoutez une date au calendrier de la mairie."
+        cancelLabel="Annuler"
+        submitLabel="Créer"
+        onCancel={() => setCreateModalOpen(false)}
+        onCreate={handleCreateEvent}
+      />
+
+      <EventDetailsModal
+        isOpen={Boolean(selectedEvent)}
+        event={selectedEvent}
+        people={people}
+        categories={categories}
+        closeLabel="Fermer"
+        editLabel="Modifier"
+        cancelLabel="Annuler"
+        saveLabel="Enregistrer"
+        onClose={() => setSelectedEvent(null)}
+        onSave={handleSaveEvent}
+      />
     </div>
   );
 }
