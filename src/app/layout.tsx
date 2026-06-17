@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "@mairie360/lib-components/dist/styles.css";
+import "./app-overrides.css";
 
 export const metadata: Metadata = {
-  title: "Calendars",
-  description: "The Calendars's module.",
+  title: "Calendrier & Événements",
+  description: "Module calendrier de Mairie360.",
 };
 
 export default function RootLayout({
@@ -12,7 +14,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="fr">
       <head>
         <meta name="apple-mobile-web-app-title" content="Mairie360" />
       </head>

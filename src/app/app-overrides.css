@@ -1,0 +1,61 @@
+html,
+body {
+  min-height: 100%;
+  background: #f5f3f0;
+}
+
+body {
+  margin: 0;
+  color: #172033;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: geometricPrecision;
+}
+
+button {
+  cursor: pointer;
+}
+
+.desktop-sidebar {
+  display: none;
+}
+
+@media (min-width: 64rem) {
+  .desktop-sidebar {
+    display: block;
+  }
+}
+
+.calendar-main {
+  padding: 2rem 1rem;
+}
+
+@media (min-width: 40rem) {
+  .calendar-main {
+    padding: 2rem 1.5rem;
+  }
+}
+
+@media (min-width: 64rem) {
+  .calendar-main {
+    padding: 3.5rem 3.5rem 6rem;
+  }
+
+  .calendar-title-bar {
+    align-items: center !important;
+  }
+}
+
+.app-footer {
+  position: fixed !important;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  width: auto !important;
+  z-index: 30;
+}
+
+@media (min-width: 64rem) {
+  .app-footer {
+    left: 260px;
+  }
+}
