@@ -3,6 +3,8 @@ import type { ReactNode } from "react";
 export type CalendarViewMode = "month" | "week" | "day";
 export type CalendarAssigneeId = string | number;
 export type CalendarDateInput = Date | string;
+export type CalendarUserRole = "user" | "responsable" | "mayor";
+export type CalendarEventApprovalStatus = "pending" | "approved" | "rejected";
 
 export type CalendarRecurrence = {
   frequency: "none" | "daily" | "weekly" | "monthly";
@@ -25,6 +27,7 @@ export type CalendarEventItem = {
   date: CalendarDateInput;
   endDate?: CalendarDateInput;
   category?: string;
+  service?: string;
   startTime?: string;
   endTime?: string;
   location?: string;
@@ -32,7 +35,11 @@ export type CalendarEventItem = {
   assigneeIds?: CalendarAssigneeId[];
   assignees?: CalendarAssignee[];
   recurrence?: CalendarRecurrence;
+  approvalStatus?: CalendarEventApprovalStatus;
+  createdById?: CalendarAssigneeId;
+  visibleToRoles?: CalendarUserRole[];
   colorClassName?: string;
+  className?: string;
 };
 
 export type CreateCalendarEventValues = {
@@ -41,6 +48,7 @@ export type CreateCalendarEventValues = {
   date: string;
   endDate: string;
   category: string;
+  service?: string;
   startTime: string;
   endTime: string;
   location: string;

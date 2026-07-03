@@ -8,7 +8,10 @@ Le module est aujourd'hui alimente cote front uniquement :
 
 - les evenements sont gardes en memoire dans `src/app/calendar/use-calendar-page.ts` ;
 - les personnes assignables et les categories sont mockees dans `src/app/calendar/constants.ts` ;
+- les services calendrier sont mockes dans `src/app/calendar/constants.ts` pour suivre le contrat des composants partages ;
 - les statistiques sont calculees dans `src/app/calendar/stats.ts` a partir de la liste des evenements ;
+- l'utilisateur courant alimente le `Header`, la route `/profile` et l'enrichissement des evenements depuis `src/app/current-user.ts` ;
+- la navigation principale, dont l'entree `Profil`, est definie dans `src/app/navigation.ts` ;
 - le package `@mairie360/bff-calendar-openapi` est installe, mais sa version actuelle ne decrit que `/health` et `/check_apis`.
 
 Le futur BFF devra donc fournir les donnees metier ci-dessous et exposer les operations de lecture/ecriture des evenements.
@@ -24,6 +27,7 @@ type CalendarEvent = {
   date: string;
   endDate?: string;
   category?: string;
+  service?: string;
   startTime?: string;
   endTime?: string;
   location?: string;
@@ -31,6 +35,9 @@ type CalendarEvent = {
   assigneeIds?: Array<string | number>;
   assignees?: CalendarAssignee[];
   recurrence?: CalendarRecurrence;
+  approvalStatus?: "pending" | "approved" | "rejected";
+  createdById?: string | number;
+  visibleToRoles?: Array<"user" | "responsable" | "mayor">;
 };
 ```
 
@@ -41,6 +48,7 @@ type CalendarEvent = {
 | `date` | oui | Date de debut de l'evenement. |
 | `endDate` | non | Date de fin pour les evenements sur plusieurs jours. Vide ou absent pour un evenement d'une seule journee. |
 | `category` | non | Valeur de categorie : `meeting`, `activity`, `ceremony` ou `other` aujourd'hui. |
+| `service` | non | Service municipal responsable de l'evenement. Valeurs actuelles : `direction`, `communication`, `culture`, `logistique`, `accueil`, `securite`. |
 | `startTime` | non | Heure de debut au format `HH:mm`. Necessaire pour les vues semaine/jour. |
 | `endTime` | non | Heure de fin au format `HH:mm`. |
 | `location` | non | Lieu affiche dans les details. |
@@ -48,8 +56,11 @@ type CalendarEvent = {
 | `assigneeIds` | non | Liste des identifiants des personnes assignees. |
 | `assignees` | non | Version enrichie des personnes assignees. Peut etre renvoyee par le BFF ou reconstruite cote front depuis le referentiel des personnes. |
 | `recurrence` | non | Regle de recurrence. |
+| `approvalStatus` | non | Etat de validation expose par les composants partages : `pending`, `approved` ou `rejected`. |
+| `createdById` | non | Identifiant de l'utilisateur createur, utile pour les regles de visibilite et de validation. |
+| `visibleToRoles` | non | Liste optionnelle des roles calendrier pouvant voir l'evenement : `user`, `responsable`, `mayor`. |
 
-Le champ `colorClassName` existe cote front pour styliser les badges, mais il ne doit pas etre gere par le BFF. Il est derive de `category`.
+Les champs `colorClassName` et `className` existent cote front pour styliser l'affichage, mais ils ne doivent pas etre geres par le BFF. `colorClassName` est derive de `category`.
 
 ## Personne assignable
 
@@ -95,6 +106,28 @@ Categories actuellement attendues :
 
 Le BFF peut exposer ce referentiel pour eviter de le garder en dur dans le front.
 
+## Service calendrier
+
+Les services servent a qualifier les evenements et a preparer les filtres/metadonnees des composants calendrier de `@mairie360/lib-components`.
+
+```ts
+type CalendarService = {
+  label: string;
+  value: string;
+};
+```
+
+Services actuellement attendus :
+
+| `value` | `label` |
+| --- | --- |
+| `direction` | Direction generale |
+| `communication` | Communication |
+| `culture` | Culture |
+| `logistique` | Logistique |
+| `accueil` | Accueil |
+| `securite` | Securite |
+
 ## Recurrence
 
 ```ts
@@ -137,6 +170,7 @@ Quand l'utilisateur cree un evenement, `CreateEventModal` renvoie actuellement c
   "date": "15-06-2026",
   "endDate": "",
   "category": "meeting",
+  "service": "direction",
   "startTime": "09:00",
   "endTime": "10:00",
   "location": "Hotel de ville",
@@ -146,6 +180,8 @@ Quand l'utilisateur cree un evenement, `CreateEventModal` renvoie actuellement c
   }
 }
 ```
+
+Le champ `service` peut etre absent si la modale de creation ne l'expose pas. Dans ce cas, le front l'enrichit aujourd'hui avec le service calendrier de l'utilisateur courant.
 
 Le BFF devrait repondre avec l'evenement cree, enrichi au minimum avec son `id` serveur.
 
@@ -159,6 +195,7 @@ Le BFF devrait repondre avec l'evenement cree, enrichi au minimum avec son `id` 
   "date": "2026-06-15",
   "endDate": "2026-06-15",
   "category": "meeting",
+  "service": "direction",
   "startTime": "09:00",
   "endTime": "10:00",
   "location": "Hotel de ville",
@@ -182,7 +219,10 @@ Le BFF devrait repondre avec l'evenement cree, enrichi au minimum avec son `id` 
     "interval": 1,
     "daysOfWeek": [1],
     "endsOn": "2026-09-30"
-  }
+  },
+  "approvalStatus": "approved",
+  "createdById": "as",
+  "visibleToRoles": ["responsable", "mayor"]
 }
 ```
 
@@ -192,13 +232,15 @@ Les endpoints metier ne sont pas encore declares dans `@mairie360/bff-calendar-o
 
 | Methode | Endpoint | Besoin |
 | --- | --- | --- |
-| `GET` | `/calendar/bootstrap` | Charger en une fois les evenements de la periode, les personnes assignables, les categories et l'utilisateur courant si necessaire. |
+| `GET` | `/calendar/bootstrap` | Charger en une fois les evenements de la periode, les personnes assignables, les categories, les services et l'utilisateur courant si necessaire. |
 | `GET` | `/calendar/events?from=YYYY-MM-DD&to=YYYY-MM-DD` | Charger les evenements utiles a la vue mois/semaine/jour. |
 | `POST` | `/calendar/events` | Creer un evenement. |
 | `PATCH` | `/calendar/events/{id}` | Modifier un evenement. |
 | `DELETE` | `/calendar/events/{id}` | Supprimer un evenement si l'UI ajoute cette action. |
+| `PATCH` | `/calendar/events/{id}/approval` | Valider ou refuser un evenement si l'UI active les actions de validation. |
 | `GET` | `/calendar/assignees` | Charger le referentiel des personnes assignables. |
 | `GET` | `/calendar/categories` | Charger le referentiel des categories. |
+| `GET` | `/calendar/services` | Charger le referentiel des services calendrier. |
 | `GET` | `/health` | Deja prevu : verifier la sante du BFF. |
 | `GET` | `/check_apis` | Deja prevu : verifier la connexion aux APIs Core et Calendar. |
 
@@ -226,16 +268,32 @@ Si le calcul doit passer cote serveur plus tard, preferer un format numerique :
 
 Le front gardera la responsabilite du libelle affiche : `1 evenement`, `2 evenements`, etc.
 
-## Donnees utilisateur
+## Donnees utilisateur et profil
 
-L'en-tete utilise actuellement un utilisateur en dur :
+L'en-tete et la page `/profile` utilisent actuellement un utilisateur en dur :
 
 ```json
 {
+  "id": "as",
   "name": "Admin Systeme",
   "email": "admin@mairie360.fr",
-  "role": "admin"
+  "role": "admin",
+  "phone": "02 62 00 00 00",
+  "service": "Direction generale",
+  "position": "Administrateur systeme",
+  "address": "1 place de la Mairie",
+  "city": "Saint-Denis",
+  "avatarUrl": "",
+  "lastConnection": "03/07/2026 14:52",
+  "calendarRole": "responsable",
+  "calendarService": "direction",
+  "canAdministrateCalendar": true
 }
 ```
 
-Pour une integration complete, ces informations devront venir de l'authentification ou de l'API Core, pas du module calendrier. Le module a seulement besoin de savoir si l'utilisateur peut administrer le calendrier afin d'afficher les actions de creation/modification.
+Pour une integration complete, ces informations devront venir de l'authentification ou de l'API Core, pas du module calendrier. Le module calendrier a besoin de :
+
+- `id` pour remplir `createdById` et appliquer les regles de visibilite ;
+- `name`, `email`, `role` et `avatarUrl` pour le `Header` ;
+- `phone`, `service`, `position`, `address`, `city` et `lastConnection` pour la page profil ;
+- `calendarRole`, `calendarService` et `canAdministrateCalendar` pour les droits de creation, modification et validation des evenements.

@@ -25,18 +25,18 @@ button {
   }
 }
 
-.calendar-main {
-  padding: 2rem 1rem;
+.app-main {
+  padding: 2rem 1rem 5rem;
 }
 
 @media (min-width: 40rem) {
-  .calendar-main {
-    padding: 2rem 1.5rem;
+  .app-main {
+    padding: 2rem 1.5rem 5rem;
   }
 }
 
 @media (min-width: 64rem) {
-  .calendar-main {
+  .app-main {
     padding: 3.5rem 3.5rem 6rem;
   }
 
@@ -46,16 +46,16 @@ button {
 }
 
 .app-footer {
-  position: fixed !important;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  width: auto !important;
+  width: 100% !important;
   z-index: 30;
 }
 
 @media (min-width: 64rem) {
   .app-footer {
+    position: fixed !important;
+    right: 0;
+    bottom: 0;
     left: 260px;
+    width: auto !important;
   }
 }
