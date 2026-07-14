@@ -4,7 +4,7 @@ import "@mairie360/lib-components/dist/styles.css";
 import "./app-overrides.css";
 
 export const metadata: Metadata = {
-  title: "Calendrier & Événements",
+  title: "Calendrier | Mairie360",
   description: "Module calendrier de Mairie360.",
 };
 

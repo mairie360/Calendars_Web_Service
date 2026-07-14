@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { currentUserCalendarService, currentUserId } from "../current-user";
 import { getEventColor, initialDate, resolveAssignees } from "./constants";
 import {
   buildCreateInitialValues,
@@ -56,12 +57,15 @@ export function useCalendarPage() {
       date: values.date,
       endDate: values.endDate || undefined,
       category,
+      service: values.service || currentUserCalendarService,
       startTime: values.startTime,
       endTime: values.endTime,
       location: values.location,
       assigneeIds: values.assigneeIds,
       assignees: resolveAssignees(values.assigneeIds),
       recurrence: values.recurrence,
+      approvalStatus: "approved",
+      createdById: currentUserId,
       colorClassName: getEventColor(category),
     };
 

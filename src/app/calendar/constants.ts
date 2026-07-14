@@ -30,6 +30,15 @@ export const categories = [
   { label: "Autre", value: "other" },
 ];
 
+export const services = [
+  { label: "Direction générale", value: "direction" },
+  { label: "Communication", value: "communication" },
+  { label: "Culture", value: "culture" },
+  { label: "Logistique", value: "logistique" },
+  { label: "Accueil", value: "accueil" },
+  { label: "Sécurité", value: "securite" },
+];
+
 const eventColors: Record<string, string> = {
   meeting: "bg-[#e9f2ff] text-[#1256a6]",
   activity: "bg-[#eaf7ee] text-[#257444]",

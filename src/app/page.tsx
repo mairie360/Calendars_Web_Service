@@ -7,13 +7,11 @@ import {
   CreateEventModal,
   DaySchedule,
   EventDetailsModal,
-  Footer,
-  Header,
   MonthGrid,
   PageTitleBar,
-  Sidebar,
   WeekGrid,
 } from "@mairie360/lib-components";
+import { AppShell } from "./_components/app-shell";
 import { categories, people } from "./calendar/constants";
 import { useCalendarPage } from "./calendar/use-calendar-page";
 
@@ -21,88 +19,67 @@ export default function Page() {
   const calendar = useCalendarPage();
 
   return (
-    <div className="min-h-screen bg-[#f5f3f0] text-[#172033]">
-      <div className="flex min-h-screen">
-        <div className="desktop-sidebar shrink-0">
-          <Sidebar activeItem="calendar" isAdmin brandLogoSrc={null} />
-        </div>
+    <AppShell activeItem="calendar">
+      <PageTitleBar
+        title="Calendrier & Événements"
+        subtitle="Planifiez et organisez vos activités"
+        actionLabel="Nouvel événement"
+        className="calendar-title-bar"
+        onAction={() => calendar.openCreateModal()}
+      />
 
-        <div className="flex min-h-screen min-w-0 flex-1 flex-col">
-          <Header
-            isAdmin
-            user={{
-              name: "Admin Systeme",
-              email: "admin@mairie360.fr",
-              role: "admin",
-            }}
-          />
-
-          <main className="calendar-main flex-1">
-            <PageTitleBar
-              title="Calendrier & Événements"
-              subtitle="Planifiez et organisez vos activités"
-              actionLabel="Nouvel événement"
-              className="calendar-title-bar"
-              onAction={() => calendar.openCreateModal()}
+      <div className="mt-7 grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_350px]">
+        <Card className="min-h-[620px] overflow-hidden rounded-lg">
+          <div className="px-6 pb-8 pt-6">
+            <CalendarToolbar
+              title={calendar.periodTitle}
+              view={calendar.view}
+              onPrevious={calendar.handlePrevious}
+              onNext={calendar.handleNext}
+              onViewChange={calendar.setView}
             />
 
-            <div className="mt-7 grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_350px]">
-              <Card className="min-h-[620px] overflow-hidden rounded-lg">
-                <div className="px-6 pb-8 pt-6">
-                  <CalendarToolbar
-                    title={calendar.periodTitle}
-                    view={calendar.view}
-                    onPrevious={calendar.handlePrevious}
-                    onNext={calendar.handleNext}
-                    onViewChange={calendar.setView}
-                  />
+            <div className="mt-9 overflow-x-auto">
+              {calendar.view === "month" && (
+                <MonthGrid
+                  currentDate={calendar.currentDate}
+                  selectedDate={calendar.selectedDate}
+                  events={calendar.events}
+                  onSelectDate={calendar.handleSelectDate}
+                  onEventClick={calendar.handleEventClick}
+                />
+              )}
 
-                  <div className="mt-9 overflow-x-auto">
-                    {calendar.view === "month" && (
-                      <MonthGrid
-                        currentDate={calendar.currentDate}
-                        selectedDate={calendar.selectedDate}
-                        events={calendar.events}
-                        onSelectDate={calendar.handleSelectDate}
-                        onEventClick={calendar.handleEventClick}
-                      />
-                    )}
+              {calendar.view === "week" && (
+                <WeekGrid
+                  currentDate={calendar.currentDate}
+                  selectedDate={calendar.selectedDate}
+                  events={calendar.events}
+                  onSelectDate={calendar.handleSelectDate}
+                  onSelectSlot={calendar.handleSelectSlot}
+                  onEventClick={calendar.handleEventClick}
+                />
+              )}
 
-                    {calendar.view === "week" && (
-                      <WeekGrid
-                        currentDate={calendar.currentDate}
-                        selectedDate={calendar.selectedDate}
-                        events={calendar.events}
-                        onSelectDate={calendar.handleSelectDate}
-                        onSelectSlot={calendar.handleSelectSlot}
-                        onEventClick={calendar.handleEventClick}
-                      />
-                    )}
-
-                    {calendar.view === "day" && (
-                      <DaySchedule
-                        currentDate={calendar.selectedDate}
-                        events={calendar.events}
-                        onSelectSlot={calendar.handleSelectSlot}
-                        onEventClick={calendar.handleEventClick}
-                      />
-                    )}
-                  </div>
-                </div>
-              </Card>
-
-              <CalendarSidebar
-                events={calendar.events}
-                currentDate={calendar.selectedDate}
-                stats={calendar.stats}
-                showEmptyState={false}
-                onEventClick={calendar.handleEventClick}
-              />
+              {calendar.view === "day" && (
+                <DaySchedule
+                  currentDate={calendar.selectedDate}
+                  events={calendar.events}
+                  onSelectSlot={calendar.handleSelectSlot}
+                  onEventClick={calendar.handleEventClick}
+                />
+              )}
             </div>
-          </main>
+          </div>
+        </Card>
 
-          <Footer year={2026} version="2.1.0" className="app-footer" />
-        </div>
+        <CalendarSidebar
+          events={calendar.events}
+          currentDate={calendar.selectedDate}
+          stats={calendar.stats}
+          showEmptyState={false}
+          onEventClick={calendar.handleEventClick}
+        />
       </div>
 
       <CreateEventModal
@@ -130,6 +107,6 @@ export default function Page() {
         onClose={() => calendar.setSelectedEvent(null)}
         onSave={calendar.handleSaveEvent}
       />
-    </div>
+    </AppShell>
   );
 }
