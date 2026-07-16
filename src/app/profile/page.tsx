@@ -2,16 +2,20 @@
 
 import { UserProfile } from "@mairie360/lib-components";
 import { AppShell } from "../_components/app-shell";
-import { currentUser } from "../current-user";
 
 export default function ProfilePage() {
   return (
     <AppShell activeItem="profile">
-      <UserProfile
-        user={currentUser}
-        title="Profil utilisateur"
-        subtitle="Consultez et mettez à jour vos informations personnelles"
-      />
+      {(session) => (
+        <UserProfile
+          user={session.user}
+          title="Profil utilisateur"
+          subtitle="Informations réelles du compte connecté"
+          editable={false}
+          loading={session.loading}
+          error={session.error}
+        />
+      )}
     </AppShell>
   );
 }

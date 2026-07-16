@@ -4,13 +4,17 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 import { Footer, Header, Sidebar } from "@mairie360/lib-components";
 import { useRouter } from "next/navigation";
-import { logoutAndReload, useAuthSession } from "@/lib/auth-session";
+import {
+  logoutAndReload,
+  useAuthSession,
+  type AuthSession,
+} from "@/lib/auth-session";
 import { currentUser } from "../current-user";
 import { appSidebarItems, navigateToPage } from "../navigation";
 
 type AppShellProps = {
   activeItem: string;
-  children: ReactNode;
+  children: ReactNode | ((session: AuthSession) => ReactNode);
   mainClassName?: string;
 };
 
@@ -67,7 +71,9 @@ export function AppShell({ activeItem, children, mainClassName = "app-main flex-
             onLogout={() => void logoutAndReload()}
           />
 
-          <main className={mainClassName}>{children}</main>
+          <main className={mainClassName}>
+            {typeof children === "function" ? children(session) : children}
+          </main>
 
           <Footer year={2026} version="2.1.0" className="app-footer" />
         </div>
