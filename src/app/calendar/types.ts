@@ -37,6 +37,9 @@ export type CalendarEventItem = {
   recurrence?: CalendarRecurrence;
   approvalStatus?: CalendarEventApprovalStatus;
   createdById?: CalendarAssigneeId;
+  canValidate?: boolean;
+  canEdit?: boolean;
+  canDelete?: boolean;
   visibleToRoles?: CalendarUserRole[];
   colorClassName?: string;
   className?: string;
