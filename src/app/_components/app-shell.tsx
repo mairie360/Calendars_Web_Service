@@ -4,25 +4,27 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 import { Footer, Header, Sidebar } from "@mairie360/lib-components";
 import { useRouter } from "next/navigation";
+import {
+  logoutAndReload,
+  useAuthSession,
+  type AuthSession,
+} from "@/lib/auth-session";
 import { currentUser } from "../current-user";
-import { appSidebarItems, getNavigationHref } from "../navigation";
+import { appSidebarItems, navigateToPage } from "../navigation";
 
 type AppShellProps = {
   activeItem: string;
-  children: ReactNode;
+  children: ReactNode | ((session: AuthSession) => ReactNode);
   mainClassName?: string;
 };
 
 export function AppShell({ activeItem, children, mainClassName = "app-main flex-1" }: AppShellProps) {
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const session = useAuthSession(currentUser);
 
   const handlePageChange = (page: string) => {
-    const href = getNavigationHref(page);
-
-    if (href) {
-      router.push(href);
-    }
+    navigateToPage(page, router.push);
 
     setSidebarOpen(false);
   };
@@ -30,7 +32,7 @@ export function AppShell({ activeItem, children, mainClassName = "app-main flex-
   const sidebar = (
     <Sidebar
       activeItem={activeItem}
-      isAdmin
+      isAdmin={session.isAdmin}
       items={appSidebarItems}
       brandLogoSrc={null}
       onItemSelect={(item) => handlePageChange(item.id)}
@@ -61,14 +63,17 @@ export function AppShell({ activeItem, children, mainClassName = "app-main flex-
 
         <div className="flex min-h-screen min-w-0 flex-1 flex-col">
           <Header
-            isAdmin
-            user={currentUser}
+            isAdmin={session.isAdmin}
+            user={session.user}
             profileHref="/profile"
             setSidebarOpen={setSidebarOpen}
             onPageChange={handlePageChange}
+            onLogout={() => void logoutAndReload()}
           />
 
-          <main className={mainClassName}>{children}</main>
+          <main className={mainClassName}>
+            {typeof children === "function" ? children(session) : children}
+          </main>
 
           <Footer year={2026} version="2.1.0" className="app-footer" />
         </div>
