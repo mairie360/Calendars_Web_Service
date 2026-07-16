@@ -5,7 +5,7 @@ import { useState } from "react";
 import { Footer, Header, Sidebar } from "@mairie360/lib-components";
 import { useRouter } from "next/navigation";
 import { currentUser } from "../current-user";
-import { appSidebarItems, getNavigationHref } from "../navigation";
+import { appSidebarItems, navigateToPage } from "../navigation";
 
 type AppShellProps = {
   activeItem: string;
@@ -18,11 +18,7 @@ export function AppShell({ activeItem, children, mainClassName = "app-main flex-
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const handlePageChange = (page: string) => {
-    const href = getNavigationHref(page);
-
-    if (href) {
-      router.push(href);
-    }
+    navigateToPage(page, router.push);
 
     setSidebarOpen(false);
   };
