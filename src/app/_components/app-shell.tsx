@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 import { Footer, Header, Sidebar } from "@mairie360/lib-components";
 import { useRouter } from "next/navigation";
+import { logoutAndReload, useAuthSession } from "@/lib/auth-session";
 import { currentUser } from "../current-user";
 import { appSidebarItems, navigateToPage } from "../navigation";
 
@@ -16,6 +17,7 @@ type AppShellProps = {
 export function AppShell({ activeItem, children, mainClassName = "app-main flex-1" }: AppShellProps) {
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const session = useAuthSession(currentUser);
 
   const handlePageChange = (page: string) => {
     navigateToPage(page, router.push);
@@ -26,7 +28,7 @@ export function AppShell({ activeItem, children, mainClassName = "app-main flex-
   const sidebar = (
     <Sidebar
       activeItem={activeItem}
-      isAdmin
+      isAdmin={session.isAdmin}
       items={appSidebarItems}
       brandLogoSrc={null}
       onItemSelect={(item) => handlePageChange(item.id)}
@@ -57,11 +59,12 @@ export function AppShell({ activeItem, children, mainClassName = "app-main flex-
 
         <div className="flex min-h-screen min-w-0 flex-1 flex-col">
           <Header
-            isAdmin
-            user={currentUser}
+            isAdmin={session.isAdmin}
+            user={session.user}
             profileHref="/profile"
             setSidebarOpen={setSidebarOpen}
             onPageChange={handlePageChange}
+            onLogout={() => void logoutAndReload()}
           />
 
           <main className={mainClassName}>{children}</main>
