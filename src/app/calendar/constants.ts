@@ -1,6 +1,6 @@
 import type { CalendarAssignee, CalendarAssigneeId } from "./types";
 
-export const initialDate = new Date(2026, 5, 15);
+export const initialDate = new Date();
 
 export const people: CalendarAssignee[] = [
   {
@@ -50,8 +50,11 @@ export function getEventColor(category = "other") {
   return eventColors[category] || eventColors.other;
 }
 
-export function resolveAssignees(assigneeIds: CalendarAssigneeId[]) {
-  return people.filter((person) =>
+export function resolveAssignees(
+  assigneeIds: CalendarAssigneeId[],
+  sourcePeople: CalendarAssignee[] = people,
+) {
+  return sourcePeople.filter((person) =>
     assigneeIds.some((assigneeId) => String(assigneeId) === String(person.id)),
   );
 }

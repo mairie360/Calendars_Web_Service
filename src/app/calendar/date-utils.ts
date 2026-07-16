@@ -41,6 +41,14 @@ export function formatDateForServer(date: CalendarDateInput) {
   return `${day}-${month}-${year}`;
 }
 
+export function formatDateForQuery(date: CalendarDateInput) {
+  const parsedDate = parseDateInput(date);
+  const day = `${parsedDate.getDate()}`.padStart(2, "0");
+  const month = `${parsedDate.getMonth() + 1}`.padStart(2, "0");
+  const year = parsedDate.getFullYear();
+  return `${year}-${month}-${day}`;
+}
+
 export function formatMonthYear(date: CalendarDateInput) {
   const parsedDate = parseDateInput(date);
   const month = new Intl.DateTimeFormat("fr-FR", { month: "long" }).format(parsedDate);
@@ -61,6 +69,36 @@ export function startOfWeek(date: CalendarDateInput) {
   const day = parsedDate.getDay();
   const diff = day === 0 ? -6 : 1 - day;
   return addDays(parsedDate, diff);
+}
+
+export function endOfWeek(date: CalendarDateInput) {
+  return addDays(startOfWeek(date), 6);
+}
+
+export function getCalendarPeriodRange(view: CalendarViewMode, date: CalendarDateInput) {
+  const parsedDate = parseDateInput(date);
+
+  if (view === "week") {
+    return {
+      from: startOfWeek(parsedDate),
+      to: endOfWeek(parsedDate),
+    };
+  }
+
+  if (view === "day") {
+    return {
+      from: parsedDate,
+      to: parsedDate,
+    };
+  }
+
+  const monthStart = new Date(parsedDate.getFullYear(), parsedDate.getMonth(), 1);
+  const monthEnd = new Date(parsedDate.getFullYear(), parsedDate.getMonth() + 1, 0);
+
+  return {
+    from: startOfWeek(monthStart),
+    to: endOfWeek(monthEnd),
+  };
 }
 
 export function getPeriodTitle(view: CalendarViewMode, date: CalendarDateInput) {

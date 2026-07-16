@@ -1,8 +1,24 @@
-import { useMemo, useState } from "react";
-import { currentUserCalendarService, currentUserId } from "../current-user";
-import { getEventColor, initialDate, resolveAssignees } from "./constants";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { currentUserCalendarService, currentUserId as fallbackCurrentUserId } from "../current-user";
+import {
+  createCalendarEvent,
+  deleteCalendarEvent,
+  formatCalendarApiError,
+  loadCalendarData,
+  updateCalendarEvent,
+  updateCalendarEventApproval,
+} from "./api";
+import {
+  categories as fallbackCategories,
+  getEventColor,
+  initialDate,
+  people as fallbackPeople,
+  services as fallbackServices,
+} from "./constants";
 import {
   buildCreateInitialValues,
+  formatDateForQuery,
+  getCalendarPeriodRange,
   getNextPeriod,
   getPeriodTitle,
   getPreviousPeriod,
@@ -16,14 +32,71 @@ export function useCalendarPage() {
   const [currentDate, setCurrentDate] = useState<Date>(initialDate);
   const [selectedDate, setSelectedDate] = useState<Date>(initialDate);
   const [events, setEvents] = useState<CalendarEventItem[]>([]);
+  const [people, setPeople] = useState(fallbackPeople);
+  const [categories, setCategories] = useState(fallbackCategories);
+  const [services, setServices] = useState(fallbackServices);
+  const [currentUserId, setCurrentUserId] = useState<string | number>(fallbackCurrentUserId);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [createInitialValues, setCreateInitialValues] = useState(() =>
     buildCreateInitialValues(initialDate),
   );
   const [selectedEvent, setSelectedEvent] = useState<CalendarEventItem | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const stats = useMemo(() => buildStats(events, selectedDate), [events, selectedDate]);
   const periodTitle = useMemo(() => getPeriodTitle(view, currentDate), [currentDate, view]);
+  const periodRange = useMemo(
+    () => getCalendarPeriodRange(view, currentDate),
+    [currentDate, view],
+  );
+  const rangeFrom = useMemo(() => formatDateForQuery(periodRange.from), [periodRange.from]);
+  const rangeTo = useMemo(() => formatDateForQuery(periodRange.to), [periodRange.to]);
+
+  const loadData = useCallback(
+    async (signal?: AbortSignal) => {
+      setLoading(true);
+
+      try {
+        const calendarData = await loadCalendarData({
+          from: rangeFrom,
+          to: rangeTo,
+          signal,
+        });
+
+        if (signal?.aborted) return;
+
+        setEvents(calendarData.events);
+        setPeople(calendarData.people);
+        setCategories(calendarData.categories);
+        setServices(calendarData.services);
+        if (calendarData.currentUser) {
+          setCurrentUserId(calendarData.currentUser.id);
+        }
+        setError(null);
+      } catch (loadError) {
+        if (
+          signal?.aborted ||
+          (loadError instanceof Error && loadError.name === "AbortError")
+        ) {
+          return;
+        }
+
+        setError(formatCalendarApiError(loadError));
+      } finally {
+        if (!signal?.aborted) setLoading(false);
+      }
+    },
+    [rangeFrom, rangeTo],
+  );
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void loadData(controller.signal);
+
+    return () => controller.abort();
+  }, [loadData]);
 
   const handlePrevious = () => {
     setCurrentDate((date) => getPreviousPeriod(date, view));
@@ -48,60 +121,139 @@ export function useCalendarPage() {
     openCreateModal(date, time);
   };
 
-  const handleCreateEvent = (values: CreateCalendarEventValues) => {
-    const category = values.category || "other";
-    const createdEvent: CalendarEventItem = {
-      id: `event-${Date.now()}`,
-      title: values.title,
-      description: values.description,
-      date: values.date,
-      endDate: values.endDate || undefined,
-      category,
-      service: values.service || currentUserCalendarService,
-      startTime: values.startTime,
-      endTime: values.endTime,
-      location: values.location,
-      assigneeIds: values.assigneeIds,
-      assignees: resolveAssignees(values.assigneeIds),
-      recurrence: values.recurrence,
-      approvalStatus: "approved",
-      createdById: currentUserId,
-      colorClassName: getEventColor(category),
-    };
+  const handleCreateEvent = async (values: CreateCalendarEventValues) => {
+    if (saving) return;
 
-    setEvents((currentEvents) => [...currentEvents, createdEvent]);
-    setCreateModalOpen(false);
-    setSelectedDate(parseDateInput(values.date));
-    setCurrentDate(parseDateInput(values.date));
+    const category = values.category || "other";
+    setSaving(true);
+    setError(null);
+
+    try {
+      const createdEvent = await createCalendarEvent(
+        {
+          ...values,
+          category,
+          service: values.service || currentUserCalendarService,
+        },
+        people,
+      );
+
+      if (!createdEvent) {
+        throw new Error("La réponse du BFF ne contient pas l’événement créé.");
+      }
+
+      const enrichedEvent = {
+        ...createdEvent,
+        approvalStatus: createdEvent.approvalStatus ?? "approved",
+        createdById: createdEvent.createdById ?? currentUserId,
+        colorClassName: getEventColor(createdEvent.category),
+      } satisfies CalendarEventItem;
+
+      setEvents((currentEvents) => [...currentEvents, enrichedEvent]);
+      setCreateModalOpen(false);
+      setSelectedDate(parseDateInput(createdEvent.date));
+      setCurrentDate(parseDateInput(createdEvent.date));
+    } catch (createError) {
+      setError(formatCalendarApiError(createError));
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleEventClick = (event: unknown) => {
     setSelectedEvent(event as CalendarEventItem);
   };
 
-  const handleSaveEvent = (updatedEventPayload: unknown) => {
+  const handleSaveEvent = async (updatedEventPayload: unknown) => {
+    if (saving) return;
+
     const updatedEvent = updatedEventPayload as CalendarEventItem;
 
-    setEvents((currentEvents) =>
-      currentEvents.map((event) =>
-        String(event.id) === String(updatedEvent.id)
-          ? {
-              ...event,
-              ...updatedEvent,
-              assignees: resolveAssignees(updatedEvent.assigneeIds || []),
-              colorClassName: getEventColor(updatedEvent.category),
-            }
-          : event,
-      ),
-    );
-    setSelectedEvent(null);
+    setSaving(true);
+    setError(null);
+
+    try {
+      const savedEvent = await updateCalendarEvent(updatedEvent, people);
+
+      setEvents((currentEvents) =>
+        currentEvents.map((event) =>
+          String(event.id) === String(savedEvent.id)
+            ? {
+                ...event,
+                ...savedEvent,
+                colorClassName: getEventColor(savedEvent.category),
+              }
+            : event,
+        ),
+      );
+      setSelectedEvent(null);
+    } catch (saveError) {
+      setError(formatCalendarApiError(saveError));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteEvent = async (eventToDelete: CalendarEventItem) => {
+    if (saving) return;
+
+    setSaving(true);
+    setError(null);
+
+    try {
+      await deleteCalendarEvent(eventToDelete.id);
+      setEvents((currentEvents) =>
+        currentEvents.filter((event) => String(event.id) !== String(eventToDelete.id)),
+      );
+      setSelectedEvent(null);
+    } catch (deleteError) {
+      setError(formatCalendarApiError(deleteError));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleValidateEvent = async (
+    eventToValidate: CalendarEventItem,
+    approvalStatus: "approved" | "rejected",
+  ) => {
+    if (saving || !eventToValidate.canValidate) return;
+
+    setSaving(true);
+    setError(null);
+
+    try {
+      const savedEvent = await updateCalendarEventApproval(
+        eventToValidate.id,
+        approvalStatus,
+        people,
+      );
+
+      if (!savedEvent) {
+        throw new Error("La réponse du BFF ne contient pas l’événement validé.");
+      }
+
+      setEvents((currentEvents) =>
+        currentEvents.map((event) =>
+          String(event.id) === String(savedEvent.id) ? savedEvent : event,
+        ),
+      );
+      setSelectedEvent(savedEvent);
+    } catch (validationError) {
+      setError(formatCalendarApiError(validationError));
+    } finally {
+      setSaving(false);
+    }
   };
 
   return {
+    categories,
     createInitialValues,
     createModalOpen,
     currentDate,
+    error,
     events,
+    handleDeleteEvent,
     handleCreateEvent,
     handleEventClick,
     handleNext,
@@ -109,13 +261,19 @@ export function useCalendarPage() {
     handleSaveEvent,
     handleSelectDate,
     handleSelectSlot,
+    handleValidateEvent,
+    loading,
     openCreateModal,
+    people,
     periodTitle,
+    refreshData: loadData,
     selectedDate,
     selectedEvent,
     setCreateModalOpen,
     setSelectedEvent,
     setView,
+    services,
+    saving,
     stats,
     view,
   };
