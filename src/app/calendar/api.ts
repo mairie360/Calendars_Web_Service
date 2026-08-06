@@ -1,10 +1,5 @@
 import { BffRequestError, requestBff } from "@/lib/bff-client";
-import {
-  categories as fallbackCategories,
-  getEventColor,
-  resolveAssignees,
-  services as fallbackServices,
-} from "./constants";
+import { getEventColor, resolveAssignees } from "./constants";
 import type {
   CalendarAssignee,
   CalendarAssigneeId,
@@ -56,11 +51,8 @@ function toCalendarId(value: unknown): CalendarAssigneeId | undefined {
   return typeof value === "string" || typeof value === "number" ? value : undefined;
 }
 
-function normalizeReferenceOptions(
-  value: unknown,
-  fallback: CalendarReferenceOption[],
-): CalendarReferenceOption[] {
-  if (!Array.isArray(value)) return fallback;
+function normalizeReferenceOptions(value: unknown): CalendarReferenceOption[] {
+  if (!Array.isArray(value)) return [];
 
   const options = value.flatMap((item) => {
     if (!isRecord(item)) return [];
@@ -69,7 +61,7 @@ function normalizeReferenceOptions(
     return optionValue && label ? [{ label, value: optionValue }] : [];
   });
 
-  return options.length > 0 ? options : fallback;
+  return options;
 }
 
 function normalizePeople(value: unknown): CalendarAssignee[] {
@@ -123,7 +115,7 @@ function normalizeEvent(value: unknown, people: CalendarAssignee[]): CalendarEve
 
   if (id === undefined || !title || !date) return null;
 
-  const category = toStringValue(value.category) ?? "other";
+  const category = toStringValue(value.category);
   const assigneeIds = Array.isArray(value.assigneeIds)
     ? value.assigneeIds
         .map(toCalendarId)
@@ -199,7 +191,7 @@ function eventPayload(event: CreateCalendarEventValues | CalendarEventItem) {
       event.endDate instanceof Date
         ? event.endDate.toISOString().slice(0, 10)
         : event.endDate || undefined,
-    category: event.category || "other",
+    category: event.category || undefined,
     service: event.service,
     startTime: event.startTime,
     endTime: event.endTime,
@@ -227,6 +219,10 @@ async function loadEvents(params: CalendarLoadParams) {
   );
 }
 
+async function loadCollection(path: string, signal?: AbortSignal) {
+  return requestBff<unknown>(path, { signal });
+}
+
 export async function loadCalendarData(params: CalendarLoadParams): Promise<CalendarData> {
   let response: unknown;
 
@@ -237,7 +233,13 @@ export async function loadCalendarData(params: CalendarLoadParams): Promise<Cale
       throw error;
     }
 
-    response = { events: await loadEvents(params) };
+    const [events, assignees, categories, services] = await Promise.all([
+      loadEvents(params),
+      loadCollection("/calendar/assignees", params.signal),
+      loadCollection("/calendar/categories", params.signal),
+      loadCollection("/calendar/services", params.signal),
+    ]);
+    response = { events, assignees, categories, services };
   }
 
   const record = isRecord(response) ? response : {};
@@ -246,8 +248,8 @@ export async function loadCalendarData(params: CalendarLoadParams): Promise<Cale
   return {
     events: normalizeEvents(record.events, people),
     people,
-    categories: normalizeReferenceOptions(record.categories, fallbackCategories),
-    services: normalizeReferenceOptions(record.services, fallbackServices),
+    categories: normalizeReferenceOptions(record.categories),
+    services: normalizeReferenceOptions(record.services),
     currentUser: normalizeCurrentUser(record.currentUser),
     assigneeScope:
       record.assigneeScope === "all" ||
@@ -281,7 +283,11 @@ export async function updateCalendarEvent(
     },
   );
 
-  return normalizeEvent(response, people) ?? event;
+  const normalizedEvent = normalizeEvent(response, people);
+  if (!normalizedEvent) {
+    throw new Error("La réponse du BFF ne contient pas l’événement modifié.");
+  }
+  return normalizedEvent;
 }
 
 export async function deleteCalendarEvent(eventId: CalendarAssigneeId) {

@@ -9,7 +9,6 @@ import {
   useAuthSession,
   type AuthSession,
 } from "@/lib/auth-session";
-import { currentUser } from "../current-user";
 import { appSidebarItems, navigateToPage } from "../navigation";
 
 type AppShellProps = {
@@ -21,7 +20,7 @@ type AppShellProps = {
 export function AppShell({ activeItem, children, mainClassName = "app-main flex-1" }: AppShellProps) {
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const session = useAuthSession(currentUser);
+  const session = useAuthSession();
 
   const handlePageChange = (page: string) => {
     navigateToPage(page, router.push);

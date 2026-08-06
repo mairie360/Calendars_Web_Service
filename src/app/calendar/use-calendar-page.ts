@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { currentUserCalendarService, currentUserId as fallbackCurrentUserId } from "../current-user";
 import {
   createCalendarEvent,
   deleteCalendarEvent,
@@ -8,13 +7,7 @@ import {
   updateCalendarEvent,
   updateCalendarEventApproval,
 } from "./api";
-import {
-  categories as fallbackCategories,
-  getEventColor,
-  initialDate,
-  people as fallbackPeople,
-  services as fallbackServices,
-} from "./constants";
+import { getEventColor, initialDate } from "./constants";
 import {
   buildCreateInitialValues,
   formatDateForQuery,
@@ -25,17 +18,22 @@ import {
   parseDateInput,
 } from "./date-utils";
 import { buildStats } from "./stats";
-import type { CalendarEventItem, CalendarViewMode, CreateCalendarEventValues } from "./types";
+import type { CalendarReferenceOption } from "./api";
+import type {
+  CalendarAssignee,
+  CalendarEventItem,
+  CalendarViewMode,
+  CreateCalendarEventValues,
+} from "./types";
 
 export function useCalendarPage() {
   const [view, setView] = useState<CalendarViewMode>("month");
   const [currentDate, setCurrentDate] = useState<Date>(initialDate);
   const [selectedDate, setSelectedDate] = useState<Date>(initialDate);
   const [events, setEvents] = useState<CalendarEventItem[]>([]);
-  const [people, setPeople] = useState(fallbackPeople);
-  const [categories, setCategories] = useState(fallbackCategories);
-  const [services, setServices] = useState(fallbackServices);
-  const [currentUserId, setCurrentUserId] = useState<string | number>(fallbackCurrentUserId);
+  const [people, setPeople] = useState<CalendarAssignee[]>([]);
+  const [categories, setCategories] = useState<CalendarReferenceOption[]>([]);
+  const [services, setServices] = useState<CalendarReferenceOption[]>([]);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [createInitialValues, setCreateInitialValues] = useState(() =>
     buildCreateInitialValues(initialDate),
@@ -71,9 +69,6 @@ export function useCalendarPage() {
         setPeople(calendarData.people);
         setCategories(calendarData.categories);
         setServices(calendarData.services);
-        if (calendarData.currentUser) {
-          setCurrentUserId(calendarData.currentUser.id);
-        }
         setError(null);
       } catch (loadError) {
         if (
@@ -124,19 +119,11 @@ export function useCalendarPage() {
   const handleCreateEvent = async (values: CreateCalendarEventValues) => {
     if (saving) return;
 
-    const category = values.category || "other";
     setSaving(true);
     setError(null);
 
     try {
-      const createdEvent = await createCalendarEvent(
-        {
-          ...values,
-          category,
-          service: values.service || currentUserCalendarService,
-        },
-        people,
-      );
+      const createdEvent = await createCalendarEvent(values, people);
 
       if (!createdEvent) {
         throw new Error("La réponse du BFF ne contient pas l’événement créé.");
@@ -144,8 +131,6 @@ export function useCalendarPage() {
 
       const enrichedEvent = {
         ...createdEvent,
-        approvalStatus: createdEvent.approvalStatus ?? "approved",
-        createdById: createdEvent.createdById ?? currentUserId,
         colorClassName: getEventColor(createdEvent.category),
       } satisfies CalendarEventItem;
 
