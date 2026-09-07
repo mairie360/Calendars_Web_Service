@@ -1,3 +1,5 @@
+import type { components } from '@/contracts/bff';
+type CalendarBootstrap = components['schemas']['CalendarBootstrapResponse'];
 import { BffRequestError, requestBff } from "@/lib/bff-client";
 import { getEventColor, resolveAssignees } from "./constants";
 import type {
@@ -206,14 +208,14 @@ function queryString(params: Record<string, string>) {
 }
 
 async function loadBootstrap(params: CalendarLoadParams) {
-  return requestBff<unknown>(
+  return requestBff<CalendarBootstrap>(
     `${BOOTSTRAP_ENDPOINT}${queryString({ from: params.from, to: params.to })}`,
     { signal: params.signal },
   );
 }
 
 async function loadEvents(params: CalendarLoadParams) {
-  return requestBff<unknown>(
+  return requestBff<components['schemas']['CalendarEvent'][]>(
     `${EVENT_ENDPOINT}${queryString({ from: params.from, to: params.to })}`,
     { signal: params.signal },
   );
