@@ -1,3 +1,4 @@
+import type { components } from '@/contracts/bff';
 import type { ReactNode } from "react";
 
 export type CalendarViewMode = "month" | "week" | "day";
@@ -13,13 +14,7 @@ export type CalendarRecurrence = {
   endsOn?: CalendarDateInput;
 };
 
-export type CalendarAssignee = {
-  id: CalendarAssigneeId;
-  name: string;
-  email?: string;
-  role?: string;
-  avatarUrl?: string;
-};
+export type CalendarAssignee = components['schemas']['CalendarAssignee'];
 
 export type CalendarEventItem = {
   id: string | number;
