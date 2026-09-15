@@ -4,6 +4,7 @@ import {
   createNonce,
   NONCE_REQUEST_HEADER,
 } from "./lib/content-security-policy";
+import { isContractDataPath } from "./lib/bff-contract";
 
 const ACCESS_TOKEN_COOKIE = "accessToken";
 const DEFAULT_LOGIN_FRONT_URL = "http://localhost:5000/";
@@ -53,6 +54,12 @@ function redirectToLogin(request: NextRequest) {
 }
 
 export function middleware(request: NextRequest) {
+  // Routes de données relayées au BFF : la session est jugée par le BFF (401 JSON), pas par une
+  // redirection HTML que fetch ne saurait pas exploiter.
+  if (isContractDataPath(request.nextUrl.pathname)) {
+    return NextResponse.next();
+  }
+
   const accessToken = request.cookies.get(ACCESS_TOKEN_COOKIE)?.value;
 
   if (!accessToken || isExpiredJwt(accessToken)) {

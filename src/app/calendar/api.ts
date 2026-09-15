@@ -1,33 +1,33 @@
 import type { components } from '@/contracts/bff';
-type CalendarBootstrap = components['schemas']['CalendarBootstrapResponse'];
-import { BffRequestError, requestBff } from "@/lib/bff-client";
+import { requestBff } from "@/lib/bff-client";
 import { getEventColor, resolveAssignees } from "./constants";
+import { formatDateForQuery } from "./date-utils";
 import type {
   CalendarAssignee,
   CalendarAssigneeId,
+  CalendarDateInput,
   CalendarEventItem,
-  CalendarRecurrence,
   CreateCalendarEventValues,
 } from "./types";
 
-export type CalendarReferenceOption = {
-  label: string;
-  value: string;
-};
+// Client de BFF_Calendar. Les réponses sont celles du contrat (contracts/openapi.json) : le BFF valide
+// les entrées, calcule les droits (canEdit, canDelete, canValidate) et le périmètre des personnes
+// assignables. Le front ne fait qu'adapter l'affichage.
+
+type Schemas = components['schemas'];
+type BffCalendarEvent = Schemas['CalendarEvent'];
+type BffCalendarBootstrap = Schemas['CalendarBootstrapResponse'];
+type BffCalendarEventBody = Schemas['CreateCalendarEventBody'];
+
+export type CalendarReferenceOption = Schemas['CalendarCategory'];
 
 export type CalendarData = {
   events: CalendarEventItem[];
   people: CalendarAssignee[];
   categories: CalendarReferenceOption[];
   services: CalendarReferenceOption[];
-  currentUser?: {
-    id: CalendarAssigneeId;
-    name: string;
-    email: string;
-    role?: string;
-    groupIds: number[];
-  };
-  assigneeScope?: "all" | "groups" | "self";
+  currentUser?: BffCalendarBootstrap['currentUser'];
+  assigneeScope?: BffCalendarBootstrap['assigneeScope'];
 };
 
 type CalendarLoadParams = {
@@ -39,226 +39,57 @@ type CalendarLoadParams = {
 const EVENT_ENDPOINT = "/calendar/events";
 const BOOTSTRAP_ENDPOINT = "/calendar/bootstrap";
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
-}
-
-function toStringValue(value: unknown) {
-  if (typeof value === "string") return value;
-  if (typeof value === "number") return String(value);
-  return undefined;
-}
-
-function toCalendarId(value: unknown): CalendarAssigneeId | undefined {
-  return typeof value === "string" || typeof value === "number" ? value : undefined;
-}
-
-function normalizeReferenceOptions(value: unknown): CalendarReferenceOption[] {
-  if (!Array.isArray(value)) return [];
-
-  const options = value.flatMap((item) => {
-    if (!isRecord(item)) return [];
-    const optionValue = toStringValue(item.value);
-    const label = toStringValue(item.label);
-    return optionValue && label ? [{ label, value: optionValue }] : [];
-  });
-
-  return options;
-}
-
-function normalizePeople(value: unknown): CalendarAssignee[] {
-  if (!Array.isArray(value)) return [];
-
-  return value.flatMap((item) => {
-    if (!isRecord(item)) return [];
-    const id = toCalendarId(item.id);
-    const name = toStringValue(item.name);
-
-    if (id === undefined || !name) return [];
-
-    return [{
-      id,
-      name,
-      email: toStringValue(item.email),
-      role: toStringValue(item.role),
-      avatarUrl: toStringValue(item.avatarUrl),
-    }];
-  });
-}
-
-function normalizeRecurrence(value: unknown): CalendarRecurrence | undefined {
-  if (!isRecord(value)) return undefined;
-  const frequency = toStringValue(value.frequency);
-
-  if (!frequency || !["none", "daily", "weekly", "monthly"].includes(frequency)) {
-    return undefined;
-  }
-
-  const interval = Number(value.interval);
-  const daysOfWeek = Array.isArray(value.daysOfWeek)
-    ? value.daysOfWeek
-        .map(Number)
-        .filter((day) => Number.isInteger(day) && day >= 0 && day <= 6)
-    : undefined;
+function toCalendarEventItem(event: BffCalendarEvent, people: CalendarAssignee[]): CalendarEventItem {
+  const assigneeIds = event.assigneeIds ?? [];
 
   return {
-    frequency: frequency as CalendarRecurrence["frequency"],
-    interval: Number.isFinite(interval) && interval >= 1 ? interval : undefined,
-    daysOfWeek,
-    endsOn: toStringValue(value.endsOn),
-  };
-}
-
-function normalizeEvent(value: unknown, people: CalendarAssignee[]): CalendarEventItem | null {
-  if (!isRecord(value)) return null;
-  const id = toCalendarId(value.id);
-  const title = toStringValue(value.title);
-  const date = toStringValue(value.date);
-
-  if (id === undefined || !title || !date) return null;
-
-  const category = toStringValue(value.category);
-  const assigneeIds = Array.isArray(value.assigneeIds)
-    ? value.assigneeIds
-        .map(toCalendarId)
-        .filter((assigneeId): assigneeId is CalendarAssigneeId => assigneeId !== undefined)
-    : [];
-  const eventAssignees = normalizePeople(value.assignees);
-
-  return {
-    id,
-    title,
-    date,
-    endDate: toStringValue(value.endDate),
-    category,
-    service: toStringValue(value.service),
-    startTime: toStringValue(value.startTime),
-    endTime: toStringValue(value.endTime),
-    location: toStringValue(value.location),
-    description: toStringValue(value.description),
+    ...event,
+    // `id` est optionnel dans le schéma partagé avec la création, mais toujours renvoyé en lecture.
+    id: event.id as CalendarAssigneeId,
     assigneeIds,
-    assignees: eventAssignees.length > 0
-      ? eventAssignees
-      : resolveAssignees(assigneeIds, people),
-    recurrence: normalizeRecurrence(value.recurrence),
-    approvalStatus:
-      value.approvalStatus === "pending" ||
-      value.approvalStatus === "approved" ||
-      value.approvalStatus === "rejected"
-        ? value.approvalStatus
-        : undefined,
-    createdById: toCalendarId(value.createdById),
-    canValidate: value.canValidate === true,
-    canEdit: value.canEdit === true,
-    canDelete: value.canDelete === true,
-    colorClassName: getEventColor(category),
+    assignees: event.assignees?.length ? event.assignees : resolveAssignees(assigneeIds, people),
+    colorClassName: getEventColor(event.category),
   };
 }
 
-function normalizeCurrentUser(value: unknown): CalendarData["currentUser"] {
-  if (!isRecord(value)) return undefined;
-
-  const id = toCalendarId(value.id);
-  const name = toStringValue(value.name);
-  const email = toStringValue(value.email);
-  if (id === undefined || !name || !email) return undefined;
-
-  return {
-    id,
-    name,
-    email,
-    role: toStringValue(value.role),
-    groupIds: Array.isArray(value.groupIds)
-      ? value.groupIds.map(Number).filter(Number.isInteger)
-      : [],
-  };
+function toDateString(date: CalendarDateInput) {
+  return date instanceof Date ? formatDateForQuery(date) : date;
 }
 
-function normalizeEvents(value: unknown, people: CalendarAssignee[]) {
-  if (!Array.isArray(value)) return [];
-  return value
-    .map((event) => normalizeEvent(event, people))
-    .filter((event): event is CalendarEventItem => event !== null);
-}
-
-function eventPayload(event: CreateCalendarEventValues | CalendarEventItem) {
+function eventBody(event: CreateCalendarEventValues | CalendarEventItem): BffCalendarEventBody {
   return {
-    title: typeof event.title === "string" ? event.title : String(event.title ?? ""),
-    description:
-      typeof event.description === "string"
-        ? event.description
-        : String(event.description ?? ""),
-    date: event.date instanceof Date ? event.date.toISOString().slice(0, 10) : event.date,
-    endDate:
-      event.endDate instanceof Date
-        ? event.endDate.toISOString().slice(0, 10)
-        : event.endDate || undefined,
-    category: event.category || undefined,
+    title: String(event.title ?? ""),
+    description: String(event.description ?? ""),
+    date: toDateString(event.date),
+    endDate: event.endDate ? toDateString(event.endDate) : undefined,
+    category: (event.category || undefined) as BffCalendarEventBody['category'],
     service: event.service,
     startTime: event.startTime,
     endTime: event.endTime,
     location: event.location,
     assigneeIds: event.assigneeIds ?? [],
-    recurrence: event.recurrence,
+    recurrence: event.recurrence && {
+      ...event.recurrence,
+      endsOn: event.recurrence.endsOn ? toDateString(event.recurrence.endsOn) : undefined,
+    },
   };
 }
 
-function queryString(params: Record<string, string>) {
-  return `?${new URLSearchParams(params).toString()}`;
-}
-
-async function loadBootstrap(params: CalendarLoadParams) {
-  return requestBff<CalendarBootstrap>(
-    `${BOOTSTRAP_ENDPOINT}${queryString({ from: params.from, to: params.to })}`,
-    { signal: params.signal },
-  );
-}
-
-async function loadEvents(params: CalendarLoadParams) {
-  return requestBff<components['schemas']['CalendarEvent'][]>(
-    `${EVENT_ENDPOINT}${queryString({ from: params.from, to: params.to })}`,
-    { signal: params.signal },
-  );
-}
-
-async function loadCollection(path: string, signal?: AbortSignal) {
-  return requestBff<unknown>(path, { signal });
+function eventPath(eventId: CalendarAssigneeId, suffix = "") {
+  return `${EVENT_ENDPOINT}/${encodeURIComponent(String(eventId))}${suffix}`;
 }
 
 export async function loadCalendarData(params: CalendarLoadParams): Promise<CalendarData> {
-  let response: unknown;
-
-  try {
-    response = await loadBootstrap(params);
-  } catch (error) {
-    if (!(error instanceof BffRequestError) || ![404, 405, 501].includes(error.status)) {
-      throw error;
-    }
-
-    const [events, assignees, categories, services] = await Promise.all([
-      loadEvents(params),
-      loadCollection("/calendar/assignees", params.signal),
-      loadCollection("/calendar/categories", params.signal),
-      loadCollection("/calendar/services", params.signal),
-    ]);
-    response = { events, assignees, categories, services };
-  }
-
-  const record = isRecord(response) ? response : {};
-  const people = normalizePeople(record.assignees);
+  const query = new URLSearchParams({ from: params.from, to: params.to });
+  const bootstrap = await requestBff<BffCalendarBootstrap>(`${BOOTSTRAP_ENDPOINT}?${query}`, { signal: params.signal });
 
   return {
-    events: normalizeEvents(record.events, people),
-    people,
-    categories: normalizeReferenceOptions(record.categories),
-    services: normalizeReferenceOptions(record.services),
-    currentUser: normalizeCurrentUser(record.currentUser),
-    assigneeScope:
-      record.assigneeScope === "all" ||
-      record.assigneeScope === "groups" ||
-      record.assigneeScope === "self"
-        ? record.assigneeScope
-        : undefined,
+    events: bootstrap.events.map((event) => toCalendarEventItem(event, bootstrap.assignees)),
+    people: bootstrap.assignees,
+    categories: bootstrap.categories,
+    services: bootstrap.services,
+    currentUser: bootstrap.currentUser,
+    assigneeScope: bootstrap.assigneeScope,
   };
 }
 
@@ -266,52 +97,38 @@ export async function createCalendarEvent(
   values: CreateCalendarEventValues,
   people: CalendarAssignee[],
 ) {
-  const response = await requestBff<unknown>(EVENT_ENDPOINT, {
+  const event = await requestBff<BffCalendarEvent>(EVENT_ENDPOINT, {
     method: "POST",
-    body: JSON.stringify(eventPayload(values)),
+    body: JSON.stringify(eventBody(values)),
   });
-  return normalizeEvent(response, people);
+  return toCalendarEventItem(event, people);
 }
 
 export async function updateCalendarEvent(
   event: CalendarEventItem,
   people: CalendarAssignee[],
 ) {
-  const response = await requestBff<unknown>(
-    `${EVENT_ENDPOINT}/${encodeURIComponent(String(event.id))}`,
-    {
-      method: "PATCH",
-      body: JSON.stringify(eventPayload(event)),
-    },
-  );
-
-  const normalizedEvent = normalizeEvent(response, people);
-  if (!normalizedEvent) {
-    throw new Error("La réponse du BFF ne contient pas l’événement modifié.");
-  }
-  return normalizedEvent;
+  const savedEvent = await requestBff<BffCalendarEvent>(eventPath(event.id), {
+    method: "PATCH",
+    body: JSON.stringify(eventBody(event)),
+  });
+  return toCalendarEventItem(savedEvent, people);
 }
 
 export async function deleteCalendarEvent(eventId: CalendarAssigneeId) {
-  await requestBff<void>(`${EVENT_ENDPOINT}/${encodeURIComponent(String(eventId))}`, {
-    method: "DELETE",
-  });
+  await requestBff<void>(eventPath(eventId), { method: "DELETE" });
 }
 
 export async function updateCalendarEventApproval(
   eventId: CalendarAssigneeId,
-  approvalStatus: "approved" | "rejected",
+  approvalStatus: Schemas['UpdateCalendarEventApprovalBody']['approvalStatus'],
   people: CalendarAssignee[],
 ) {
-  const response = await requestBff<unknown>(
-    `${EVENT_ENDPOINT}/${encodeURIComponent(String(eventId))}/approval`,
-    {
-      method: "PATCH",
-      body: JSON.stringify({ approvalStatus }),
-    },
-  );
-
-  return normalizeEvent(response, people);
+  const savedEvent = await requestBff<BffCalendarEvent>(eventPath(eventId, "/approval"), {
+    method: "PATCH",
+    body: JSON.stringify({ approvalStatus }),
+  });
+  return toCalendarEventItem(savedEvent, people);
 }
 
 export function formatCalendarApiError(error: unknown) {

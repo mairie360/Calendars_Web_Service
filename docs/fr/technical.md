@@ -14,7 +14,7 @@ flowchart LR
 
 La page assemble les composants calendrier avec `useCalendarPage`. Le hook charge le bootstrap, gère la période et les mutations; les routes de données gardent le préfixe `/calendar`. Le shell et la page profil utilisent séparément les adaptateurs de session.
 
-Le proxy générique lit le contrat OpenAPI versionné pour autoriser chemins et méthodes. Il conserve paramètres de requête, corps binaire, statuts et en-têtes utiles, filtre les en-têtes de transport, désactive le cache et n’effectue pas de suivi automatique des redirections. Son délai est de 15 secondes.
+Le proxy générique lit le contrat OpenAPI versionné pour autoriser chemins et méthodes. Il ne transmet qu’une liste d’en-têtes autorisés (`Accept`, `Accept-Language`, `Content-Type`, en-têtes conditionnels, `User-Agent`, `X-Request-Id`), ne relaie un corps que si l’opération en déclare un et dans un type de contenu déclaré (sinon 415), limite les corps à 1 Mio (413), conserve paramètres de requête, statuts et réponses du BFF, désactive le cache et n’effectue pas de suivi automatique des redirections. Son délai est de 15 secondes.
 
 ## Données et persistance
 
@@ -81,19 +81,19 @@ Dans un conteneur, `localhost` désigne le conteneur lui-même. Utiliser le nom 
 
 Inventaire extrait de `contracts/openapi.json`. Les paramètres entre accolades sont remplacés par des identifiants réels. Les types détaillés, champs requis, réponses et exemples éventuels sont définis dans ce contrat; les statuts du tableau sont ceux déclarés, sans prétendre lister toutes les erreurs de transport ou de validation.
 
-Ces chemins de données sont exposés à la même origine par le proxy; les pages Next.js sont distinctes. `/openapi.json` et `/swagger.json` sont également relayés. L’interface Swagger `/docs` se consulte directement sur le BFF.
+Ces chemins de données sont exposés à la même origine par le proxy; les pages Next.js sont distinctes. La documentation du BFF (`/openapi.json`, `/swagger.json`, `/docs`) n’est pas relayée.
 
-| Méthode | Chemin | Corps déclaré | Statuts déclarés |
+| Méthode | Chemin | Paramètres ou corps déclarés | Statuts déclarés |
 | --- | --- | --- | --- |
 | GET | `/health` | — | 200 |
 | GET | `/check_apis` | — | 200, 502 |
-| GET | `/calendar/bootstrap` | — | 200, 500 |
-| GET | `/calendar/events` | — | 200, 400, 500 |
-| POST | `/calendar/events` | application/json | 201, 400, 500 |
-| PATCH | `/calendar/events/{id}` | application/json | 200, 400, 404, 500 |
-| DELETE | `/calendar/events/{id}` | — | 204, 404, 500 |
-| PATCH | `/calendar/events/{id}/approval` | application/json | 200, 400, 404, 500 |
-| GET | `/calendar/assignees` | — | 200, 500 |
+| GET | `/calendar/bootstrap` | query `from`, `to` (optionnels) | 200, 400, 401, 500, 502 |
+| GET | `/calendar/events` | query `from`, `to` | 200, 400, 401, 500, 502 |
+| POST | `/calendar/events` | application/json | 201, 400, 401, 403, 500, 502 |
+| PATCH | `/calendar/events/{id}` | application/json | 200, 400, 401, 403, 404, 500, 502 |
+| DELETE | `/calendar/events/{id}` | — | 204, 400, 401, 403, 404, 500, 502 |
+| PATCH | `/calendar/events/{id}/approval` | application/json | 200, 400, 401, 403, 404, 500, 502 |
+| GET | `/calendar/assignees` | query `from`, `to` (optionnels) | 200, 400, 401, 500, 502 |
 | GET | `/calendar/categories` | — | 200, 500 |
 | GET | `/calendar/services` | — | 200, 500 |
 
@@ -113,7 +113,9 @@ Ces chemins de données sont exposés à la même origine par le proxy; les page
 
 ## Session, permissions et erreurs
 
-Les adaptateurs `/api/auth/me`, `/api/auth/session` et `/api/user/me` utilisent BFF User pour la session; `/api/auth/logout` relaie la déconnexion. Le proxy générique utilise le Bearer explicite ou, en son absence, le cookie `accessToken`. Les permissions métier restent celles du BFF et de ses sources.
+Les adaptateurs `/api/auth/me`, `/api/auth/session` et `/api/user/me` utilisent BFF User pour la session; `/api/auth/logout` relaie la déconnexion. Les deux proxies n’authentifient qu’avec le cookie HttpOnly `accessToken` posé par Login, converti en `Authorization: Bearer`; un en-tête `Authorization` envoyé par le navigateur est ignoré et aucun jeton n’est stocké dans `localStorage`. Les méthodes non sûres (POST, PUT, PATCH, DELETE) sont refusées en 403 lorsque `Sec-Fetch-Site` ne vaut pas `same-origin` ou, en son absence, lorsque `Origin` ne correspond pas à l’hôte servi (protection CSRF en plus de `SameSite=Strict`).
+
+Le front fait confiance au BFF: les droits (`canEdit`, `canDelete`, `canValidate`), les personnes assignables, la validation des données et les messages d’erreur viennent de BFF_Calendar et sont utilisés tels quels. Le middleware ne redirige pas les chemins de données déclarés dans le contrat: le BFF répond 401, puis le client se déconnecte via BFF User et recharge la page, que le middleware renvoie vers Login. Les manques côté BFF sont listés dans [BFF.md](../../BFF.md).
 
 Le proxy générique répond 400 pour un chemin invalide, 404 pour un chemin hors contrat, 405 pour une méthode interdite et 502 si le service est injoignable ou dépasse le délai. Les réponses amont sont conservées, y compris les corps vides 204/205/304.
 
@@ -131,7 +133,9 @@ npm run lint
 npm run build
 ```
 
-`contracts:sync` copie le contrat BFF et régénère `src/contracts/bff.d.ts`. `contracts:check` compare aussi le BFF voisin lorsqu’il est présent; dans un checkout isolé, il vérifie les types contre la copie locale versionnée. `test:contracts` exécute les tests Node du proxy.
+`contracts:sync` copie le contrat BFF et régénère `src/contracts/bff.d.ts`. `contracts:check` compare aussi le BFF voisin lorsqu’il est présent; dans un checkout isolé, il vérifie les types contre la copie locale versionnée. `test:contracts` exécute les tests Node sans couverture; `npm test` les exécute avec les seuils de couverture de 60 % (lignes, branches, fonctions).
+
+Les tests `tests/*.bff-mock.test.cjs` exécutent le vrai code client (`src/app/calendar/api.ts`, le hook `useCalendarPage`, `useAuthSession`) contre un serveur HTTP local qui route vers les vrais route handlers Next.js, lesquels relaient vers des BFF simulés localement. Le mock BFF_Calendar est piloté par `contracts/openapi.json`: chaque requête (chemin, méthode, paramètres de chemin et de query, query non déclarée, corps JSON) et chaque réponse simulée est validée contre le contrat, et tout écart fait échouer le test. Un garde remplace `fetch`: le code client ne peut appeler que sa propre origine et le serveur ne peut joindre que les BFF simulés. Le mock BFF User utilise `../../BFFs/BFF_user/contracts/openapi.json` (ou `BFF_USER_CONTRACT_DIR`) lorsque ce checkout existe; sinon il déclare seulement les trois opérations consommées, sans schéma de réponse. `tests/network-boundary.test.cjs` vérifie aussi statiquement que seuls `bff-client.ts`, `auth-session.ts`, `logout.ts` et `bff-proxy.ts` émettent des requêtes, qu’aucun identifiant lisible par JavaScript n’est utilisé, et que chaque endpoint du client calendrier est déclaré dans le contrat.
 
 Le générateur de types est fixé à `openapi-typescript@7.10.1` dans `scripts/contracts.mjs` et s’exécute via npm. Pour une modification uniquement documentaire, vérifier les liens, l’exactitude des deux langues et `git diff --check`; ne pas régénérer les contrats sans modification de leur source.
 
@@ -139,7 +143,7 @@ Le générateur de types est fixé à `openapi-typescript@7.10.1` dans `scripts/
 
 Le job `contracts.yml` utilise Node.js 22, `actions/checkout@v7` et `actions/setup-node@v7`. Il s’exécute sur push, pull request et lancement manuel; il installe avec `npm ci`, contrôle les contrats et lance les tests dédiés.
 
-`cicd.yml` appelle `mairie360/CICD/.github/workflows/frontend-cicd.yml@v2.0.0`, avec `cicd_version: v2.0.0` et `node_version: "23"`. Les étapes réutilisables et les environnements GitHub déterminent les contrôles, publications et déploiements effectifs.
+`cicd.yml` appelle `mairie360/CICD/.github/workflows/frontend-cicd.yml@v2.3.1`, avec `cicd_version: v2.3.1` et `node_version: "23"`. Les étapes réutilisables et les environnements GitHub déterminent les contrôles, publications et déploiements effectifs.
 
 Le Dockerfile utilise par défaut `NODE_VERSION=23.10.0` et le build Next.js `standalone`; la commande de l’image est `["node", "server.js"]`. Le port de l’image et les mappings Compose peuvent différer du port local proposé plus haut.
 
