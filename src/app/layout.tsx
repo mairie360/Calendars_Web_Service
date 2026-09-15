@@ -3,6 +3,10 @@ import "./globals.css";
 import "@mairie360/lib-components/dist/styles.css";
 import "./app-overrides.css";
 
+// Rendu à la demande obligatoire : une page prérendue au build ne porterait pas le
+// nonce CSP propre à chaque requête, et ses scripts seraient bloqués.
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Calendrier | Mairie360",
   description: "Module calendrier de Mairie360.",
