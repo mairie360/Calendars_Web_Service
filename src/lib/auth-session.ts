@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { logoutAndReload } from "./logout";
+
+export { logoutAndReload };
 
 export const APP_ROLES = [
   "Admin",
@@ -243,19 +246,4 @@ export function useAuthSession(initialUser: AuthSessionUser = EMPTY_SESSION_USER
   }, [initialUser]);
 
   return session;
-}
-
-export async function logoutAndReload() {
-  try {
-    await fetch("/api/auth/logout", {
-      method: "POST",
-      cache: "no-store",
-    });
-  } finally {
-    try {
-      window.localStorage.clear();
-    } finally {
-      window.location.reload();
-    }
-  }
 }

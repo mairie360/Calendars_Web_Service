@@ -1,14 +1,10 @@
 const assert = require('node:assert/strict');
 const { test } = require('node:test');
-const fs = require('node:fs');
-const ts = require('typescript');
 const { NextRequest } = require('next/server');
-const originalLoader = require.extensions['.ts'];
-require.extensions['.ts'] = (module, filename) => module._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020, esModuleInterop: true } }).outputText, filename);
-const { middleware } = require('../src/middleware.ts');
-const { buildContentSecurityPolicy } = require('../src/lib/content-security-policy.ts');
+const { loadTs } = require('./support/load-ts.cjs');
+const { middleware } = loadTs('middleware');
+const { buildContentSecurityPolicy } = loadTs('lib/content-security-policy');
 const nextConfig = require('../next.config.ts').default;
-require.extensions['.ts'] = originalLoader;
 
 const b64url = (value) => Buffer.from(JSON.stringify(value)).toString('base64url');
 const jwt = (exp) => `${b64url({ alg: 'HS256', typ: 'JWT' })}.${b64url({ sub: '2', exp })}.signature`;
@@ -36,6 +32,17 @@ test('missing or expired sessions are redirected to Login without a CSP', () => 
     assert.equal(response.headers.get('content-security-policy'), null);
     assert.match(response.headers.get('set-cookie'), /accessToken=;/);
   }
+});
+
+test('BFF data routes are left to the BFF: no Login redirect, no cookie cleared, even without a session', () => {
+  for (const [path, token] of [['/calendar/bootstrap', undefined], ['/calendar/events/12', jwt(1)], ['/health', undefined]]) {
+    const response = middleware(new NextRequest(`http://localhost:5002${path}`, token ? { headers: { cookie: `accessToken=${token}` } } : {}));
+    assert.equal(response.status, 200, path);
+    assert.equal(response.headers.get('x-middleware-next'), '1', path);
+    assert.equal(response.headers.get('set-cookie'), null, path);
+  }
+  // Un chemin hors contrat reste traité comme une page.
+  assert.equal(middleware(new NextRequest('http://localhost:5002/calendar/unknown')).status, 307);
 });
 
 test('development CSP allows eval for hot reload only', () => {
