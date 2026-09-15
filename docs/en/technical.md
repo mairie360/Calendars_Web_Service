@@ -14,7 +14,7 @@ flowchart LR
 
 The page combines calendar components with `useCalendarPage`. The hook loads bootstrap and manages the date range and mutations; data routes retain the `/calendar` prefix. The shell and profile page use separate session adapters.
 
-The generic proxy reads the versioned OpenAPI contract to allow paths and methods. It preserves query parameters, binary bodies, statuses and useful headers, filters transport headers, disables caching and does not automatically follow redirects. Its timeout is 15 seconds.
+The generic proxy reads the versioned OpenAPI contract to allow paths and methods. It forwards an allowlist of request headers (`Accept`, `Accept-Language`, `Content-Type`, conditional headers, `User-Agent`, `X-Request-Id`), forwards a body only when the operation declares one and in a declared content type (otherwise 415), limits bodies to 1 MiB (413), preserves query parameters, statuses and BFF responses, disables caching and does not automatically follow redirects. Its timeout is 15 seconds.
 
 ## Data and persistence
 
@@ -81,19 +81,19 @@ Inside a container, `localhost` refers to that container. Use the BFF service DN
 
 Inventory extracted from `contracts/openapi.json`. Replace brace parameters with real identifiers. Detailed types, required fields, responses and any examples are defined in that contract; table statuses are the declared statuses, not an exhaustive list of transport or validation errors.
 
-These data paths are exposed at the same origin through the proxy; Next.js pages are separate. `/openapi.json` and `/swagger.json` are also forwarded. Open the `/docs` Swagger UI directly on the BFF.
+These data paths are exposed at the same origin through the proxy; Next.js pages are separate. The BFF documentation (`/openapi.json`, `/swagger.json`, `/docs`) is not forwarded.
 
-| Method | Path | Declared body | Declared statuses |
+| Method | Path | Declared parameters or body | Declared statuses |
 | --- | --- | --- | --- |
 | GET | `/health` | — | 200 |
 | GET | `/check_apis` | — | 200, 502 |
-| GET | `/calendar/bootstrap` | — | 200, 500 |
-| GET | `/calendar/events` | — | 200, 400, 500 |
-| POST | `/calendar/events` | application/json | 201, 400, 500 |
-| PATCH | `/calendar/events/{id}` | application/json | 200, 400, 404, 500 |
-| DELETE | `/calendar/events/{id}` | — | 204, 404, 500 |
-| PATCH | `/calendar/events/{id}/approval` | application/json | 200, 400, 404, 500 |
-| GET | `/calendar/assignees` | — | 200, 500 |
+| GET | `/calendar/bootstrap` | `from`, `to` query (optional) | 200, 400, 401, 500, 502 |
+| GET | `/calendar/events` | `from`, `to` query | 200, 400, 401, 500, 502 |
+| POST | `/calendar/events` | application/json | 201, 400, 401, 403, 500, 502 |
+| PATCH | `/calendar/events/{id}` | application/json | 200, 400, 401, 403, 404, 500, 502 |
+| DELETE | `/calendar/events/{id}` | — | 204, 400, 401, 403, 404, 500, 502 |
+| PATCH | `/calendar/events/{id}/approval` | application/json | 200, 400, 401, 403, 404, 500, 502 |
+| GET | `/calendar/assignees` | `from`, `to` query (optional) | 200, 400, 401, 500, 502 |
 | GET | `/calendar/categories` | — | 200, 500 |
 | GET | `/calendar/services` | — | 200, 500 |
 
@@ -113,7 +113,9 @@ These data paths are exposed at the same origin through the proxy; Next.js pages
 
 ## Session, permissions and errors
 
-The `/api/auth/me`, `/api/auth/session` and `/api/user/me` adapters use BFF User for session access; `/api/auth/logout` forwards logout. The generic proxy uses an explicit Bearer header or, when absent, the `accessToken` cookie. Business permissions remain those of the BFF and its sources.
+The `/api/auth/me`, `/api/auth/session` and `/api/user/me` adapters use BFF User for session access; `/api/auth/logout` forwards logout. Both proxies authenticate only with the HttpOnly `accessToken` cookie set by Login, turned into `Authorization: Bearer`; an `Authorization` header sent by the browser is ignored and no token is stored in `localStorage`. Unsafe methods (POST, PUT, PATCH, DELETE) are refused with 403 when `Sec-Fetch-Site` is not `same-origin`, or, without it, when `Origin` does not match the served host (CSRF protection on top of `SameSite=Strict`).
+
+The front trusts the BFF: permissions (`canEdit`, `canDelete`, `canValidate`), assignable people, payload validation and error messages come from BFF_Calendar and are used as returned. The middleware does not redirect data paths declared in the contract: the BFF answers 401, and the client then logs out through BFF User and reloads the page, which the middleware sends to Login. BFF-side gaps are listed in [BFF.md](../../BFF.md).
 
 The generic proxy returns 400 for an invalid path, 404 for a path outside the contract, 405 for a disallowed method and 502 when the service is unreachable or times out. Upstream responses are preserved, including empty 204/205/304 bodies.
 
@@ -131,7 +133,9 @@ npm run lint
 npm run build
 ```
 
-`contracts:sync` copies the BFF contract and regenerates `src/contracts/bff.d.ts`. `contracts:check` also compares a neighboring BFF when present; in an isolated checkout, it checks types against the local committed snapshot. `test:contracts` runs the Node proxy tests.
+`contracts:sync` copies the BFF contract and regenerates `src/contracts/bff.d.ts`. `contracts:check` also compares a neighboring BFF when present; in an isolated checkout, it checks types against the local committed snapshot. `test:contracts` runs the Node tests without coverage; `npm test` runs them with the 60% line, branch and function coverage thresholds.
+
+The `tests/*.bff-mock.test.cjs` tests run the real client code (`src/app/calendar/api.ts`, the `useCalendarPage` hook, `useAuthSession`) against a local HTTP server that routes to the real Next.js route handlers, which forward to local BFF mocks. The BFF_Calendar mock is driven by `contracts/openapi.json`: every request (path, method, path and query parameters, undeclared query, JSON body) and every mocked response is validated against the contract, and any deviation fails the test. A guard replaces `fetch`: client code may only call its own origin and the server may only reach the mocked BFFs. The BFF User mock uses `../../BFFs/BFF_user/contracts/openapi.json` (or `BFF_USER_CONTRACT_DIR`) when that checkout exists; otherwise it only declares the three consumed operations, without response schemas. `tests/network-boundary.test.cjs` also checks statically that only `bff-client.ts`, `auth-session.ts`, `logout.ts` and `bff-proxy.ts` emit requests, that no JavaScript-readable credential is used, and that every endpoint used by the calendar client is declared in the contract.
 
 The type generator is pinned to `openapi-typescript@7.10.1` in `scripts/contracts.mjs` and runs through npm. For documentation-only changes, check links, accuracy in both languages and `git diff --check`; do not regenerate contracts without changing their source.
 
@@ -139,7 +143,7 @@ The type generator is pinned to `openapi-typescript@7.10.1` in `scripts/contract
 
 The `contracts.yml` job uses Node.js 22, `actions/checkout@v7` and `actions/setup-node@v7`. It runs on pushes, pull requests and manual dispatch; it installs with `npm ci`, checks contracts and runs the associated tests.
 
-`cicd.yml` calls `mairie360/CICD/.github/workflows/frontend-cicd.yml@v2.0.0`, with `cicd_version: v2.0.0` and `node_version: "23"`. Reusable steps and GitHub environments determine actual checks, publications and deployments.
+`cicd.yml` calls `mairie360/CICD/.github/workflows/frontend-cicd.yml@v2.3.1`, with `cicd_version: v2.3.1` and `node_version: "23"`. Reusable steps and GitHub environments determine actual checks, publications and deployments.
 
 The Dockerfile defaults to `NODE_VERSION=23.10.0` and the Next.js `standalone` build; the image command is `["node", "server.js"]`. Image ports and Compose mappings can differ from the local port suggested above.
 
