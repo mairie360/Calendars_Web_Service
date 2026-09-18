@@ -14,6 +14,7 @@ const COMPILER_OPTIONS = {
   resolveJsonModule: true,
   inlineSourceMap: true,
   inlineSources: true,
+  jsx: ts.JsxEmit.ReactJSX,
 };
 
 function compile(module, filename) {
@@ -26,16 +27,19 @@ function install() {
   if (installed) return;
   installed = true;
   require.extensions['.ts'] = compile;
+  require.extensions['.tsx'] = compile;
   const resolveFilename = Module._resolveFilename;
   Module._resolveFilename = function resolveAlias(request, ...rest) {
     return resolveFilename.call(this, request.startsWith('@/') ? path.join(SRC, request.slice(2)) : request, ...rest);
   };
 }
 
-/** `loadTs('lib/bff-client')` charge `src/lib/bff-client.ts`. */
+/** `loadTs('lib/bff-client')` charge `src/lib/bff-client.ts` (ou `.tsx` si seul ce fichier existe). */
 function loadTs(relativePath) {
   install();
-  return require(path.join(SRC, relativePath.endsWith('.ts') ? relativePath : `${relativePath}.ts`));
+  if (/\.tsx?$/.test(relativePath)) return require(path.join(SRC, relativePath));
+  const ts = path.join(SRC, `${relativePath}.ts`);
+  return require(fs.existsSync(ts) ? ts : path.join(SRC, `${relativePath}.tsx`));
 }
 
 /** Remplace un paquet (ex. `react`) par une implémentation de test pour tous les modules chargés ensuite. */
