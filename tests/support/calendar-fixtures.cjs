@@ -5,11 +5,20 @@ const alice = { id: 'user-7', name: 'Alice Martin', email: 'alice@mairie.test', 
 const marie = { id: 'user-3', name: 'Marie Responsable', email: 'marie@mairie.test', role: 'Responsable' };
 const admin = { id: 'user-1', name: 'Admin Mairie', email: 'admin@mairie.test', role: 'Admin' };
 
+// Aligned with src/app/calendar/constants.ts `initialDate` (also `new Date()`), so fixture events
+// always fall on "today" and stay inside the visible month / upcoming-events window regardless of
+// when the suite runs — see CLAUDE.md "Tests that depend on 'today'".
+function todayYmd() {
+  const now = new Date();
+  const pad = (value) => String(value).padStart(2, '0');
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+}
+
 function calendarEvent(id, overrides = {}) {
   return {
     id,
     title: `Événement ${id}`,
-    date: '2026-09-16',
+    date: todayYmd(),
     category: 'meeting',
     service: 'direction',
     startTime: '09:00',
