@@ -74,6 +74,21 @@ services:
     networks:
       - backend
 
+  seeder:
+    image: postgres:18-alpine
+    container_name: mairie360-seeder-calendar-front
+    depends_on:
+      liquibase:
+        condition: service_completed_successfully
+    volumes:
+      - ./init-test.sql:/init-test.sql:ro
+    environment:
+      PGPASSWORD: ${DB_PASSWORD:-password}
+    command: >
+      sh -c "psql -h postgres -U ${DB_USER:-postgres} -d mairie_360_database -f /init-test.sql"
+    networks:
+      - backend
+
   redis:
     image: redis:8.4.0-bookworm
     container_name: mairie360-redis-calendar-front #change front name
@@ -90,35 +105,49 @@ services:
       timeout: 5s
       retries: 5
 
-  # core:
-  #   container_name: core-calendar-front-developpement
-  #   image: ghcr.io/mairie360/core-api:dev-1644fa7
-  #   ports:
-  #     - "3000:3000"
-  #   networks:
-  #     - backend
-  #   dns:
-  #     - 8.8.8.8
-  #     - 1.1.1.1
-  #   environment:
-  #     HOST: "0.0.0.0"
-  #     PORT: 3000
-  #     REDIS_URL: redis://redis:6379
-  #     DB_TYPE: postgres
-  #     DB_NAME: mairie_360_database
-  #     DB_USER: postgres
-  #     DB_HOST: postgres
-  #     DB_PASSWORD: password
-  #     DB_PORT: 5432
-  #     PUBLIC_URL: http://core.development.mairie360.fr
-  #     JWT_SECRET: b"secret"
-  #     JWT_TIMEOUT: 3600
-  #   depends_on:
-  #     liquibase:
-  #       condition: service_completed_successfully
-  #     redis:
-  #       condition: service_healthy
-      
+  core:
+    container_name: core-calendar-front-developpement
+    image: ghcr.io/mairie360/core-api:dev-latest
+    ports:
+      - "3000:3000"
+    networks:
+      - backend
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    environment:
+      HOST: "0.0.0.0"
+      PORT: 3000
+      REDIS_URL: redis://redis:6379
+      DB_TYPE: postgres
+      DB_NAME: mairie_360_database
+      DB_USER: postgres
+      DB_HOST: postgres
+      DB_PASSWORD: password
+      DB_PORT: 5432
+      PUBLIC_URL: http://core.development.mairie360.fr
+      JWT_SECRET: b"secret"
+      JWT_TIMEOUT: 3600
+    depends_on:
+      liquibase:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    # L'image publiée est "distroless" (ni shell ni curl) : la disponibilité est
+    # sondée depuis le conteneur core-ready ci-dessous.
+
+  core-ready:
+    image: curlimages/curl:latest
+    container_name: core-calendar-front-ready
+    depends_on:
+      core:
+        condition: service_started
+    command: >
+      sh -c 'until curl -fsS http://core:3000/health >/dev/null; do
+      echo "waiting for core..."; sleep 2; done; echo "core ready"'
+    networks:
+      - backend
+
   calendar-api:
     container_name: calendar-api-front-calendar-developpement
     image: ghcr.io/mairie360/calendar-api:dev-latest
@@ -147,8 +176,51 @@ services:
         condition: service_completed_successfully
       redis:
         condition: service_healthy
-  
-  #add other apis if needed
+    # L'image publiée est "distroless" (ni shell ni curl) : la disponibilité est
+    # sondée depuis le conteneur calendar-api-ready ci-dessous.
+
+  calendar-api-ready:
+    image: curlimages/curl:latest
+    container_name: calendar-api-front-calendar-ready
+    depends_on:
+      calendar-api:
+        condition: service_started
+    command: >
+      sh -c 'until curl -fsS http://calendar-api:3002/health >/dev/null; do
+      echo "waiting for calendar-api..."; sleep 2; done; echo "calendar-api ready"'
+    networks:
+      - backend
+
+  bff-user:
+    container_name: bff-user-calendar-front
+    image: ghcr.io/mairie360/bff-user:dev-latest
+    ports:
+      - "4000:4000"
+    networks:
+      - backend
+      - frontend
+    depends_on:
+      seeder:
+        condition: service_completed_successfully
+      core-ready:
+        condition: service_completed_successfully
+    environment:
+      DB_TYPE: postgres
+      DB_NAME: mairie_360_database
+      DB_USER: postgres
+      DB_HOST: postgres
+      DB_PASSWORD: password
+      DB_PORT: 5432
+      HOST: "0.0.0.0"
+      PORT: 4000
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: 'b"secret"'
+      CORE_API_URL: http://core:3000
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
   bff-calendar:
     container_name: bff-calendar-calendar-front
@@ -158,10 +230,17 @@ services:
     networks:
       - backend
       - frontend
+    depends_on:
+      seeder:
+        condition: service_completed_successfully
+      core-ready:
+        condition: service_completed_successfully
+      calendar-api-ready:
+        condition: service_completed_successfully
     environment:
-      CORE_API_URL: "core" 
+      CORE_API_URL: "core"
       CORE_API_PORT: 3000
-      CALENDAR_API_URL: "calendar-api" 
+      CALENDAR_API_URL: "calendar-api"
       CALENDAR_API_PORT: 3002
       PORT: 4002
     healthcheck:
@@ -169,7 +248,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
-  
+
   calendar-front: # Ton application React
     container_name: calendar-front-developpement
     build:
@@ -192,16 +271,22 @@ services:
       <<: *common-env
       PORT: 3000
       BFF_CALENDAR_BASE_URL: http://bff-calendar:4002
+      USER_BFF_URL: http://bff-user:4000
       # Force React/Vite à surveiller les fichiers correctement dans Docker
-      WATCHPACK_POLLING: "true" 
+      WATCHPACK_POLLING: "true"
       CHOKIDAR_USEPOLLING: "true"
+    depends_on:
+      bff-user:
+        condition: service_healthy
+      bff-calendar:
+        condition: service_healthy
     networks:
       - frontend
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000"]
       interval: 10s
       retries: 3
-        
+
 secrets:
   NODE_AUTH_TOKEN:
     environment: NODE_AUTH_TOKEN
