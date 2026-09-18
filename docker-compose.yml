@@ -242,6 +242,10 @@ services:
       CORE_API_PORT: 3000
       CALENDAR_API_URL: "calendar-api"
       CALENDAR_API_PORT: 3002
+      # Racine du service : le client Orval (@mairie360/calendar-api-openapi) préfixe
+      # déjà ses routes par /api/v1, un CALENDAR_API_BASE_PATH se terminant par /api
+      # produit un /api/api/v1/... qui 404 (calendarClient.ts, BFF_Calendar).
+      CALENDAR_API_BASE_PATH: http://calendar-api:3002
       PORT: 4002
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:4002/health"]
