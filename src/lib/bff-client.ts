@@ -1,4 +1,4 @@
-import { getStoredAuthorizationHeader } from "./auth-token";
+import { logoutAndReload } from "./logout";
 
 export class BffRequestError extends Error {
   constructor(
@@ -9,28 +9,6 @@ export class BffRequestError extends Error {
     super(message);
     this.name = "BffRequestError";
   }
-}
-
-function createRequestHeaders(init: RequestInit) {
-  const headers = new Headers(init.headers);
-
-  if (!headers.has("Accept")) {
-    headers.set("Accept", "application/json");
-  }
-
-  if (init.body && !headers.has("Content-Type")) {
-    headers.set("Content-Type", "application/json");
-  }
-
-  if (!headers.has("Authorization")) {
-    const authorizationHeader = getStoredAuthorizationHeader();
-
-    if (authorizationHeader) {
-      headers.set("Authorization", authorizationHeader);
-    }
-  }
-
-  return headers;
 }
 
 async function readResponseBody(response: Response) {
@@ -45,6 +23,7 @@ async function readResponseBody(response: Response) {
   }
 }
 
+// Erreurs du BFF (`ApiError` : { code, message }) ou du proxy du front ({ error: { message } }).
 function getErrorMessage(status: number, body: unknown) {
   if (body && typeof body === "object") {
     const record = body as Record<string, unknown>;
@@ -62,15 +41,25 @@ function getErrorMessage(status: number, body: unknown) {
   return `Erreur BFF (${status})`;
 }
 
+/**
+ * Appel same-origin vers le proxy du front. L'authentification repose uniquement sur le cookie HttpOnly
+ * `accessToken`, que le proxy convertit en Bearer ; le corps de réponse est celui déclaré par le contrat du BFF.
+ */
 export async function requestBff<T>(path: string, init: RequestInit = {}) {
+  const headers = new Headers(init.headers);
+  headers.set("Accept", "application/json");
+  if (init.body !== undefined) headers.set("Content-Type", "application/json");
+
   const response = await fetch(path, {
     ...init,
-    headers: createRequestHeaders(init),
+    headers,
     cache: "no-store",
+    credentials: "same-origin",
   });
 
   if (!response.ok) {
     const body = await readResponseBody(response);
+    if (response.status === 401) void logoutAndReload();
     throw new BffRequestError(response.status, getErrorMessage(response.status, body), body);
   }
 

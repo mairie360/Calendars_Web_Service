@@ -7,7 +7,7 @@ import {
   updateCalendarEvent,
   updateCalendarEventApproval,
 } from "./api";
-import { getEventColor, initialDate } from "./constants";
+import { initialDate } from "./constants";
 import {
   buildCreateInitialValues,
   formatDateForQuery,
@@ -125,16 +125,7 @@ export function useCalendarPage() {
     try {
       const createdEvent = await createCalendarEvent(values, people);
 
-      if (!createdEvent) {
-        throw new Error("La réponse du BFF ne contient pas l’événement créé.");
-      }
-
-      const enrichedEvent = {
-        ...createdEvent,
-        colorClassName: getEventColor(createdEvent.category),
-      } satisfies CalendarEventItem;
-
-      setEvents((currentEvents) => [...currentEvents, enrichedEvent]);
+      setEvents((currentEvents) => [...currentEvents, createdEvent]);
       setCreateModalOpen(false);
       setSelectedDate(parseDateInput(createdEvent.date));
       setCurrentDate(parseDateInput(createdEvent.date));
@@ -163,11 +154,7 @@ export function useCalendarPage() {
       setEvents((currentEvents) =>
         currentEvents.map((event) =>
           String(event.id) === String(savedEvent.id)
-            ? {
-                ...event,
-                ...savedEvent,
-                colorClassName: getEventColor(savedEvent.category),
-              }
+            ? { ...event, ...savedEvent }
             : event,
         ),
       );
@@ -202,6 +189,7 @@ export function useCalendarPage() {
     eventToValidate: CalendarEventItem,
     approvalStatus: "approved" | "rejected",
   ) => {
+    // Simple garde d'affichage : le BFF reste seul juge du droit de valider (403 sinon).
     if (saving || !eventToValidate.canValidate) return;
 
     setSaving(true);
@@ -213,10 +201,6 @@ export function useCalendarPage() {
         approvalStatus,
         people,
       );
-
-      if (!savedEvent) {
-        throw new Error("La réponse du BFF ne contient pas l’événement validé.");
-      }
 
       setEvents((currentEvents) =>
         currentEvents.map((event) =>
