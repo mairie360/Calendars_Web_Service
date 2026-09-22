@@ -1,3 +1,4 @@
+import { frontUrl } from "@/lib/front-urls";
 import type { LucideIcon } from "lucide-react";
 import {
   Briefcase,
@@ -22,20 +23,20 @@ type AppSidebarItem = {
 };
 
 export const appSidebarItems: AppSidebarItem[] = [
-  { id: "dashboard", label: "Tableau de bord", icon: LayoutDashboard, href: process.env.LOGIN_FRONT_URL },
-  { id: "projects", label: "Projets", icon: Briefcase, href: process.env.PROJECT_FRONT_URL },
-  { id: "messages", label: "Messagerie", icon: MessageSquare, href: process.env.MESSAGE_FRONT_URL },
-  { id: "emails", label: "E-mails", icon: Mail, href: process.env.EMAIL_FRONT_URL },
-  { id: "files", label: "Fichiers", icon: Files, href: process.env.FILES_FRONT_URL },
-  { id: "training", label: "Formation", icon: GraduationCap, href: process.env.ELEARNING_FRONT_URL },
-  { id: "calendar", label: "Calendrier", icon: CalendarDays, href: process.env.CALENDAR_FRONT_URL },
+  { id: "dashboard", label: "Tableau de bord", icon: LayoutDashboard, get href() { return frontUrl("LOGIN_FRONT_URL"); } },
+  { id: "projects", label: "Projets", icon: Briefcase, get href() { return frontUrl("PROJECT_FRONT_URL"); } },
+  { id: "messages", label: "Messagerie", icon: MessageSquare, get href() { return frontUrl("MESSAGE_FRONT_URL"); } },
+  { id: "emails", label: "E-mails", icon: Mail, get href() { return frontUrl("EMAIL_FRONT_URL"); } },
+  { id: "files", label: "Fichiers", icon: Files, get href() { return frontUrl("FILES_FRONT_URL"); } },
+  { id: "training", label: "Formation", icon: GraduationCap, get href() { return frontUrl("ELEARNING_FRONT_URL"); } },
+  { id: "calendar", label: "Calendrier", icon: CalendarDays, get href() { return frontUrl("CALENDAR_FRONT_URL"); } },
   {
     id: "admin",
     label: "Administration",
     icon: Shield,
     adminOnly: true,
     badge: "Admin",
-    href: process.env.ADMINISTRATION_FRONT_URL,
+    get href() { return frontUrl("ADMINISTRATION_FRONT_URL"); },
   },
   { id: "profile", label: "Profil", icon: UserRound, href: "/profile" },
   { id: "settings", label: "Paramètres", icon: Settings },
