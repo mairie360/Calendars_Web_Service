@@ -39,7 +39,7 @@ export const appSidebarItems: AppSidebarItem[] = [
     get href() { return frontUrl("ADMINISTRATION_FRONT_URL"); },
   },
   { id: "profile", label: "Profil", icon: UserRound, href: "/profile" },
-  { id: "settings", label: "Paramètres", icon: Settings },
+  { id: "settings", label: "Paramètres", icon: Settings, get href() { return frontUrl("SETTINGS_FRONT_URL"); } },
 ];
 
 export function getNavigationHref(page: string) {
