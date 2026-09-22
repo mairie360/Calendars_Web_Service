@@ -23,7 +23,7 @@ type AppSidebarItem = {
 };
 
 export const appSidebarItems: AppSidebarItem[] = [
-  { id: "dashboard", label: "Tableau de bord", icon: LayoutDashboard, get href() { return frontUrl("LOGIN_FRONT_URL"); } },
+  { id: "dashboard", label: "Tableau de bord", icon: LayoutDashboard, get href() { return frontUrl("DASHBOARD_FRONT_URL"); } },
   { id: "projects", label: "Projets", icon: Briefcase, get href() { return frontUrl("PROJECT_FRONT_URL"); } },
   { id: "messages", label: "Messagerie", icon: MessageSquare, get href() { return frontUrl("MESSAGE_FRONT_URL"); } },
   { id: "emails", label: "E-mails", icon: Mail, get href() { return frontUrl("EMAIL_FRONT_URL"); } },
