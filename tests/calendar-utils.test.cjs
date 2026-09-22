@@ -8,8 +8,8 @@ const { installWindow } = require('./support/calendar-fixtures.cjs');
 const dates = loadTs('app/calendar/date-utils');
 const { buildStats, eventOccursOnDate } = loadTs('app/calendar/stats');
 const { getEventColor, resolveAssignees } = loadTs('app/calendar/constants');
-// next.config.ts injecte les URL des autres fronts au build ; on en fixe une pour le test.
-process.env.PROJECT_FRONT_URL = 'https://projects.mairie.test/';
+// The root layout reads the other fronts' URLs at runtime and hands them to the browser; one is set for the test.
+const { setBrowserFrontUrls } = loadTs('lib/front-urls');
 const navigation = loadTs('app/navigation');
 
 const ymd = (date) => dates.formatDateForQuery(date);
@@ -106,6 +106,7 @@ test('event colours and assignee resolution', () => {
 
 test('navigation opens other fronts in the browser and module pages with the router', () => {
   const window = installWindow();
+  setBrowserFrontUrls({ PROJECT_FRONT_URL: 'https://projects.mairie.test/' });
   const pushed = [];
   try {
     navigation.navigateToPage('profile', (href) => pushed.push(href));

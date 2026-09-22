@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { readFrontUrlsFromEnv } from "@/lib/front-urls";
+import { FrontUrlsProvider } from "@/lib/front-urls-provider";
 import "./globals.css";
 import "@mairie360/lib-components/dist/styles.css";
 import "./app-overrides.css";
@@ -23,7 +25,7 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="Mairie360" />
       </head>
       <body>
-        <main>{children}</main>
+        <main><FrontUrlsProvider urls={readFrontUrlsFromEnv()}>{children}</FrontUrlsProvider></main>
       </body>
     </html>
   );
