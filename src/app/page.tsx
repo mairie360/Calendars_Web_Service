@@ -11,6 +11,7 @@ import {
 } from "@mairie360/lib-components";
 import { RefreshCw } from "lucide-react";
 import { AppShell } from "./_components/app-shell";
+import { prepareUpcomingScrollRegion } from "./calendar/_components/upcoming-scroll-region";
 import { CreateEventModal, EventDetailsModal } from "./calendar/_components/validated-event-modals";
 import { useCalendarPage } from "./calendar/use-calendar-page";
 
@@ -27,7 +28,7 @@ export default function Page() {
         onAction={() => calendar.openCreateModal()}
       />
 
-      <div className="mt-7 grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_350px]">
+      <div className="calendar-board mt-7 grid items-start gap-6" ref={prepareUpcomingScrollRegion}>
         <Card className="min-h-[620px] overflow-hidden rounded-lg">
           <div className="px-6 pb-8 pt-6">
             {calendar.loading || calendar.saving || calendar.error ? (
@@ -60,9 +61,10 @@ export default function Page() {
               onViewChange={calendar.setView}
             />
 
-            <div className="mt-9 overflow-x-auto">
+            <div className="calendar-grid-viewport mt-9">
               {calendar.view === "month" && (
                 <MonthGrid
+                  className="calendar-month-grid"
                   currentDate={calendar.currentDate}
                   selectedDate={calendar.selectedDate}
                   events={calendar.events}
@@ -73,6 +75,7 @@ export default function Page() {
 
               {calendar.view === "week" && (
                 <WeekGrid
+                  className="calendar-week-grid"
                   currentDate={calendar.currentDate}
                   selectedDate={calendar.selectedDate}
                   events={calendar.events}
@@ -95,6 +98,7 @@ export default function Page() {
         </Card>
 
         <CalendarSidebar
+          className="calendar-sidebar"
           events={calendar.events}
           currentDate={calendar.selectedDate}
           stats={calendar.stats}
