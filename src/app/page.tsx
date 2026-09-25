@@ -13,6 +13,7 @@ import {
 } from "@mairie360/lib-components";
 import { RefreshCw } from "lucide-react";
 import { AppShell } from "./_components/app-shell";
+import { prepareUpcomingScrollRegion } from "./calendar/_components/upcoming-scroll-region";
 import { useCalendarPage } from "./calendar/use-calendar-page";
 
 export default function Page() {
@@ -28,7 +29,7 @@ export default function Page() {
         onAction={() => calendar.openCreateModal()}
       />
 
-      <div className="calendar-board mt-7 grid items-start gap-6">
+      <div className="calendar-board mt-7 grid items-start gap-6" ref={prepareUpcomingScrollRegion}>
         <Card className="min-h-[620px] overflow-hidden rounded-lg">
           <div className="px-6 pb-8 pt-6">
             {calendar.loading || calendar.saving || calendar.error ? (

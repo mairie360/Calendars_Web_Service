@@ -23,6 +23,7 @@ test('upcoming events stay compact and long lists scroll inside the card', () =>
   assert.match(declarations('.calendar-sidebar'), /grid-template-columns: minmax\(0, 1fr\);/);
   assert.match(declarations('.calendar-sidebar > section:first-child'), /max-height: min\(35rem, calc\(100dvh - 8rem\)\);/);
   assert.match(declarations('.calendar-sidebar > section:first-child > div'), /overflow-y: auto;/);
+  assert.match(declarations('.calendar-sidebar > section:first-child > div:focus-visible'), /outline: 2px solid #1256a6;/);
   assert.match(css, /@media \(min-width: 48rem\) and \(max-width: 106\.249rem\)/);
   assert.match(css, /@media \(min-width: 106\.25rem\)[\s\S]*?\.calendar-board\s*\{[^}]*grid-template-columns: minmax\(0, 1fr\) 19\.375rem;/);
 });
