@@ -14,6 +14,8 @@ flowchart LR
 
 The page combines calendar components with `useCalendarPage`. The hook loads bootstrap and manages the date range and mutations; data routes retain the `/calendar` prefix. The shell and profile page use separate session adapters.
 
+On first mount, the hook reads optional `date` (`YYYY-MM-DD`) and `event` (ID) query parameters. A valid date selects its month before the first `/calendar/bootstrap` request, avoiding an unnecessary request for the current month. After a successful bootstrap, a matching event opens in the existing details modal. An invalid date falls back to the current month; a missing event leaves the selected date visible without opening a modal. The link does not grant access beyond what the BFF returns.
+
 The generic proxy reads the versioned OpenAPI contract to allow paths and methods. It forwards an allowlist of request headers (`Accept`, `Accept-Language`, `Content-Type`, conditional headers, `User-Agent`, `X-Request-Id`), forwards a body only when the operation declares one and in a declared content type (otherwise 415), limits bodies to 1 MiB (413), preserves query parameters, statuses and BFF responses, disables caching and does not automatically follow redirects. Its timeout is 15 seconds.
 
 ## Data and persistence

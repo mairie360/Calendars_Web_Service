@@ -26,6 +26,13 @@ import type {
   CreateCalendarEventValues,
 } from "./types";
 
+function calendarDateFromLink(value: string | null): Date | null {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+
+  const date = parseDateInput(value);
+  return formatDateForQuery(date) === value ? date : null;
+}
+
 export function useCalendarPage() {
   const [view, setView] = useState<CalendarViewMode>("month");
   const [currentDate, setCurrentDate] = useState<Date>(initialDate);
@@ -42,6 +49,10 @@ export function useCalendarPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [link, setLink] = useState<{ ready: boolean; eventId: string | null }>({
+    ready: false,
+    eventId: null,
+  });
 
   const stats = useMemo(() => buildStats(events, selectedDate), [events, selectedDate]);
   const periodTitle = useMemo(() => getPeriodTitle(view, currentDate), [currentDate, view]);
@@ -51,6 +62,18 @@ export function useCalendarPage() {
   );
   const rangeFrom = useMemo(() => formatDateForQuery(periodRange.from), [periodRange.from]);
   const rangeTo = useMemo(() => formatDateForQuery(periodRange.to), [periodRange.to]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(
+      typeof window === "undefined" ? "" : window.location.search,
+    );
+    const linkedDate = calendarDateFromLink(params.get("date"));
+    if (linkedDate) {
+      setCurrentDate(linkedDate);
+      setSelectedDate(linkedDate);
+    }
+    setLink({ ready: true, eventId: linkedDate ? params.get("event") || null : null });
+  }, []);
 
   const loadData = useCallback(
     async (signal?: AbortSignal) => {
@@ -87,11 +110,21 @@ export function useCalendarPage() {
   );
 
   useEffect(() => {
+    if (!link.ready) return;
+
     const controller = new AbortController();
     void loadData(controller.signal);
 
     return () => controller.abort();
-  }, [loadData]);
+  }, [link.ready, loadData]);
+
+  useEffect(() => {
+    if (loading || error || !link.eventId) return;
+
+    const linkedEvent = events.find((event) => String(event.id) === link.eventId);
+    if (linkedEvent) setSelectedEvent(linkedEvent);
+    setLink({ ready: true, eventId: null });
+  }, [error, events, link.eventId, loading]);
 
   const handlePrevious = () => {
     setCurrentDate((date) => getPreviousPeriod(date, view));

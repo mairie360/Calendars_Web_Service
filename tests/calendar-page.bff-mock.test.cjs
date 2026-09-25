@@ -53,6 +53,52 @@ test('the first render loads the visible month through GET /calendar/bootstrap o
   assert.match(state.periodTitle, /\d{4}$/);
 });
 
+test('a dashboard link loads the linked month and opens its event after bootstrap', async () => {
+  const linkedDate = new Date(initialDate.getFullYear(), initialDate.getMonth() + 2, 4);
+  const date = formatDateForQuery(linkedDate);
+  const window = installWindow();
+  window.location.search = `?date=${date}&event=42`;
+  try {
+    await renderLoadedPage(bootstrap({ events: [calendarEvent(42, { date })] }));
+    const state = await page.waitFor((current) => current.selectedEvent?.id === 42);
+
+    assert.equal(formatDateForQuery(state.currentDate), date);
+    assert.equal(formatDateForQuery(state.selectedDate), date);
+    assert.equal(state.selectedEvent.title, 'Événement 42');
+    assert.deepEqual(front.calendarBff.sequence(), [`GET /calendar/bootstrap?${rangeQuery('month', linkedDate)}`]);
+  } finally {
+    delete global.window;
+  }
+});
+
+test('a valid linked date still navigates when the event is absent', async () => {
+  const linkedDate = new Date(initialDate.getFullYear(), initialDate.getMonth() + 1, 7);
+  const date = formatDateForQuery(linkedDate);
+  const window = installWindow();
+  window.location.search = `?date=${date}&event=missing`;
+  try {
+    const state = await renderLoadedPage(bootstrap({ events: [] }));
+    assert.equal(formatDateForQuery(state.selectedDate), date);
+    assert.equal(state.selectedEvent, null);
+    assert.deepEqual(front.calendarBff.sequence(), [`GET /calendar/bootstrap?${rangeQuery('month', linkedDate)}`]);
+  } finally {
+    delete global.window;
+  }
+});
+
+test('an invalid linked date falls back to the current month without opening an event', async () => {
+  const window = installWindow();
+  window.location.search = '?date=2026-02-31&event=5';
+  try {
+    const state = await renderLoadedPage();
+    assert.equal(formatDateForQuery(state.selectedDate), formatDateForQuery(initialDate));
+    assert.equal(state.selectedEvent, null);
+    assert.deepEqual(front.calendarBff.sequence(), [`GET /calendar/bootstrap?${rangeQuery('month', initialDate)}`]);
+  } finally {
+    delete global.window;
+  }
+});
+
 test('changing view or period reloads bootstrap with the new range', async () => {
   await renderLoadedPage();
 
