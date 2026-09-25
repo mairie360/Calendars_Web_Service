@@ -4,9 +4,7 @@ import {
   CalendarSidebar,
   CalendarToolbar,
   Card,
-  CreateEventModal,
   DaySchedule,
-  EventDetailsModal,
   MonthGrid,
   PageTitleBar,
   WeekGrid,
@@ -14,6 +12,7 @@ import {
 import { RefreshCw } from "lucide-react";
 import { AppShell } from "./_components/app-shell";
 import { prepareUpcomingScrollRegion } from "./calendar/_components/upcoming-scroll-region";
+import { CreateEventModal, EventDetailsModal } from "./calendar/_components/validated-event-modals";
 import { useCalendarPage } from "./calendar/use-calendar-page";
 
 export default function Page() {
