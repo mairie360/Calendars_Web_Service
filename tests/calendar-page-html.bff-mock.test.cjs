@@ -118,6 +118,23 @@ test('changing the view re-renders the week grid with the reloaded events', asyn
   assert.match(view.text(), /Événement 5/);
 });
 
+test('calendar layout uses responsive grids and a bounded sidebar with BFF-backed events', async () => {
+  const monthHtml = await renderLoadedPage();
+
+  assert.match(monthHtml, /class="calendar-board mt-7 grid items-start gap-6"/);
+  assert.match(monthHtml, /class="calendar-grid-viewport mt-9"/);
+  assert.equal(view.props('MonthGrid').className, 'calendar-month-grid');
+  assert.equal(view.props('CalendarSidebar').className, 'calendar-sidebar');
+  assert.deepEqual(view.props('CalendarSidebar').events.map((event) => event.id), [5, 6]);
+  assert.deepEqual(front.calendarBff.sequence().map((line) => line.split('?')[0]), ['GET /calendar/bootstrap']);
+
+  await view.act(() => view.props('CalendarToolbar').onViewChange('week'));
+  await view.waitFor(() => front.calendarBff.requests.length === 2 && !view.html.includes('role="status"'));
+
+  assert.equal(view.props('WeekGrid').className, 'calendar-week-grid');
+  assert.match(view.html, /class="calendar-grid-viewport mt-9"/);
+});
+
 test('the create modal opens from the title bar and the created event appears in the page', async () => {
   await renderLoadedPage();
   assert.doesNotMatch(view.html, /Ajoutez une date au calendrier de la mairie\./);
