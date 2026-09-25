@@ -65,6 +65,11 @@ test('the first pass renders the loading state, the second the events answered b
 test('the shell shows the user resolved from BFF User in the header', async () => {
   const html = await renderLoadedPage();
 
+  assert.match(html, /calendar-scroll-shell/);
+  assert.match(html, /calendar-scroll-layout/);
+  assert.match(html, /calendar-scroll-column/);
+  assert.match(html, /class="app-main flex-1"/);
+  assert.match(html, /<footer[^>]*app-footer/);
   assert.deepEqual(front.userBff.sequence(), ['GET /me']);
   assert.match(html, /<span data-slot="avatar-fallback"[^>]*>AM<\/span>|<span[^>]*>AM<\/span>/);
   assert.match(html, /<span[^>]*>Admin Mairie<\/span>/);
