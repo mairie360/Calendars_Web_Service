@@ -13,12 +13,13 @@ Domaine fonctionnel: Calendrier.
 ## Fonctions disponibles
 
 - Consultation du calendrier et chargement d’une période.
+- Ouverture de la date et des détails d’un événement depuis le Tableau de bord.
 - Création, modification et suppression des événements selon les permissions.
 - Sélection des personnes, catégories et services; affichage de la validation et de la récurrence.
 
 ## Parcours type
 
-1. Charger le calendrier sur une période avec `/calendar/bootstrap`.
+1. Charger le calendrier sur une période avec `/calendar/bootstrap`, dont le mois indiqué par un lien valide.
 2. Créer ou modifier un événement et choisir les personnes autorisées.
 3. Consulter l’état de validation et recharger la période après une mutation.
 

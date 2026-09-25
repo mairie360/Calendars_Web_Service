@@ -14,6 +14,8 @@ flowchart LR
 
 La page assemble les composants calendrier avec `useCalendarPage`. Le hook charge le bootstrap, gère la période et les mutations; les routes de données gardent le préfixe `/calendar`. Le shell et la page profil utilisent séparément les adaptateurs de session.
 
+Au premier montage, le hook lit les paramètres facultatifs `date` (`YYYY-MM-DD`) et `event` (identifiant). Une date valide sélectionne son mois avant la première requête `/calendar/bootstrap`, évitant de charger inutilement le mois courant. Après un bootstrap réussi, l’événement correspondant s’ouvre dans la fenêtre de détails existante. Une date invalide conserve le mois courant; un événement absent laisse la date sélectionnée sans ouvrir de fenêtre. Le lien ne donne aucun accès au-delà des données renvoyées par le BFF.
+
 Le proxy générique lit le contrat OpenAPI versionné pour autoriser chemins et méthodes. Il ne transmet qu’une liste d’en-têtes autorisés (`Accept`, `Accept-Language`, `Content-Type`, en-têtes conditionnels, `User-Agent`, `X-Request-Id`), ne relaie un corps que si l’opération en déclare un et dans un type de contenu déclaré (sinon 415), limite les corps à 1 Mio (413), conserve paramètres de requête, statuts et réponses du BFF, désactive le cache et n’effectue pas de suivi automatique des redirections. Son délai est de 15 secondes.
 
 ## Données et persistance

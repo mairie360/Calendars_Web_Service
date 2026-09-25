@@ -13,12 +13,13 @@ Business domain: Calendar.
 ## Available capabilities
 
 - Browse the calendar and load a date range.
+- Follow a Dashboard event link to its date and details.
 - Create, edit and delete events according to permissions.
 - Select people, categories and services; display approval and recurrence.
 
 ## Typical workflow
 
-1. Load a date range through `/calendar/bootstrap`.
+1. Load a date range through `/calendar/bootstrap`, including the month in a valid event link.
 2. Create or update an event and choose authorized assignees.
 3. Inspect approval status and reload the date range after a mutation.
 
