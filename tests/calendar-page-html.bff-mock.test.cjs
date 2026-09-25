@@ -12,6 +12,7 @@ const { alice, apiError, bootstrap, calendarEvent, installWindow, sessionRespons
 const { router } = installReactRuntime();
 const React = require('react');
 const Page = loadTs('app/page').default;
+const { AppShell } = loadTs('app/_components/app-shell');
 const { initialDate } = loadTs('app/calendar/constants');
 const { getPeriodTitle } = loadTs('app/calendar/date-utils');
 
@@ -75,6 +76,16 @@ test('the shell shows the user resolved from BFF User in the header', async () =
   assert.match(html, /<span[^>]*>Admin Mairie<\/span>/);
   assert.match(html, /<footer/);
   assert.deepEqual(view.props('Sidebar').isAdmin, true);
+});
+
+test('the profile shell keeps the normal page layout without calendar scrolling', async () => {
+  view = mount(React.createElement(AppShell, { activeItem: 'profile' }, React.createElement('p', null, 'Profile content')));
+  const html = await view.waitFor(() => view.find('Header')[0]?.props.user.name !== 'Chargement…');
+
+  assert.match(html, /Profile content/);
+  assert.doesNotMatch(html, /calendar-scroll-(?:shell|layout|column)/);
+  assert.match(html, /class="app-main flex-1"/);
+  assert.deepEqual(front.userBff.sequence(), ['GET /me']);
 });
 
 test('a BFF error is rendered as an alert with a retry button that reloads the calendar', async () => {
