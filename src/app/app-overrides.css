@@ -59,3 +59,57 @@ button {
     width: auto !important;
   }
 }
+
+.calendar-scroll-shell {
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.calendar-scroll-layout {
+  height: 100%;
+  min-height: 0;
+}
+
+.calendar-scroll-layout > .desktop-sidebar {
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.calendar-scroll-layout > .desktop-sidebar > aside {
+  min-height: 100%;
+}
+
+.calendar-scroll-column {
+  min-height: 0;
+}
+
+.calendar-scroll-column > header {
+  flex-shrink: 0;
+}
+
+.calendar-scroll-shell .app-main {
+  min-height: 0;
+  min-width: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-bottom: 3.5rem;
+}
+
+.calendar-scroll-shell .app-footer {
+  position: static !important;
+  flex-shrink: 0;
+  width: 100% !important;
+}
+
+.calendar-scroll-shell .grid > * {
+  min-width: 0;
+}
+
+@media (max-width: 639px) {
+  .calendar-scroll-shell .app-main {
+    padding: 1.5rem 1rem;
+  }
+}

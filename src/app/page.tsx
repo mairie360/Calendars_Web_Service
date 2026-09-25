@@ -19,7 +19,7 @@ export default function Page() {
   const calendar = useCalendarPage();
 
   return (
-    <AppShell activeItem="calendar">
+    <AppShell activeItem="calendar" scrollContent>
       <PageTitleBar
         title="Calendrier & Événements"
         subtitle="Planifiez et organisez vos activités"

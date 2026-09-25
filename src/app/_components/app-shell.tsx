@@ -15,9 +15,10 @@ type AppShellProps = {
   activeItem: string;
   children: ReactNode | ((session: AuthSession) => ReactNode);
   mainClassName?: string;
+  scrollContent?: boolean;
 };
 
-export function AppShell({ activeItem, children, mainClassName = "app-main flex-1" }: AppShellProps) {
+export function AppShell({ activeItem, children, mainClassName = "app-main flex-1", scrollContent = false }: AppShellProps) {
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const session = useAuthSession();
@@ -39,8 +40,8 @@ export function AppShell({ activeItem, children, mainClassName = "app-main flex-
   );
 
   return (
-    <div className="min-h-screen bg-[#f5f3f0] text-[#172033]">
-      <div className="flex min-h-screen">
+    <div className={`min-h-screen bg-[#f5f3f0] text-[#172033]${scrollContent ? " calendar-scroll-shell" : ""}`}>
+      <div className={`flex min-h-screen${scrollContent ? " calendar-scroll-layout" : ""}`}>
         <div className="desktop-sidebar shrink-0">{sidebar}</div>
 
         {sidebarOpen && (
@@ -60,7 +61,7 @@ export function AppShell({ activeItem, children, mainClassName = "app-main flex-
           </div>
         )}
 
-        <div className="flex min-h-screen min-w-0 flex-1 flex-col">
+        <div className={`flex min-h-screen min-w-0 flex-1 flex-col${scrollContent ? " calendar-scroll-column" : ""}`}>
           <Header
             isAdmin={session.isAdmin}
             user={session.user}
