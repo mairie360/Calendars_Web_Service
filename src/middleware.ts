@@ -5,6 +5,7 @@ import {
   NONCE_REQUEST_HEADER,
 } from "./lib/content-security-policy";
 import { isContractDataPath } from "./lib/bff-contract";
+import { readFrontUrlsFromEnv } from "./lib/front-urls";
 
 const ACCESS_TOKEN_COOKIE = "accessToken";
 const DEFAULT_LOGIN_FRONT_URL = "http://localhost:5000/";
@@ -38,7 +39,19 @@ function isExpiredJwt(token: string) {
 
 function redirectToLogin(request: NextRequest) {
   const loginUrl = process.env.LOGIN_FRONT_URL || DEFAULT_LOGIN_FRONT_URL;
-  const response = NextResponse.redirect(new URL(loginUrl, request.url));
+  const destination = new URL(loginUrl);
+  const publicFrontUrl = readFrontUrlsFromEnv().CALENDAR_FRONT_URL;
+  if (publicFrontUrl) {
+    try {
+      const requestedPage = new URL(publicFrontUrl);
+      requestedPage.pathname = request.nextUrl.pathname;
+      requestedPage.search = request.nextUrl.search;
+      destination.searchParams.set("redirect", requestedPage.href);
+    } catch {
+      // A missing or invalid public URL leaves Login's default destination in place.
+    }
+  }
+  const response = NextResponse.redirect(destination);
   const cookieDomain = process.env.COOKIE_DOMAIN?.trim();
 
   response.cookies.set({
