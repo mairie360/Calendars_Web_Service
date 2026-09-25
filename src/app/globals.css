@@ -3,3 +3,9 @@
 @plugin "daisyui";
 
 @source "../../src/";
+
+/* The shared event form has no recurrence-aware end-date prop. Keep the
+   multi-day field out of the active form when recurrence is selected. */
+.calendar-validated-modal[data-recurring="true"] div:has(> label[for="event-end-date"]) {
+  display: none;
+}

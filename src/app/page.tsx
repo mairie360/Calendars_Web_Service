@@ -4,15 +4,14 @@ import {
   CalendarSidebar,
   CalendarToolbar,
   Card,
-  CreateEventModal,
   DaySchedule,
-  EventDetailsModal,
   MonthGrid,
   PageTitleBar,
   WeekGrid,
 } from "@mairie360/lib-components";
 import { RefreshCw } from "lucide-react";
 import { AppShell } from "./_components/app-shell";
+import { CreateEventModal, EventDetailsModal } from "./calendar/_components/validated-event-modals";
 import { useCalendarPage } from "./calendar/use-calendar-page";
 
 export default function Page() {
