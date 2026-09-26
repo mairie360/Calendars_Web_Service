@@ -10,7 +10,6 @@ import {
   MessageSquare,
   Settings,
   Shield,
-  UserRound,
 } from "lucide-react";
 
 type AppSidebarItem = {
@@ -38,11 +37,12 @@ export const appSidebarItems: AppSidebarItem[] = [
     badge: "Admin",
     get href() { return frontUrl("ADMINISTRATION_FRONT_URL"); },
   },
-  { id: "profile", label: "Profil", icon: UserRound, href: "/profile" },
   { id: "settings", label: "Paramètres", icon: Settings, get href() { return frontUrl("SETTINGS_FRONT_URL"); } },
 ];
 
 export function getNavigationHref(page: string) {
+  // Existing header links and bookmarks reach the server-side Settings redirect.
+  if (page === "profile") return "/profile";
   return appSidebarItems.find((item) => item.id === page)?.href;
 }
 

@@ -1,5 +1,13 @@
 # Calendars_Web_Service — Présentation du module
 
+## Un seul espace compte
+
+Le profil est désormais ouvert dans **Paramètres (Settings)**. Les anciens liens
+`/profile` et leurs sous-chemins redirigent vers le front Settings configuré.
+La sidebar conserve Paramètres sans doublon Profil. Si Settings n'est pas configuré
+correctement, une indisponibilité explicite remplace la redirection ; aucune donnée
+personnelle de démonstration ni fausse sauvegarde n'est affichée.
+
 [Documentation technique](technical.md) · [English](../en/module.md) · [README](../../README.md)
 
 Afficher et piloter le calendrier municipal dans le navigateur, avec événements, affectations et validations fournis par BFF Calendar.

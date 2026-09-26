@@ -45,6 +45,14 @@ The script's default source `../BFF_Calendar/contracts` resolves to `Fronts/BFF_
 
 ## Architecture
 
+- **Profile routing (MAIR-180 partial delivery)** — `src/app/profile/[[...path]]/page.tsx`
+  is now a dynamic Server Component redirecting old profile URLs to the existing
+  runtime `SETTINGS_FRONT_URL`. It does not load a local user/profile; absent,
+  invalid or looping destinations render an unavailable state with a return link.
+  The sidebar no longer duplicates Settings with a Profile item. Earlier profile
+  page descriptions below are superseded by this route; the shared AppShell
+  migration and BFF session contracts are unchanged.
+
 - **Contract-gated catch-all proxy** — `src/app/[...path]/route.ts` exports `proxyBffRequest` (`src/lib/bff-proxy.ts`) for every method. It matches the path against `contracts/openapi.json` `paths` (brace segments are wildcards): unknown path → 404, method not declared → 405 with `Allow`, `.`/`..` segments → 400; BFF docs (`/openapi.json`, `/swagger.json`) are not forwarded. Matching lives in `src/lib/bff-contract.ts` (literal paths win over `{param}` ones), shared with the middleware. A body is forwarded only if the operation declares a `requestBody`, in a declared media type (else 415), up to `MAX_REQUEST_BODY_BYTES` (1 MiB, else 413); schema validation is left to the BFF. **A BFF route is therefore reachable from the browser only once the synced contract declares it.**
 - **`forwardToBff`** first refuses cross-site unsafe methods with 403 (`isCrossSiteRequest`: `Sec-Fetch-Site` must be `same-origin`/`none`, else `Origin` host must equal `x-forwarded-host`/`host`; requests with neither, like k6/curl, pass). It forwards only an allowlist of request headers, and sets `Authorization: Bearer` **only from the HttpOnly `accessToken` cookie** (a browser-sent Authorization is dropped). Keeps the query string, uses `redirect: 'manual'`, a 15 s timeout and `Cache-Control: no-store`, preserves upstream status/headers (including `Set-Cookie`, empty 204/205/304 bodies) and returns a controlled 502 JSON error when the BFF is unreachable. `tests/proxy.test.cjs` pins this behaviour.
 - **BFF URL** — `BFF_CALENDAR_BASE_URL` → `CALENDAR_BFF_URL` → `NEXT_PUBLIC_BFF_CALENDAR_BASE_URL`; resolved at request time on the server. Explicit HTTP(S) configuration is required; missing or invalid values return an uncached 503 without an upstream call.
