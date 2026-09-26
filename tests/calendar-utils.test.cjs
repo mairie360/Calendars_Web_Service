@@ -119,6 +119,8 @@ test('navigation opens other fronts in the browser and module pages with the rou
     assert.deepEqual(window.location.assigned, ['https://projects.mairie.test/']);
     assert.equal(navigation.getNavigationHref('profile'), '/profile');
     assert.equal(navigation.appSidebarItems.find((item) => item.id === 'admin').adminOnly, true);
+    assert.equal(navigation.appSidebarItems.some((item) => item.id === 'profile'), false);
+    assert.equal(navigation.appSidebarItems.filter((item) => item.id === 'settings').length, 1);
   } finally {
     delete global.window;
   }

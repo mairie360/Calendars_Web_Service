@@ -1,5 +1,16 @@
 # Calendars_Web_Service — Technical documentation
 
+## Settings account destination — MAIR-180 slice
+
+The server route `/profile/[[...path]]` replaces the local profile screens.
+It temporarily redirects (307) to `SETTINGS_FRONT_URL`, resolved on each request;
+no business profile is fetched by this module. Missing, invalid, credential-bearing
+or legacy `profile` path destinations render an unavailable state with a link
+back to the module. Old bookmark query parameters are not forwarded. Middleware
+authentication is unchanged. No new contract, package, secret or environment
+variable is introduced. This slice does not complete shared AppShell migration
+(MAIR-179).
+
 ## Explicit frontend destinations (MAIR-177)
 
 Frontend redirects use only explicitly configured HTTP(S) URLs without embedded
@@ -24,7 +35,7 @@ flowchart LR
   Next --> BFF["BFF_Calendar"]
 ```
 
-The page combines calendar components with `useCalendarPage`. The hook loads bootstrap and manages the date range and mutations; data routes retain the `/calendar` prefix. The shell and profile page use separate session adapters.
+The page combines calendar components with `useCalendarPage`. The hook loads bootstrap and manages the date range and mutations; data routes retain the `/calendar` prefix. The shell uses session adapters; legacy profile pages redirect to Settings without loading a local profile.
 
 On first mount, the hook reads optional `date` (`YYYY-MM-DD`) and `event` (ID) query parameters. A valid date selects its month before the first `/calendar/bootstrap` request, avoiding an unnecessary request for the current month. After a successful bootstrap, a matching event opens in the existing details modal. An invalid date falls back to the current month; a missing event leaves the selected date visible without opening a modal. The link does not grant access beyond what the BFF returns.
 
@@ -118,7 +129,7 @@ These data paths are exposed at the same origin through the proxy; Next.js pages
 | Page | Source |
 | --- | --- |
 | `/` | [src/app/page.tsx](../../src/app/page.tsx) |
-| `/profile` | [src/app/profile/page.tsx](../../src/app/profile/page.tsx) |
+| `/profile/[[...path]]` | [src/app/profile/[[...path]]/page.tsx](../../src/app/profile/%5B%5B...path%5D%5D/page.tsx) |
 
 | Method | Local route | Source |
 | --- | --- | --- |
