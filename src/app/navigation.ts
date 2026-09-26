@@ -1,4 +1,5 @@
 import { frontUrl } from "@/lib/front-urls";
+import { settingsProfileUrl } from "@/lib/settings-profile";
 import type { LucideIcon } from "lucide-react";
 import {
   Briefcase,
@@ -44,8 +45,8 @@ const navigationItems: AppSidebarItem[] = [
 export const appSidebarItems = navigationItems.filter((item) => !["emails", "files"].includes(item.id));
 
 export function getNavigationHref(page: string) {
-  // Existing header links and bookmarks reach the server-side Settings redirect.
-  if (page === "profile") return "/profile";
+  // Keep the legacy route only when the runtime Settings destination is unusable.
+  if (page === "profile") return settingsProfileUrl(frontUrl("SETTINGS_FRONT_URL")) ?? "/profile";
   return navigationItems.find((item) => item.id === page)?.href;
 }
 

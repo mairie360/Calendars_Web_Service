@@ -86,6 +86,7 @@ test('desktop and mobile navigation expose only active modules and keep Settings
   setBrowserFrontUrls({ SETTINGS_FRONT_URL: 'https://settings.test.example/' });
   try {
     await renderLoadedPage();
+    assert.equal(view.props('Header').profileHref, 'https://settings.test.example/');
     const isAdmin = view.props('Sidebar').isAdmin;
     for (const mobileOpen of [false, true]) {
       await view.act(() => view.props('Header').setSidebarOpen(mobileOpen));
@@ -109,6 +110,8 @@ test('desktop and mobile navigation expose only active modules and keep Settings
     const mobileSidebar = view.find('Sidebar')[1].props;
     await view.act(() => mobileSidebar.onItemSelect(mobileSidebar.items.find(item => item.id === 'settings')));
     assert.deepEqual(assigned, ['https://settings.test.example/']);
+    await view.act(() => view.props('Header').onPageChange('profile'));
+    assert.deepEqual(assigned, ['https://settings.test.example/', 'https://settings.test.example/']);
     assert.equal(view.find('Sidebar').length, 1);
   } finally {
     setBrowserFrontUrls({});

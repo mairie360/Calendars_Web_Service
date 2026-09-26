@@ -9,7 +9,7 @@ import {
   useAuthSession,
   type AuthSession,
 } from "@/lib/auth-session";
-import { appSidebarItems, navigateToPage } from "../navigation";
+import { appSidebarItems, getNavigationHref, navigateToPage } from "../navigation";
 
 type AppShellProps = {
   activeItem: string;
@@ -65,7 +65,7 @@ export function AppShell({ activeItem, children, mainClassName = "app-main flex-
           <Header
             isAdmin={session.isAdmin}
             user={session.user}
-            profileHref="/profile"
+            profileHref={getNavigationHref("profile")}
             setSidebarOpen={setSidebarOpen}
             onPageChange={handlePageChange}
             onLogout={() => void logoutAndReload()}
