@@ -38,13 +38,10 @@ test('only the BFF client, the session hook, the logout helper and the server pr
   assert.deepEqual(emitters, ['lib/auth-session.ts', 'lib/bff-client.ts', 'lib/bff-proxy.ts', 'lib/logout.ts']);
 });
 
-test('absolute URLs only appear as server-side defaults for the BFFs', () => {
+test('no absolute BFF destination is hard-coded in frontend source', () => {
   const absolute = sourceFiles().flatMap((file) => [...fs.readFileSync(file, 'utf8').matchAll(/['"`](https?:\/\/[^'"`]+)['"`]/g)].map((match) => `${relative(file)} ${match[1]}`));
 
-  assert.deepEqual(absolute.sort(), [
-    'lib/bff-proxy.ts http://localhost:4002',
-    'lib/user-bff-proxy.ts http://localhost:4000',
-  ]);
+  assert.deepEqual(absolute.sort(), []);
 });
 
 test('requestBff is only used by the calendar client, whose endpoints are all declared in the contract', () => {

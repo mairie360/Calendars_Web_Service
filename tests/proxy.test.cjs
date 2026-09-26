@@ -3,13 +3,23 @@ const { test, afterEach } = require('node:test');
 const { NextRequest } = require('next/server');
 const { loadTs } = require('./support/load-ts.cjs');
 const { proxyBffRequest, forwardToBff, isCrossSiteRequest, MAX_REQUEST_BODY_BYTES } = loadTs('lib/bff-proxy');
+const { userBffRequest } = loadTs('lib/user-bff-proxy');
 const originalFetch = global.fetch;
-afterEach(() => { global.fetch = originalFetch; });
+const bffUrlVariables = ['BFF_CALENDAR_BASE_URL', 'CALENDAR_BFF_URL', 'NEXT_PUBLIC_BFF_CALENDAR_BASE_URL', 'USER_BFF_URL', 'BFF_USER_API_URL'];
+const originalBffUrls = Object.fromEntries(bffUrlVariables.map((name) => [name, process.env[name]]));
+afterEach(() => {
+  global.fetch = originalFetch;
+  for (const [name, value] of Object.entries(originalBffUrls)) {
+    if (value === undefined) delete process.env[name];
+    else process.env[name] = value;
+  }
+});
 
 const context = (...path) => ({ params: Promise.resolve({ path }) });
 const neverCalled = async () => { throw new Error('must not be called'); };
 
 test('proxy preserves query, data and upstream status, and authenticates with the cookie only', async () => {
+  process.env.BFF_CALENDAR_BASE_URL = 'http://bff.example';
   let called;
   global.fetch = async (url, init) => { called = { url: String(url), init }; return Response.json({ id: '42', value: null }, { status: 201 }); };
   const request = new NextRequest('http://localhost/health?q=a%26b', { headers: { cookie: 'accessToken=test-session', Authorization: 'Bearer forged-by-client' } });
@@ -20,6 +30,7 @@ test('proxy preserves query, data and upstream status, and authenticates with th
 });
 
 test('without the session cookie no Authorization reaches the BFF, even if the client sends one', async () => {
+  process.env.BFF_CALENDAR_BASE_URL = 'http://bff.example';
   let headers;
   global.fetch = async (_url, init) => { headers = init.headers; return Response.json({ code: 'UNAUTHORIZED', message: 'Session invalide.' }, { status: 401 }); };
   const response = await proxyBffRequest(new NextRequest('http://localhost/health', { headers: { Authorization: 'Bearer forged' } }), context('health'));
@@ -60,6 +71,7 @@ test('contract rejects unknown routes, undeclared methods and BFF documentation 
 });
 
 test('literal contract paths win over parameterised ones', async () => {
+  process.env.BFF_CALENDAR_BASE_URL = 'http://bff.example';
   let url;
   global.fetch = async (target) => { url = String(target); return Response.json([]); };
   const response = await proxyBffRequest(new NextRequest('http://localhost/calendar/events'), context('calendar', 'events'));
@@ -87,6 +99,7 @@ test('cross-site unsafe requests are refused (CSRF), same-origin and non-browser
 });
 
 test('bodies must use a content type declared by the contract and stay under the size limit', async () => {
+  process.env.BFF_CALENDAR_BASE_URL = 'http://bff.example';
   global.fetch = neverCalled;
   const post = (body, headers) => proxyBffRequest(new NextRequest('http://localhost/calendar/events', { method: 'POST', headers, body }), context('calendar', 'events'));
   assert.equal((await post('title=x', { 'content-type': 'application/x-www-form-urlencoded' })).status, 415);
@@ -104,6 +117,7 @@ test('bodies must use a content type declared by the contract and stay under the
 });
 
 test('a body sent to an operation without declared requestBody is not forwarded', async () => {
+  process.env.BFF_CALENDAR_BASE_URL = 'http://bff.example';
   let init;
   global.fetch = async (_url, options) => { init = options; return new Response(null, { status: 204 }); };
   const response = await proxyBffRequest(new NextRequest('http://localhost/calendar/events/2', { method: 'DELETE', headers: { 'content-type': 'application/json' }, body: '{"cascade":true}' }), context('calendar', 'events', '2'));
@@ -123,3 +137,30 @@ test('unavailable BFF produces a controlled error', async () => {
   assert.equal(result.status, 502); assert.equal(result.headers.get('Cache-Control'), 'no-store');
   assert.deepEqual(await result.json(), { error: { message: 'Le service est indisponible.' } });
 });
+
+for (const [name, value] of [
+  ['missing', undefined],
+  ['empty', ''],
+  ['malformed', 'not-a-url'],
+  ['unsupported protocol', 'file:///tmp/bff'],
+  ['embedded credentials', 'http://user:password@example.test'],
+  ['query string', 'http://bff.example?token=example'],
+  ['fragment', 'http://bff.example#fragment'],
+]) {
+  for (const [relay, variable] of [['calendar', 'BFF_CALENDAR_BASE_URL'], ['user', 'USER_BFF_URL']]) {
+    test(`${relay} relay rejects ${name} BFF URL with an uncached 503 and no upstream call`, async () => {
+      for (const key of bffUrlVariables) delete process.env[key];
+      if (value !== undefined) process.env[variable] = value;
+      global.fetch = neverCalled;
+
+      const request = new NextRequest('http://localhost/health');
+      const response = relay === 'calendar'
+        ? await proxyBffRequest(request, context('health'))
+        : await userBffRequest(request, '/me');
+
+      assert.equal(response.status, 503);
+      assert.equal(response.headers.get('Cache-Control'), 'no-store');
+      assert.deepEqual(await response.json(), { error: { message: 'Le service n’est pas configuré.' } });
+    });
+  }
+}
