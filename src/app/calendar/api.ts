@@ -133,5 +133,5 @@ export async function updateCalendarEventApproval(
 
 export function formatCalendarApiError(error: unknown) {
   if (error instanceof Error && error.message.trim()) return error.message;
-  return "Le BFF calendrier est injoignable.";
+  return "Le service calendrier est injoignable.";
 }

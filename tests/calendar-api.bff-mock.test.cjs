@@ -207,6 +207,6 @@ test('an unreachable BFF surfaces the proxy 502 message', async () => {
 });
 
 test('formatCalendarApiError falls back to a generic message', () => {
-  assert.equal(api.formatCalendarApiError(new Error('  ')), 'Le BFF calendrier est injoignable.');
-  assert.equal(api.formatCalendarApiError('boom'), 'Le BFF calendrier est injoignable.');
+  assert.equal(api.formatCalendarApiError(new Error('  ')), 'Le service calendrier est injoignable.');
+  assert.equal(api.formatCalendarApiError('boom'), 'Le service calendrier est injoignable.');
 });

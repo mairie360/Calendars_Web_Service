@@ -93,7 +93,7 @@ test('a BFF error is rendered as an alert with a retry button that reloads the c
   view = mount(React.createElement(Page));
   const failed = await view.waitFor((html) => html.includes('role="alert"'));
 
-  assert.match(failed, /<span role="alert">BFF calendrier : Calendar API unavailable<\/span>/);
+  assert.match(failed, /<span role="alert">Calendrier : Calendar API unavailable<\/span>/);
   assert.match(failed, /<button type="button"[^>]*>[\s\S]*?<span>Réessayer<\/span><\/button>/);
   assert.doesNotMatch(view.text(), /Événement 5/);
 

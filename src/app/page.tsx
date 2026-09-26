@@ -35,9 +35,9 @@ export default function Page() {
               <div className="mb-5 flex flex-col gap-3 rounded-md border border-[#d8d2ca] bg-[#fbfaf9] px-4 py-3 text-sm text-[#334155] sm:flex-row sm:items-center sm:justify-between">
                 <span role={calendar.error ? "alert" : "status"}>
                   {calendar.error
-                    ? `BFF calendrier : ${calendar.error}`
+                    ? `Calendrier : ${calendar.error}`
                     : calendar.saving
-                      ? "Synchronisation avec le BFF calendrier…"
+                      ? "Enregistrement en cours…"
                       : "Chargement des données du calendrier…"}
                 </span>
                 {calendar.error ? (
