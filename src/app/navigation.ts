@@ -21,7 +21,7 @@ type AppSidebarItem = {
   href?: string;
 };
 
-export const appSidebarItems: AppSidebarItem[] = [
+const navigationItems: AppSidebarItem[] = [
   { id: "dashboard", label: "Tableau de bord", icon: LayoutDashboard, get href() { return frontUrl("DASHBOARD_FRONT_URL"); } },
   { id: "projects", label: "Projets", icon: Briefcase, get href() { return frontUrl("PROJECT_FRONT_URL"); } },
   { id: "messages", label: "Messagerie", icon: MessageSquare, get href() { return frontUrl("MESSAGE_FRONT_URL"); } },
@@ -40,10 +40,13 @@ export const appSidebarItems: AppSidebarItem[] = [
   { id: "settings", label: "Paramètres", icon: Settings, get href() { return frontUrl("SETTINGS_FRONT_URL"); } },
 ];
 
+// Archived modules stay resolvable for legacy callers, but are not menu entries.
+export const appSidebarItems = navigationItems.filter((item) => !["emails", "files"].includes(item.id));
+
 export function getNavigationHref(page: string) {
   // Existing header links and bookmarks reach the server-side Settings redirect.
   if (page === "profile") return "/profile";
-  return appSidebarItems.find((item) => item.id === page)?.href;
+  return navigationItems.find((item) => item.id === page)?.href;
 }
 
 export function navigateToPage(page: string, push: (href: string) => void) {
