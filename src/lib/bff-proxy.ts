@@ -15,9 +15,21 @@ const HOP_BY_HOP_RESPONSE_HEADERS = ['content-encoding', 'content-length', 'tran
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
 export function configuredBffUrl() {
-  return (process.env.BFF_CALENDAR_BASE_URL ??
+  return validatedBffUrl(process.env.BFF_CALENDAR_BASE_URL ??
     process.env.CALENDAR_BFF_URL ??
-    process.env.NEXT_PUBLIC_BFF_CALENDAR_BASE_URL ?? 'http://localhost:4002').replace(/\/+$/, '');
+    process.env.NEXT_PUBLIC_BFF_CALENDAR_BASE_URL);
+}
+
+export function validatedBffUrl(value: string | undefined) {
+  const candidate = value?.trim();
+  if (!candidate) return '';
+  try {
+    const url = new URL(candidate);
+    if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.search || url.hash) return '';
+    return candidate.replace(/\/+$/, '');
+  } catch {
+    return '';
+  }
 }
 
 function errorResponse(status: number, message: string, headers: Record<string, string> = {}) {
@@ -74,6 +86,8 @@ type ForwardOptions = {
 
 export async function forwardToBff(request: NextRequest, baseUrl: string, path: string, options: ForwardOptions = {}) {
   if (isCrossSiteRequest(request)) return errorResponse(403, 'Requête intersite refusée.');
+  const upstreamBaseUrl = validatedBffUrl(baseUrl);
+  if (!upstreamBaseUrl) return errorResponse(503, 'Le service n’est pas configuré.');
 
   const headers = new Headers();
   for (const name of FORWARDED_REQUEST_HEADERS) {
@@ -90,7 +104,7 @@ export async function forwardToBff(request: NextRequest, baseUrl: string, path: 
     if (options.body === undefined && body === null) return errorResponse(413, 'Corps de requête trop volumineux.');
   }
 
-  const target = new URL(`${baseUrl.replace(/\/+$/, '')}${path}`);
+  const target = new URL(`${upstreamBaseUrl}${path}`);
   target.search = new URL(request.url).search;
   try {
     const upstream = await fetch(target, {

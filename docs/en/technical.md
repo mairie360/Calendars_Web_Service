@@ -78,8 +78,8 @@ Values below are local examples or explicitly described behavior, not production
 
 | Variable or precedence | Example / stated fallback | Purpose |
 | --- | --- | --- |
-| `BFF_CALENDAR_BASE_URL` → `CALENDAR_BFF_URL` → `NEXT_PUBLIC_BFF_CALENDAR_BASE_URL` | http://localhost:4002 | Left-to-right proxy precedence; the URL shown is the local fallback. |
-| `USER_BFF_URL` → `BFF_USER_API_URL` | http://localhost:4000 | Separate precedence used by session adapters targeting BFF User. |
+| `BFF_CALENDAR_BASE_URL` → `CALENDAR_BFF_URL` → `NEXT_PUBLIC_BFF_CALENDAR_BASE_URL` | http://localhost:4002 | Left-to-right proxy precedence; explicitly configure an HTTP(S) URL. Missing or invalid configuration returns an uncached 503 without an upstream call. |
+| `USER_BFF_URL` → `BFF_USER_API_URL` | http://localhost:4000 | Separate precedence for BFF User session adapters; also requires an explicit HTTP(S) URL. |
 | `BFF_CONTRACT_DIR` | ../BFF_Calendar/contracts | BFF contract directory for synchronization and checking scripts. |
 | `COOKIE_DOMAIN` | — | Cookie domain; keep it consistent with Login and BFF User. |
 | `ADMINISTRATION_FRONT_URL` | — | Navigation destination; see the source file that reads it. Variables injected by `next.config.ts` or prefixed `NEXT_PUBLIC_` are public and consumed at build time. |

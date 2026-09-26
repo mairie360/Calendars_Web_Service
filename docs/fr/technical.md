@@ -78,8 +78,8 @@ Les valeurs ci-dessous sont des exemples locaux ou des comportements expliciteme
 
 | Variable ou priorité | Exemple / repli indiqué | Rôle |
 | --- | --- | --- |
-| `BFF_CALENDAR_BASE_URL` → `CALENDAR_BFF_URL` → `NEXT_PUBLIC_BFF_CALENDAR_BASE_URL` | http://localhost:4002 | Priorité de gauche à droite dans le proxy; l’URL indiquée est le repli local. |
-| `USER_BFF_URL` → `BFF_USER_API_URL` | http://localhost:4000 | Priorité propre aux adaptateurs de session vers BFF User. |
+| `BFF_CALENDAR_BASE_URL` → `CALENDAR_BFF_URL` → `NEXT_PUBLIC_BFF_CALENDAR_BASE_URL` | http://localhost:4002 | Priorité de gauche à droite dans le proxy; configurer explicitement une URL HTTP(S). Une configuration absente ou invalide renvoie un 503 non mis en cache, sans appel réseau. |
+| `USER_BFF_URL` → `BFF_USER_API_URL` | http://localhost:4000 | Priorité propre aux adaptateurs de session vers BFF User; une URL HTTP(S) explicite est aussi requise. |
 | `BFF_CONTRACT_DIR` | ../BFF_Calendar/contracts | Répertoire des contrats BFF pour les scripts de synchronisation et de contrôle. |
 | `COOKIE_DOMAIN` | — | Domaine des cookies; vérifier sa cohérence avec Login et BFF User. |
 | `ADMINISTRATION_FRONT_URL` | — | Destination de navigation; voir le fichier source qui la lit. Les variables injectées par `next.config.ts` ou préfixées `NEXT_PUBLIC_` sont publiques et prises en compte lors du build. |
