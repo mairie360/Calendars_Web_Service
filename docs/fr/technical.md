@@ -1,24 +1,23 @@
 # Calendars_Web_Service — Documentation technique
 
-## Menu des modules actifs — lot préparatoire MAIR-180
+## AppShell partagé et menu des modules actifs — MAIR-180
 
-Seule la liste transmise à Sidebar exclut `emails` et `files` ; la résolution des
-URL existantes, la configuration, les sessions et les appels BFF sont inchangés.
-Ordinateur et mobile utilisent la même liste active. Le test de page rend le
-vrai Sidebar, vérifie ordre/sélection/visibilité admin, ouvre le menu mobile puis
-suit Paramètres en refermant le panneau. Aucune copie de bibliothèque ni nouvelle
-dépendance ; la migration AppShell MAIR-179/MAIR-180 reste distincte et incomplète.
+La page calendrier utilise l'AppShell de `@mairie360/lib-components` avec la
+session existante fournie par le BFF. Seules les destinations actives, validées
+à l'exécution, sont affichées ; `emails` et `files` restent archivés. Le menu
+est identique sur ordinateur et mobile ; l'administration dépend du rôle de la
+session. Le contenu principal et la liste des événements à venir défilent
+indépendamment. Aucun appel BFF ni variable d'environnement n'est ajouté.
 
 ## Profil centralisé dans Settings — lot MAIR-180
 
-La route serveur `/profile/[[...path]]` remplace les écrans de profil locaux.
-Elle redirige temporairement (307) vers `SETTINGS_FRONT_URL`, lue à chaque
-requête ; aucun profil métier n'est chargé dans ce module. Une destination
-absente, invalide, avec identifiants intégrés ou contenant un segment `profile`
-affiche un état d'indisponibilité avec un lien de retour au module. Les paramètres
-de l'ancien favori ne sont pas transmis. L'authentification middleware reste
-inchangée. Aucun nouveau contrat, paquet, secret ou variable n'est ajouté.
-Ce lot ne termine pas la migration complète vers l'AppShell partagé (MAIR-179).
+Les anciens favoris `/profile` et leurs sous-chemins sont redirigés (307) par
+le middleware du front vers `SETTINGS_FRONT_URL`, lue à chaque requête. Une
+destination absente, invalide, avec identifiants intégrés ou contenant un
+segment `profile` renvoie 503 sans cache, sans boucle. Les paramètres de
+l'ancien favori ne sont pas transmis ; aucun profil métier n'est chargé ici.
+Sans session, le parcours Login reste inchangé. Aucun nouveau contrat, secret
+ou variable d'environnement n'est ajouté.
 
 ## Destinations frontend explicites (MAIR-177)
 
@@ -36,7 +35,7 @@ peut être résolue. Aucun contrat API/BFF ni variable de déploiement ajouté.
 
 ## Architecture et traitement des requêtes
 
-Application Next.js 15.5.25, React 19 et TypeScript avec App Router. Le navigateur appelle les routes de la même origine; le serveur Next.js relaie les données vers **BFF_Calendar**.
+Application Next.js 16.3.6, React 19 et TypeScript avec App Router. Le navigateur appelle les routes de la même origine; le serveur Next.js relaie les données vers **BFF_Calendar**.
 
 ```mermaid
 flowchart LR
@@ -44,7 +43,7 @@ flowchart LR
   Next --> BFF["BFF_Calendar"]
 ```
 
-La page assemble les composants calendrier avec `useCalendarPage`. Le hook charge le bootstrap, gère la période et les mutations ; les routes de données gardent le préfixe `/calendar`. Le shell utilise les adaptateurs de session ; les anciennes pages profil redirigent vers Settings sans charger de profil local.
+La page assemble les composants calendrier avec `useCalendarPage`. Le hook charge le bootstrap, gère la période et les mutations ; les routes de données gardent le préfixe `/calendar`. L'AppShell partagé utilise l'adaptateur de session existant ; le middleware du front redirige les anciens favoris profil vers Settings sans charger de profil local.
 
 Au premier montage, le hook lit les paramètres facultatifs `date` (`YYYY-MM-DD`) et `event` (identifiant). Une date valide sélectionne son mois avant la première requête `/calendar/bootstrap`, évitant de charger inutilement le mois courant. Après un bootstrap réussi, l’événement correspondant s’ouvre dans la fenêtre de détails existante. Une date invalide conserve le mois courant; un événement absent laisse la date sélectionnée sans ouvrir de fenêtre. Le lien ne donne aucun accès au-delà des données renvoyées par le BFF.
 
@@ -138,7 +137,8 @@ Ces chemins de données sont exposés à la même origine par le proxy; les page
 | Page | Source |
 | --- | --- |
 | `/` | [src/app/page.tsx](../../src/app/page.tsx) |
-| `/profile/[[...path]]` | [src/app/profile/[[...path]]/page.tsx](../../src/app/profile/%5B%5B...path%5D%5D/page.tsx) |
+
+Les requêtes authentifiées `/profile` sont traitées par le [middleware du front](../../src/middleware.ts), et non par une page profil locale.
 
 | Méthode | Route locale | Source |
 | --- | --- | --- |

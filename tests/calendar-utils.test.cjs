@@ -1,16 +1,12 @@
 const assert = require('node:assert/strict');
 const { test } = require('node:test');
 const { loadTs } = require('./support/load-ts.cjs');
-const { installWindow } = require('./support/calendar-fixtures.cjs');
 
 // Logique pure du calendrier (dates, statistiques, couleurs) et navigation entre modules : aucune requête réseau.
 
 const dates = loadTs('app/calendar/date-utils');
 const { buildStats, eventOccursOnDate } = loadTs('app/calendar/stats');
 const { getEventColor, resolveAssignees } = loadTs('app/calendar/constants');
-// The root layout reads the other fronts' URLs at runtime and hands them to the browser; one is set for the test.
-const { setBrowserFrontUrls } = loadTs('lib/front-urls');
-const navigation = loadTs('app/navigation');
 
 const ymd = (date) => dates.formatDateForQuery(date);
 
@@ -102,26 +98,4 @@ test('event colours and assignee resolution', () => {
   assert.equal(getEventColor(), getEventColor('other'));
   const people = [{ id: 7, name: 'Alice' }, { id: 'user-3', name: 'Marie' }];
   assert.deepEqual(resolveAssignees(['7', 'user-3', 'missing'], people), people);
-});
-
-test('navigation opens other fronts in the browser and module pages with the router', () => {
-  const window = installWindow();
-  setBrowserFrontUrls({ PROJECT_FRONT_URL: 'https://projects.mairie.test/' });
-  const pushed = [];
-  try {
-    navigation.navigateToPage('profile', (href) => pushed.push(href));
-    navigation.navigateToPage('settings', (href) => pushed.push(href));
-    navigation.navigateToPage('unknown', (href) => pushed.push(href));
-    assert.deepEqual(pushed, ['/profile']);
-
-    navigation.navigateToPage('projects', (href) => pushed.push(href));
-    assert.deepEqual(pushed, ['/profile']);
-    assert.deepEqual(window.location.assigned, ['https://projects.mairie.test/']);
-    assert.equal(navigation.getNavigationHref('profile'), '/profile');
-    assert.equal(navigation.appSidebarItems.find((item) => item.id === 'admin').adminOnly, true);
-    assert.equal(navigation.appSidebarItems.some((item) => item.id === 'profile'), false);
-    assert.equal(navigation.appSidebarItems.filter((item) => item.id === 'settings').length, 1);
-  } finally {
-    delete global.window;
-  }
 });

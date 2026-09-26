@@ -7,6 +7,7 @@ const { middleware } = loadTs('middleware');
 const previous = {
   LOGIN_FRONT_URL: process.env.LOGIN_FRONT_URL,
   CALENDAR_FRONT_URL: process.env.CALENDAR_FRONT_URL,
+  SETTINGS_FRONT_URL: process.env.SETTINGS_FRONT_URL,
 };
 
 test('missing or invalid Login configuration returns an uncached unavailable state', async () => {
@@ -51,4 +52,28 @@ test('an unauthenticated visit returns to the public Calendar URL, not the ingre
   assert.equal(login.origin, 'https://login.mairie.test');
   assert.equal(login.searchParams.get('redirect'), 'https://calendar.mairie.test/profile?day=2026-09-25');
   assert.doesNotMatch(login.href, /internal:3000/);
+});
+
+test('authenticated legacy profile bookmarks go directly to configured Settings', () => {
+  process.env.SETTINGS_FRONT_URL = 'https://settings.mairie.test/account/';
+  for (const path of ['/profile', '/profile/security']) {
+    const response = middleware(new NextRequest(`http://internal:3000${path}`, {
+      headers: { cookie: 'accessToken=active-session' },
+    }));
+    assert.equal(response.status, 307);
+    assert.equal(response.headers.get('location'), 'https://settings.mairie.test/account/');
+  }
+});
+
+test('an invalid Settings destination never loops through the legacy profile route', async () => {
+  for (const value of ['', 'javascript:alert(1)', 'https://settings.mairie.test/profile/']) {
+    process.env.SETTINGS_FRONT_URL = value;
+    const response = middleware(new NextRequest('http://internal:3000/profile', {
+      headers: { cookie: 'accessToken=active-session' },
+    }));
+    assert.equal(response.status, 503);
+    assert.equal(response.headers.get('location'), null);
+    assert.equal(response.headers.get('cache-control'), 'no-store');
+    assert.match(await response.text(), /Paramètres indisponibles/);
+  }
 });

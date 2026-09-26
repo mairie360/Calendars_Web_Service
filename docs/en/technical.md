@@ -1,24 +1,23 @@
 # Calendars_Web_Service — Technical documentation
 
-## Active-module menu — MAIR-180 preparatory slice
+## Shared AppShell and active-module menu — MAIR-180
 
-Only the Sidebar item list excludes `emails` and `files`; existing URL resolution,
-environment configuration, sessions and BFF calls are unchanged. Both desktop and
-mobile render the same active list. Page-level regression coverage renders the
-real Sidebar, checks item order/active item/admin visibility, opens the mobile
-menu and follows Settings while closing the drawer. No library fork or new
-package is introduced; the full MAIR-179/MAIR-180 AppShell dependency remains.
+The calendar page uses `@mairie360/lib-components` AppShell with the existing
+BFF-backed session. Runtime-validated destinations include active modules only;
+`emails` and `files` remain archived. Both desktop and mobile render the same
+navigation, with administrator visibility based on the session role. The
+calendar keeps a bounded scrolling main area and independently scrollable
+upcoming-events list. No BFF call or environment variable is added.
 
 ## Settings account destination — MAIR-180 slice
 
-The server route `/profile/[[...path]]` replaces the local profile screens.
-It temporarily redirects (307) to `SETTINGS_FRONT_URL`, resolved on each request;
-no business profile is fetched by this module. Missing, invalid, credential-bearing
-or legacy `profile` path destinations render an unavailable state with a link
-back to the module. Old bookmark query parameters are not forwarded. Middleware
-authentication is unchanged. No new contract, package, secret or environment
-variable is introduced. This slice does not complete shared AppShell migration
-(MAIR-179).
+Authenticated `/profile` bookmarks and subpaths are redirected (307) by the
+frontend middleware to `SETTINGS_FRONT_URL`, resolved on each request. Missing,
+invalid, credential-bearing or legacy `profile` path destinations return an
+uncached 503 instead of looping. Old bookmark query parameters are not
+forwarded. No business profile is fetched by this module. Unauthenticated
+requests still follow the Login flow. No new contract, secret or environment
+variable is introduced.
 
 ## Explicit frontend destinations (MAIR-177)
 
@@ -36,7 +35,7 @@ can be resolved. No BFF/API contract or deployment variable is added.
 
 ## Architecture and request handling
 
-Next.js 15.5.25, React 19 and TypeScript application using the App Router. The browser calls same-origin routes; the Next.js server forwards data to **BFF_Calendar**.
+Next.js 16.3.6, React 19 and TypeScript application using the App Router. The browser calls same-origin routes; the Next.js server forwards data to **BFF_Calendar**.
 
 ```mermaid
 flowchart LR
@@ -44,7 +43,7 @@ flowchart LR
   Next --> BFF["BFF_Calendar"]
 ```
 
-The page combines calendar components with `useCalendarPage`. The hook loads bootstrap and manages the date range and mutations; data routes retain the `/calendar` prefix. The shell uses session adapters; legacy profile pages redirect to Settings without loading a local profile.
+The page combines calendar components with `useCalendarPage`. The hook loads bootstrap and manages the date range and mutations; data routes retain the `/calendar` prefix. The shared shell uses the existing session adapter; the frontend middleware redirects legacy profile bookmarks to Settings without loading a local profile.
 
 On first mount, the hook reads optional `date` (`YYYY-MM-DD`) and `event` (ID) query parameters. A valid date selects its month before the first `/calendar/bootstrap` request, avoiding an unnecessary request for the current month. After a successful bootstrap, a matching event opens in the existing details modal. An invalid date falls back to the current month; a missing event leaves the selected date visible without opening a modal. The link does not grant access beyond what the BFF returns.
 
@@ -138,7 +137,8 @@ These data paths are exposed at the same origin through the proxy; Next.js pages
 | Page | Source |
 | --- | --- |
 | `/` | [src/app/page.tsx](../../src/app/page.tsx) |
-| `/profile/[[...path]]` | [src/app/profile/[[...path]]/page.tsx](../../src/app/profile/%5B%5B...path%5D%5D/page.tsx) |
+
+Authenticated `/profile` requests are handled by [frontend middleware](../../src/middleware.ts), not a local profile page.
 
 | Method | Local route | Source |
 | --- | --- | --- |

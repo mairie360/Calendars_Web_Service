@@ -14,10 +14,10 @@ function declarations(selector) {
 test('the calendar shell keeps content scrollable without a fixed footer', () => {
   assert.match(declarations('.calendar-scroll-shell'), /height: 100dvh;/);
   assert.match(declarations('.calendar-scroll-shell'), /overflow: hidden;/);
-  assert.match(declarations('.calendar-scroll-layout'), /min-height: 0;/);
-  assert.match(declarations('.calendar-scroll-column'), /min-height: 0;/);
-  assert.match(declarations('.calendar-scroll-shell .app-main'), /overflow-y: auto;/);
-  assert.match(declarations('.calendar-scroll-shell .app-main'), /overflow-x: hidden;/);
-  assert.match(declarations('.calendar-scroll-shell .app-footer'), /position: static !important;/);
-  assert.match(declarations('.calendar-scroll-layout > .desktop-sidebar'), /overflow-y: auto;/);
+  assert.match(declarations('.calendar-scroll-shell > div'), /min-height: 0;/);
+  assert.match(declarations('.calendar-scroll-shell > div > div:last-child'), /min-height: 0;/);
+  assert.match(declarations('.calendar-scroll-shell > div > div:last-child > main'), /overflow-y: auto;/);
+  assert.match(declarations('.calendar-scroll-shell > div > div:last-child > main'), /overflow-x: hidden;/);
+  assert.match(declarations('.calendar-scroll-shell > div > div:last-child > footer'), /position: static;/);
+  assert.match(declarations('.calendar-scroll-shell > div > .hidden'), /overflow-y: auto;/);
 });

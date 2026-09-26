@@ -21,7 +21,7 @@ export default function Page() {
   const gridRef = useCalendarTodayMarker(calendar.view, calendar.currentDate.getTime());
 
   return (
-    <AppShell activeItem="calendar" scrollContent>
+    <AppShell activeItem="calendar">
       <PageTitleBar
         title="Calendrier & Événements"
         subtitle="Planifiez et organisez vos activités"

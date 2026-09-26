@@ -12,7 +12,6 @@ const { alice, apiError, bootstrap, calendarEvent, installWindow, sessionRespons
 const { router } = installReactRuntime();
 const React = require('react');
 const Page = loadTs('app/page').default;
-const { AppShell } = loadTs('app/_components/app-shell');
 const { initialDate } = loadTs('app/calendar/constants');
 const { getPeriodTitle } = loadTs('app/calendar/date-utils');
 
@@ -67,10 +66,8 @@ test('the shell shows the user resolved from BFF User in the header', async () =
   const html = await renderLoadedPage();
 
   assert.match(html, /calendar-scroll-shell/);
-  assert.match(html, /calendar-scroll-layout/);
-  assert.match(html, /calendar-scroll-column/);
-  assert.match(html, /class="app-main flex-1"/);
-  assert.match(html, /<footer[^>]*app-footer/);
+  assert.match(html, /class="flex h-screen"/);
+  assert.match(html, /<main class="min-h-0 flex-1 overflow-auto/);
   assert.deepEqual(front.userBff.sequence(), ['GET /me']);
   assert.match(html, /<span data-slot="avatar-fallback"[^>]*>AM<\/span>|<span[^>]*>AM<\/span>/);
   assert.match(html, /<span[^>]*>Admin Mairie<\/span>/);
@@ -87,7 +84,17 @@ test('desktop and mobile navigation expose only active modules and keep Settings
   const assigned = [];
   const originalAssign = global.window.location.assign;
   global.window.location.assign = (href) => assigned.push(href);
-  setBrowserFrontUrls({ SETTINGS_FRONT_URL: 'https://settings.test.example/' });
+  setBrowserFrontUrls({
+    DASHBOARD_FRONT_URL: 'https://dashboard.test.example/',
+    PROJECT_FRONT_URL: 'https://projects.test.example/',
+    MESSAGE_FRONT_URL: 'https://messages.test.example/',
+    ELEARNING_FRONT_URL: 'https://training.test.example/',
+    CALENDAR_FRONT_URL: 'https://calendar.test.example/',
+    ADMINISTRATION_FRONT_URL: 'https://admin.test.example/',
+    SETTINGS_FRONT_URL: 'https://settings.test.example/',
+    EMAIL_FRONT_URL: 'https://emails.test.example/',
+    FILES_FRONT_URL: 'https://files.test.example/',
+  });
   try {
     await renderLoadedPage();
     assert.equal(view.props('Header').profileHref, 'https://settings.test.example/');
@@ -121,16 +128,6 @@ test('desktop and mobile navigation expose only active modules and keep Settings
     setBrowserFrontUrls({});
     global.window.location.assign = originalAssign;
   }
-});
-
-test('the profile shell keeps the normal page layout without calendar scrolling', async () => {
-  view = mount(React.createElement(AppShell, { activeItem: 'profile' }, React.createElement('p', null, 'Profile content')));
-  const html = await view.waitFor(() => view.find('Header')[0]?.props.user.name !== 'Chargement…');
-
-  assert.match(html, /Profile content/);
-  assert.doesNotMatch(html, /calendar-scroll-(?:shell|layout|column)/);
-  assert.match(html, /class="app-main flex-1"/);
-  assert.deepEqual(front.userBff.sequence(), ['GET /me']);
 });
 
 test('a BFF error is rendered as an alert with a retry button that reloads the calendar', async () => {
