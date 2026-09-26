@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import { useState } from "react";
-import { Footer, Header, Sidebar } from "@mairie360/lib-components";
+import { Header, Sidebar } from "@mairie360/lib-components";
 import { useRouter } from "next/navigation";
 import {
   logoutAndReload,
@@ -75,7 +75,9 @@ export function AppShell({ activeItem, children, mainClassName = "app-main flex-
             {typeof children === "function" ? children(session) : children}
           </main>
 
-          <Footer year={2026} version="2.1.0" className="app-footer" />
+          <footer className="app-footer flex min-h-16 w-full shrink-0 items-center border-t border-[#b9d6d5] bg-white px-6 py-4 text-sm text-[#4c5258] shadow-[0_-1px_5px_rgba(0,0,0,0.08)]">
+            © {new Date().getFullYear()} Mairie360
+          </footer>
         </div>
       </div>
     </div>
