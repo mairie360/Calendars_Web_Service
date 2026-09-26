@@ -17,4 +17,6 @@ jobs:
       package_name: "calendar-front"
       node_version: "23"
       cicd_version: "v3.1.1"
-    secrets: inherit
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+      N8N_WEBHOOK_SECRET: ${{ secrets.N8N_WEBHOOK_SECRET }}
