@@ -122,6 +122,15 @@ button {
   overflow-x: hidden;
 }
 
+.calendar-grid-viewport button[aria-current="date"][aria-label^="Sélectionner le "] {
+  border: 2px dashed #0f766e;
+}
+
+.calendar-grid-viewport button[aria-current="date"]:focus-visible {
+  outline: 3px solid #1256a6;
+  outline-offset: 2px;
+}
+
 .calendar-month-grid,
 .calendar-week-grid {
   width: 100%;

@@ -12,11 +12,13 @@ import {
 import { RefreshCw } from "lucide-react";
 import { AppShell } from "./_components/app-shell";
 import { prepareUpcomingScrollRegion } from "./calendar/_components/upcoming-scroll-region";
+import { useCalendarTodayMarker } from "./calendar/_components/use-calendar-today-marker";
 import { CreateEventModal, EventDetailsModal } from "./calendar/_components/validated-event-modals";
 import { useCalendarPage } from "./calendar/use-calendar-page";
 
 export default function Page() {
   const calendar = useCalendarPage();
+  const gridRef = useCalendarTodayMarker(calendar.view, calendar.currentDate.getTime());
 
   return (
     <AppShell activeItem="calendar" scrollContent>
@@ -61,7 +63,7 @@ export default function Page() {
               onViewChange={calendar.setView}
             />
 
-            <div className="calendar-grid-viewport mt-9">
+            <div className="calendar-grid-viewport mt-9" ref={gridRef}>
               {calendar.view === "month" && (
                 <MonthGrid
                   className="calendar-month-grid"
