@@ -13,10 +13,12 @@ export function logoutAndReload() {
       });
     } finally {
       try {
-        window.localStorage.clear();
-      } finally {
-        window.location.reload();
+        window.localStorage.removeItem("mairie360.auth.jwt");
+        window.localStorage.removeItem("mairie360.projects.jwt");
+      } catch {
+        // Storage can be unavailable; the BFF cookie logout still takes effect.
       }
+      window.location.reload();
     }
   })();
 
