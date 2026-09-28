@@ -4,15 +4,17 @@
 
 Desktop and mobile menus omit the archived E-mails and Files modules, matching
 the local presentation. The remaining module order and administrator visibility
-are unchanged; Settings remains available. Attachments and business documents
-inside active modules are not removed. This is not the full shared AppShell migration.
+are unchanged; Settings remains available. The calendar now uses the shared
+AppShell with the existing BFF-backed user session. Its main viewport scrolls
+without moving the header or footer. Attachments and business documents inside
+active modules are not removed.
 
 ## One account destination
 
 Profile access now opens **Settings**. Existing `/profile` bookmarks and subpaths
 redirect to the configured Settings frontend. The sidebar keeps Settings without
 a duplicate Profile entry. If Settings is not configured correctly, an explicit
-unavailable state replaces the redirect; no demo identity or simulated save is shown.
+uncached 503 replaces the redirect; no demo identity or simulated save is shown.
 
 [Technical documentation](technical.md) · [Français](../fr/module.md) · [README](../../README.md)
 

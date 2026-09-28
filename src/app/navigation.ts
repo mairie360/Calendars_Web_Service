@@ -1,66 +1,20 @@
-import { frontUrl } from "@/lib/front-urls";
+import { parseFrontUrl } from "@/lib/front-url";
+import { frontUrl, type FrontUrlKey } from "@/lib/front-urls";
 import { settingsProfileUrl } from "@/lib/settings-profile";
-import type { LucideIcon } from "lucide-react";
-import {
-  Briefcase,
-  CalendarDays,
-  Files,
-  GraduationCap,
-  LayoutDashboard,
-  Mail,
-  MessageSquare,
-  Settings,
-  Shield,
-} from "lucide-react";
 
-type AppSidebarItem = {
-  id: string;
-  label: string;
-  icon: LucideIcon;
-  adminOnly?: boolean;
-  badge?: string;
-  href?: string;
-};
+const configuredUrl = (key: FrontUrlKey) => parseFrontUrl(frontUrl(key))?.href;
 
-const navigationItems: AppSidebarItem[] = [
-  { id: "dashboard", label: "Tableau de bord", icon: LayoutDashboard, get href() { return frontUrl("DASHBOARD_FRONT_URL"); } },
-  { id: "projects", label: "Projets", icon: Briefcase, get href() { return frontUrl("PROJECT_FRONT_URL"); } },
-  { id: "messages", label: "Messagerie", icon: MessageSquare, get href() { return frontUrl("MESSAGE_FRONT_URL"); } },
-  { id: "emails", label: "E-mails", icon: Mail, get href() { return frontUrl("EMAIL_FRONT_URL"); } },
-  { id: "files", label: "Fichiers", icon: Files, get href() { return frontUrl("FILES_FRONT_URL"); } },
-  { id: "training", label: "Formation", icon: GraduationCap, get href() { return frontUrl("ELEARNING_FRONT_URL"); } },
-  { id: "calendar", label: "Calendrier", icon: CalendarDays, get href() { return frontUrl("CALENDAR_FRONT_URL"); } },
-  {
-    id: "admin",
-    label: "Administration",
-    icon: Shield,
-    adminOnly: true,
-    badge: "Admin",
-    get href() { return frontUrl("ADMINISTRATION_FRONT_URL"); },
-  },
-  { id: "settings", label: "Paramètres", icon: Settings, get href() { return frontUrl("SETTINGS_FRONT_URL"); } },
-];
-
-// Archived modules stay resolvable for legacy callers, but are not menu entries.
-export const appSidebarItems = navigationItems.filter((item) => !["emails", "files"].includes(item.id));
-
-export function getNavigationHref(page: string) {
-  // Keep the legacy route only when the runtime Settings destination is unusable.
-  if (page === "profile") return settingsProfileUrl(frontUrl("SETTINGS_FRONT_URL")) ?? "/profile";
-  return navigationItems.find((item) => item.id === page)?.href;
-}
-
-export function navigateToPage(page: string, push: (href: string) => void) {
-  const href = getNavigationHref(page);
-
-  if (!href) {
-    return;
-  }
-
-  if (href.startsWith("/")) {
-    push(href);
-    return;
-  }
-
-  window.location.assign(href);
+/** Runtime destinations for active modules only; archived fronts are omitted. */
+export function getActiveFrontHrefs() {
+  const settings = settingsProfileUrl(frontUrl("SETTINGS_FRONT_URL"));
+  return {
+    dashboard: configuredUrl("DASHBOARD_FRONT_URL"),
+    projects: configuredUrl("PROJECT_FRONT_URL"),
+    messages: configuredUrl("MESSAGE_FRONT_URL"),
+    training: configuredUrl("ELEARNING_FRONT_URL"),
+    calendar: configuredUrl("CALENDAR_FRONT_URL"),
+    admin: configuredUrl("ADMINISTRATION_FRONT_URL"),
+    settings,
+    profile: settings,
+  };
 }
