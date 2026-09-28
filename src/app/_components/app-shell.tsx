@@ -26,7 +26,7 @@ export function AppShell({ activeItem, children }: AppShellProps) {
       user={session.user}
       onLogout={() => void logoutAndReload()}
       hrefs={{ ...frontHrefs, calendar: frontHrefs.calendar ?? "/" }}
-      sidebarProps={{ brandLogoSrc: null }}
+      sidebarProps={{ brandLogoSrc: "/mairie360-logo.png" }}
       className="calendar-scroll-shell"
     >
       {typeof children === "function" ? children(session) : children}
