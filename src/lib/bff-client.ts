@@ -38,7 +38,9 @@ function getErrorMessage(status: number, body: unknown) {
     if (typeof message === "string" && message.trim()) return message;
   }
 
-  return `Erreur BFF (${status})`;
+  return status >= 500
+    ? "Le service calendrier est temporairement indisponible."
+    : "La demande au calendrier n’a pas pu aboutir.";
 }
 
 /**
