@@ -10,7 +10,7 @@ const { admin, alice, marie, apiError, bootstrap, calendarEvent, installWindow }
 
 const front = new FrontHarness();
 const api = loadTs('app/calendar/api');
-const { BffRequestError } = loadTs('lib/bff-client');
+const { BffRequestError, requestBff } = loadTs('lib/bff-client');
 const token = jwtFor(1);
 let window;
 
@@ -209,4 +209,25 @@ test('an unreachable BFF surfaces the proxy 502 message', async () => {
 test('formatCalendarApiError falls back to a generic message', () => {
   assert.equal(api.formatCalendarApiError(new Error('  ')), 'Le service calendrier est injoignable.');
   assert.equal(api.formatCalendarApiError('boom'), 'Le service calendrier est injoignable.');
+});
+
+test('HTTP failures without an error body use readable messages', async () => {
+  const fetchWithContractGuard = global.fetch;
+
+  try {
+    for (const [status, message] of [
+      [400, 'La demande au calendrier n’a pas pu aboutir.'],
+      [503, 'Le service calendrier est temporairement indisponible.'],
+    ]) {
+      global.fetch = async () => new Response(null, { status });
+      const error = await requestBff('/calendar/bootstrap').catch((reason) => reason);
+
+      assert.ok(error instanceof BffRequestError);
+      assert.equal(error.status, status);
+      assert.equal(error.details, undefined);
+      assert.equal(api.formatCalendarApiError(error), message);
+    }
+  } finally {
+    global.fetch = fetchWithContractGuard;
+  }
 });
