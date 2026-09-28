@@ -9,7 +9,7 @@ test('the upcoming-events list is a named keyboard-scrollable region', () => {
   const region = { tabIndex: -1, setAttribute(name, value) { attributes[name] = value; } };
   const board = {
     querySelector(selector) {
-      assert.equal(selector, '.calendar-sidebar > section:first-child > div');
+      assert.equal(selector, '.calendar-sidebar > .calendar-upcoming-panel > div');
       return region;
     },
   };
