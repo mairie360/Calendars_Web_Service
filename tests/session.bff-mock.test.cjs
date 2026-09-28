@@ -106,12 +106,14 @@ test('useAuthSession logs out and reloads on 401', async () => {
   front.userBff.on('get', '/me', { status: 401 });
   front.userBff.on('post', '/auth/logout', { body: { message: 'Logged out successfully' } });
   window.localStorage.setItem('mairie360.auth.jwt', 'stale');
+  window.localStorage.setItem('unrelated.preference', 'keep');
 
   hook = renderHook(() => session.useAuthSession());
   await hook.waitFor(() => window.location.reloads === 1);
 
   assert.deepEqual(front.userBff.sequence(), ['GET /me', 'POST /auth/logout']);
   assert.equal(window.localStorage.getItem('mairie360.auth.jwt'), null);
+  assert.equal(window.localStorage.getItem('unrelated.preference'), 'keep');
   assert.equal(hook.result.current.loading, true);
 });
 
