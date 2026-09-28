@@ -49,7 +49,7 @@ test('the provider leaves the browser store alone when rendered on the server', 
 
 test('navigation resolves every other front on use, from the URLs of this instance', () => {
   global.window = {};
-  assert.equal(navigation.getNavigationHref('dashboard'), undefined, 'nothing configured yet');
+  assert.equal(navigation.getActiveFrontHrefs().dashboard, undefined, 'nothing configured yet');
 
   const urls = {
     DASHBOARD_FRONT_URL: 'https://dashboard.test.example/',
@@ -67,17 +67,15 @@ test('navigation resolves every other front on use, from the URLs of this instan
     dashboard: urls.DASHBOARD_FRONT_URL,
     projects: urls.PROJECT_FRONT_URL,
     messages: urls.MESSAGE_FRONT_URL,
-    emails: urls.EMAIL_FRONT_URL,
-    files: urls.FILES_FRONT_URL,
     training: urls.ELEARNING_FRONT_URL,
     calendar: urls.CALENDAR_FRONT_URL,
     admin: urls.ADMINISTRATION_FRONT_URL,
     settings: urls.SETTINGS_FRONT_URL,
+    profile: urls.SETTINGS_FRONT_URL,
   };
-  for (const [page, href] of Object.entries(expected)) assert.equal(navigation.getNavigationHref(page), href, page);
-  assert.equal(navigation.getNavigationHref('profile'), urls.SETTINGS_FRONT_URL);
+  assert.deepEqual(navigation.getActiveFrontHrefs(), expected);
   frontUrls.setBrowserFrontUrls({ SETTINGS_FRONT_URL: 'https://settings.test.example/profile' });
-  assert.equal(navigation.getNavigationHref('profile'), '/profile');
+  assert.equal(navigation.getActiveFrontHrefs().profile, undefined);
   frontUrls.setBrowserFrontUrls({ SETTINGS_FRONT_URL: 'javascript:alert(1)' });
-  assert.equal(navigation.getNavigationHref('profile'), '/profile');
+  assert.equal(navigation.getActiveFrontHrefs().profile, undefined);
 });

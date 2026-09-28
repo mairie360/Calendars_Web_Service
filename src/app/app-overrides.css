@@ -15,51 +15,6 @@ button {
   cursor: pointer;
 }
 
-.desktop-sidebar {
-  display: none;
-}
-
-@media (min-width: 64rem) {
-  .desktop-sidebar {
-    display: block;
-  }
-}
-
-.app-main {
-  padding: 2rem 1rem 5rem;
-}
-
-@media (min-width: 40rem) {
-  .app-main {
-    padding: 2rem 1.5rem 5rem;
-  }
-}
-
-@media (min-width: 64rem) {
-  .app-main {
-    padding: 3.5rem 3.5rem 6rem;
-  }
-
-  .calendar-title-bar {
-    align-items: center !important;
-  }
-}
-
-.app-footer {
-  width: 100% !important;
-  z-index: 30;
-}
-
-@media (min-width: 64rem) {
-  .app-footer {
-    position: fixed !important;
-    right: 0;
-    bottom: 0;
-    left: 260px;
-    width: auto !important;
-  }
-}
-
 .calendar-scroll-shell {
   height: 100vh;
   height: 100dvh;
@@ -67,41 +22,58 @@ button {
   overflow: hidden;
 }
 
-.calendar-scroll-layout {
+.calendar-scroll-shell > div {
   height: 100%;
   min-height: 0;
 }
 
-.calendar-scroll-layout > .desktop-sidebar {
+.calendar-scroll-shell > div > .hidden {
   min-height: 0;
   overflow-y: auto;
 }
 
-.calendar-scroll-layout > .desktop-sidebar > aside {
+.calendar-scroll-shell > div > .hidden > aside {
   min-height: 100%;
 }
 
-.calendar-scroll-column {
+.calendar-scroll-shell > div > div:last-child {
   min-height: 0;
 }
 
-.calendar-scroll-column > header {
+.calendar-scroll-shell > div > div:last-child > header {
   flex-shrink: 0;
 }
 
-.calendar-scroll-shell .app-main {
+.calendar-scroll-shell > div > div:last-child > main {
   min-height: 0;
   min-width: 0;
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding-bottom: 3.5rem;
+  padding: 2rem 1rem 3.5rem;
 }
 
-.calendar-scroll-shell .app-footer {
-  position: static !important;
+@media (min-width: 40rem) {
+  .calendar-scroll-shell > div > div:last-child > main {
+    padding: 2rem 1.5rem 3.5rem;
+  }
+}
+
+@media (min-width: 64rem) {
+  .calendar-scroll-shell > div > div:last-child > main {
+    padding: 3.5rem 3.5rem 3.5rem;
+  }
+
+  .calendar-title-bar {
+    align-items: center !important;
+  }
+}
+
+.calendar-scroll-shell > div > div:last-child > footer {
+  position: static;
   flex-shrink: 0;
-  width: 100% !important;
+  width: 100%;
+  z-index: 30;
 }
 
 .calendar-scroll-shell .grid > * {
@@ -194,7 +166,7 @@ button {
 }
 
 @media (max-width: 639px) {
-  .calendar-scroll-shell .app-main {
+  .calendar-scroll-shell > div > div:last-child > main {
     padding: 1.5rem 1rem;
   }
 

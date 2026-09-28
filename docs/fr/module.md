@@ -5,15 +5,17 @@
 Les menus ordinateur et mobile ne proposent plus les modules archivés E-mails
 et Fichiers, comme dans la version locale. L'ordre des autres modules et la
 visibilité réservée aux administrateurs restent inchangés ; Paramètres reste
-accessible. Les pièces jointes et documents métier des modules actifs ne sont
-pas supprimés. Ce lot ne constitue pas la migration AppShell complète.
+accessible. Le calendrier utilise désormais l'AppShell partagé avec la session
+utilisateur fournie par le BFF. Son contenu défile sans déplacer l'en-tête ni
+le pied de page. Les pièces jointes et documents métier des modules actifs ne
+sont pas supprimés.
 
 ## Un seul espace compte
 
 Le profil est désormais ouvert dans **Paramètres (Settings)**. Les anciens liens
 `/profile` et leurs sous-chemins redirigent vers le front Settings configuré.
 La sidebar conserve Paramètres sans doublon Profil. Si Settings n'est pas configuré
-correctement, une indisponibilité explicite remplace la redirection ; aucune donnée
+correctement, une réponse 503 explicite et sans cache remplace la redirection ; aucune donnée
 personnelle de démonstration ni fausse sauvegarde n'est affichée.
 
 [Documentation technique](technical.md) · [English](../en/module.md) · [README](../../README.md)
