@@ -74,6 +74,8 @@ test('the shell shows the user resolved from BFF User in the header', async () =
   assert.match(html, /<footer/);
   const footer = html.match(/<footer\b[^>]*>[\s\S]*?<\/footer>/)?.[0];
   assert.ok(footer);
+  assert.match(html, /<aside\b[^]*?<footer\b[^]*?<\/footer>[^]*?<\/aside>/);
+  assert.doesNotMatch(html, /<\/main>\s*<footer\b/);
   assert.match(footer.replace(/<[^>]*>/g, ''), new RegExp(`© ${new Date().getFullYear()} Mairie360`));
   assert.doesNotMatch(footer, /Version|<button\b|<a\b/);
   assert.deepEqual(view.props('Sidebar').isAdmin, true);
@@ -185,7 +187,11 @@ test('the create modal opens from the title bar and the created event appears in
   assert.match(view.html, /Ajoutez une date au calendrier de la mairie\./);
   assert.equal(view.props('CreateEventModal').isOpen, true);
 
-  front.calendarBff.on('post', '/calendar/events', { status: 201, body: calendarEvent(9, { title: 'Conseil municipal', date: '2026-09-18' }) });
+  const created = calendarEvent(9, { title: 'Conseil municipal', date: '2026-09-18' });
+  // Creating in another month reloads that visible range. The mock must return
+  // the persisted event too, rather than overwrite it with today's old fixture.
+  front.calendarBff.on('get', '/calendar/bootstrap', { body: bootstrap({ events: [created] }) });
+  front.calendarBff.on('post', '/calendar/events', { status: 201, body: created });
   await view.act(() => view.props('CreateEventModal').onCreate({
     title: 'Conseil municipal', date: new Date(2026, 8, 18), startTime: '18:00', endTime: '20:00', category: 'meeting', service: 'direction',
     location: 'Salle du conseil', description: '', assigneeIds: [alice.id],
@@ -195,6 +201,7 @@ test('the create modal opens from the title bar and the created event appears in
   assert.equal(front.calendarBff.sequence().filter((line) => line.startsWith('POST')).length, 1);
   assert.doesNotMatch(html, /Ajoutez une date au calendrier de la mairie\./);
   assert.match(view.text(), /Conseil municipal/);
+  assert.equal(view.props('MonthGrid').events.some((event) => event.id === created.id), true);
 });
 
 test('clicking an event opens its details with the BFF permissions', async () => {
