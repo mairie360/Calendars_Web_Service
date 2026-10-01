@@ -16,6 +16,19 @@ redirect to the configured Settings frontend. The sidebar keeps Settings without
 a duplicate Profile entry. If Settings is not configured correctly, an explicit
 uncached 503 replaces the redirect; no demo identity or simulated save is shown.
 
+## Prototype presentation (MAIR-383)
+
+Calendar-specific styles restore the preserved prototype's 17px system typography,
+28px desktop padding, 20px/14px mobile padding, upcoming-list inner spacing
+and card shadows. Below 1700px,
+long upcoming lists use the viewport-based `clamp(320px, 100dvh - 440px, 560px)`
+cap; short and empty lists remain compact. From 1700px the 310px sidebar fits
+the calendar grid height, with only the upcoming list scrolling. The existing
+named region, focus outline, Home/End keys and event controls are unchanged.
+Dark/density presentation attributes are honored if supplied; this does not
+provide unavailable persisted appearance preferences or change business data,
+contracts, APIs/BFFs, shared package or another frontend.
+
 [Technical documentation](technical.md) · [Français](../fr/module.md) · [README](../../README.md)
 
 Display and operate the municipal calendar in the browser using events, assignments and approvals supplied by BFF Calendar.

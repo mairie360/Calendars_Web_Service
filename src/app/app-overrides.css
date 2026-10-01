@@ -1,3 +1,12 @@
+html {
+  font-size: 17px;
+  --calendar-card-shadow: 0 5px 15px rgb(23 32 51 / 14%), 0 1px 3px rgb(23 32 51 / 12%);
+}
+
+html[data-theme="dark"] {
+  --calendar-card-shadow: 0 6px 20px rgb(0 0 0 / 35%), 0 1px 4px rgb(0 0 0 / 30%);
+}
+
 html,
 body {
   min-height: 100%;
@@ -6,6 +15,7 @@ body {
 
 body {
   margin: 0;
+  font-family: system-ui, sans-serif;
   color: #172033;
   -webkit-font-smoothing: antialiased;
   text-rendering: geometricPrecision;
@@ -50,20 +60,10 @@ button {
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: 2rem 1rem 3.5rem;
-}
-
-@media (min-width: 40rem) {
-  .calendar-scroll-shell > div > div:last-child > main {
-    padding: 2rem 1.5rem 3.5rem;
-  }
+  padding: 28px;
 }
 
 @media (min-width: 64rem) {
-  .calendar-scroll-shell > div > div:last-child > main {
-    padding: 3.5rem 3.5rem 3.5rem;
-  }
-
   .calendar-title-bar {
     align-items: center !important;
   }
@@ -128,10 +128,15 @@ button {
   min-height: 0;
 }
 
+.calendar-board > section,
+.calendar-sidebar > section {
+  box-shadow: var(--calendar-card-shadow);
+}
+
 .calendar-sidebar > .calendar-upcoming-panel {
   display: flex;
   flex-direction: column;
-  max-height: min(35rem, calc(100dvh - 8rem));
+  max-height: clamp(320px, calc(100dvh - 440px), 560px);
   overflow: hidden;
 }
 
@@ -141,6 +146,8 @@ button {
 
 .calendar-sidebar > .calendar-upcoming-panel > div {
   min-height: 0;
+  flex: 0 1 auto;
+  padding-inline: 1.25rem;
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
@@ -151,23 +158,42 @@ button {
   outline-offset: -2px;
 }
 
-@media (min-width: 48rem) and (max-width: 106.249rem) {
+@media (min-width: 768px) and (max-width: 1699px) {
   .calendar-sidebar {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     align-items: start;
   }
 }
 
-@media (min-width: 106.25rem) {
+@media (min-width: 1700px) {
   .calendar-board {
-    grid-template-columns: minmax(0, 1fr) 19.375rem;
+    grid-template-columns: minmax(0, 1fr) 310px;
     align-items: stretch;
+  }
+
+  .calendar-sidebar {
+    grid-template-rows: auto minmax(0, 1fr);
+    align-items: stretch;
+    min-height: 0;
+    contain: size;
+  }
+
+  .calendar-sidebar > .calendar-upcoming-panel {
+    max-height: none;
+  }
+
+  .calendar-sidebar > .calendar-upcoming-panel > div {
+    flex: 1 1 0;
   }
 }
 
-@media (max-width: 639px) {
+@media (max-width: 767px) {
   .calendar-scroll-shell > div > div:last-child > main {
-    padding: 1.5rem 1rem;
+    padding: 20px 14px;
+  }
+
+  .calendar-board > section > div {
+    padding: 16px 10px;
   }
 
   .calendar-week-grid > .grid {
@@ -180,7 +206,7 @@ button {
   }
 
   .calendar-week-grid > .grid .text-xs {
-    font-size: 0.6875rem;
+    font-size: 11px;
   }
 
   .calendar-month-grid > .grid > div,
@@ -195,4 +221,13 @@ button {
   .calendar-month-grid [role="button"] > div + div {
     display: none;
   }
+}
+
+/* Honor presentation attributes when supplied, without inventing persistence. */
+html[data-settings-density="compact"] .calendar-scroll-shell > div > div:last-child > main {
+  padding: 16px;
+}
+
+html[data-settings-density="comfortable"] .calendar-scroll-shell > div > div:last-child > main {
+  padding: 32px;
 }
