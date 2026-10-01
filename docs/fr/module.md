@@ -18,6 +18,20 @@ La sidebar conserve Paramètres sans doublon Profil. Si Settings n'est pas confi
 correctement, une réponse 503 explicite et sans cache remplace la redirection ; aucune donnée
 personnelle de démonstration ni fausse sauvegarde n'est affichée.
 
+## Présentation du prototype (MAIR-383)
+
+Les styles propres à Calendars retrouvent la typographie système de 17px,
+les marges bureau de 28px, les marges mobile de 20px/14px, l'espacement intérieur
+de la liste à venir et les ombres du
+prototype conservé. Sous 1700px, une longue liste à venir est plafonnée par
+`clamp(320px, 100dvh - 440px, 560px)` ; les listes courtes et vides restent
+compactes. À partir de 1700px, la colonne de 310px suit la hauteur de la grille,
+avec défilement dans la liste à venir uniquement. Région nommée, focus,
+touches Home/End et actions des événements restent inchangés.
+Les attributs de présentation sombre/compacité sont respectés s'ils sont fournis ;
+cela n'ajoute pas de préférences persistées indisponibles et ne modifie ni données
+métier, contrats, API/BFF, bibliothèque partagée ni autre front.
+
 [Documentation technique](technical.md) · [English](../en/module.md) · [README](../../README.md)
 
 Afficher et piloter le calendrier municipal dans le navigateur, avec événements, affectations et validations fournis par BFF Calendar.

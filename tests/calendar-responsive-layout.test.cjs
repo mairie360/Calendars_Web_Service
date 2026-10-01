@@ -21,9 +21,34 @@ test('calendar grids fit their viewport without horizontal page scrolling', () =
 
 test('upcoming events stay compact and long lists scroll inside the card', () => {
   assert.match(declarations('.calendar-sidebar'), /grid-template-columns: minmax\(0, 1fr\);/);
-  assert.match(declarations('.calendar-sidebar > .calendar-upcoming-panel'), /max-height: min\(35rem, calc\(100dvh - 8rem\)\);/);
+  assert.match(declarations('.calendar-sidebar > .calendar-upcoming-panel'), /max-height: clamp\(320px, calc\(100dvh - 440px\), 560px\);/);
+  assert.match(declarations('.calendar-sidebar > .calendar-upcoming-panel > div'), /flex: 0 1 auto;/);
+  assert.match(declarations('.calendar-sidebar > .calendar-upcoming-panel > div'), /padding-inline: 1\.25rem;/);
   assert.match(declarations('.calendar-sidebar > .calendar-upcoming-panel > div'), /overflow-y: auto;/);
   assert.match(declarations('.calendar-sidebar > .calendar-upcoming-panel > div:focus-visible'), /outline: 2px solid #1256a6;/);
-  assert.match(css, /@media \(min-width: 48rem\) and \(max-width: 106\.249rem\)/);
-  assert.match(css, /@media \(min-width: 106\.25rem\)[\s\S]*?\.calendar-board\s*\{[^}]*grid-template-columns: minmax\(0, 1fr\) 19\.375rem;/);
+  assert.match(css, /@media \(min-width: 768px\) and \(max-width: 1699px\)/);
+  assert.match(css, /@media \(min-width: 1700px\)[\s\S]*?\.calendar-board\s*\{[^}]*grid-template-columns: minmax\(0, 1fr\) 310px;/);
+});
+
+test('wide upcoming lists fit the grid height instead of growing the whole board', () => {
+  const wide = css.slice(css.indexOf('@media (min-width: 1700px)'));
+  assert.match(wide, /\.calendar-sidebar\s*\{[^}]*grid-template-rows: auto minmax\(0, 1fr\);/);
+  assert.match(wide, /\.calendar-sidebar\s*\{[^}]*contain: size;/);
+  assert.match(wide, /\.calendar-upcoming-panel\s*\{[^}]*max-height: none;/);
+  assert.match(wide, /\.calendar-upcoming-panel > div\s*\{[^}]*flex: 1 1 0;/);
+});
+
+test('calendar presentation matches reference spacing and typography without changing other fronts', () => {
+  assert.match(declarations('html'), /font-size: 17px;/);
+  // The rendered reference keeps the shared small-text scale, despite its
+  // earlier template @theme values. Follow computed evidence, not source alone.
+  assert.doesNotMatch(css, /--text-(?:xs|sm):/);
+  assert.match(css, /body \{\s*margin: 0;\s*font-family: system-ui, sans-serif;/);
+  assert.match(declarations('.calendar-scroll-shell > div > div:last-child > main'), /padding: 28px;/);
+  assert.match(css, /@media \(max-width: 767px\)[\s\S]*?padding: 20px 14px;/);
+  assert.match(css, /\.calendar-board > section > div\s*\{[^}]*padding: 16px 10px;/);
+  assert.match(css, /\.calendar-board > section,\s*\.calendar-sidebar > section\s*\{[^}]*box-shadow: var\(--calendar-card-shadow\);/);
+  assert.match(declarations('html[data-theme="dark"]'), /rgb\(0 0 0 \/ 35%\)/);
+  assert.match(declarations('html[data-settings-density="compact"] .calendar-scroll-shell > div > div:last-child > main'), /padding: 16px;/);
+  assert.match(declarations('html[data-settings-density="comfortable"] .calendar-scroll-shell > div > div:last-child > main'), /padding: 32px;/);
 });
