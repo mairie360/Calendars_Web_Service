@@ -35,7 +35,8 @@ function calendarDateFromLink(value: string | null): Date | null {
 export function useCalendarPage() {
   const [view, setView] = useState<CalendarViewMode>("month");
   const [currentDate, setCurrentDate] = useState<Date>(() => new Date());
-  const [selectedDate, setSelectedDate] = useState<Date>(currentDate);
+  // The period title, schedule, statistics and creation default share one date.
+  const selectedDate = currentDate;
   const selectionFollowsToday = useRef(true);
   const [events, setEvents] = useState<CalendarEventItem[]>([]);
   const [people, setPeople] = useState<CalendarAssignee[]>([]);
@@ -74,7 +75,6 @@ export function useCalendarPage() {
     const openingDate = linkedDate ?? new Date();
     selectionFollowsToday.current = !linkedDate;
     setCurrentDate(openingDate);
-    setSelectedDate(openingDate);
     setLink({ ready: true, eventId: linkedDate ? params.get("event") || null : null });
   }, []);
 
@@ -130,16 +130,17 @@ export function useCalendarPage() {
   }, [error, events, link.eventId, loading]);
 
   const handlePrevious = () => {
+    selectionFollowsToday.current = false;
     setCurrentDate((date) => getPreviousPeriod(date, view));
   };
 
   const handleNext = () => {
+    selectionFollowsToday.current = false;
     setCurrentDate((date) => getNextPeriod(date, view));
   };
 
   const handleSelectDate = (date: Date) => {
     selectionFollowsToday.current = false;
-    setSelectedDate(date);
     setCurrentDate(date);
   };
 
@@ -171,7 +172,6 @@ export function useCalendarPage() {
       setEvents((currentEvents) => [...currentEvents, createdEvent]);
       setCreateModalOpen(false);
       selectionFollowsToday.current = false;
-      setSelectedDate(parseDateInput(createdEvent.date));
       setCurrentDate(parseDateInput(createdEvent.date));
     } catch (createError) {
       setError(formatCalendarApiError(createError));
