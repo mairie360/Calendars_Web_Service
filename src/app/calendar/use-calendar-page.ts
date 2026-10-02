@@ -7,7 +7,6 @@ import {
   updateCalendarEvent,
   updateCalendarEventApproval,
 } from "./api";
-import { initialDate } from "./constants";
 import {
   buildCreateInitialValues,
   formatDateForQuery,
@@ -35,15 +34,16 @@ function calendarDateFromLink(value: string | null): Date | null {
 
 export function useCalendarPage() {
   const [view, setView] = useState<CalendarViewMode>("month");
-  const [currentDate, setCurrentDate] = useState<Date>(initialDate);
-  const [selectedDate, setSelectedDate] = useState<Date>(initialDate);
+  const [currentDate, setCurrentDate] = useState<Date>(() => new Date());
+  const [selectedDate, setSelectedDate] = useState<Date>(currentDate);
+  const selectionFollowsToday = useRef(true);
   const [events, setEvents] = useState<CalendarEventItem[]>([]);
   const [people, setPeople] = useState<CalendarAssignee[]>([]);
   const [categories, setCategories] = useState<CalendarReferenceOption[]>([]);
   const [services, setServices] = useState<CalendarReferenceOption[]>([]);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [createInitialValues, setCreateInitialValues] = useState(() =>
-    buildCreateInitialValues(initialDate),
+    buildCreateInitialValues(currentDate),
   );
   const [selectedEvent, setSelectedEvent] = useState<CalendarEventItem | null>(null);
   const [loading, setLoading] = useState(true);
@@ -69,10 +69,12 @@ export function useCalendarPage() {
       typeof window === "undefined" ? "" : window.location.search,
     );
     const linkedDate = calendarDateFromLink(params.get("date"));
-    if (linkedDate) {
-      setCurrentDate(linkedDate);
-      setSelectedDate(linkedDate);
-    }
+    // Date-dependent UI stays hidden until this browser-local initialization.
+    // A server process/module date must not leak into the hydration markup.
+    const openingDate = linkedDate ?? new Date();
+    selectionFollowsToday.current = !linkedDate;
+    setCurrentDate(openingDate);
+    setSelectedDate(openingDate);
     setLink({ ready: true, eventId: linkedDate ? params.get("event") || null : null });
   }, []);
 
@@ -136,13 +138,18 @@ export function useCalendarPage() {
   };
 
   const handleSelectDate = (date: Date) => {
+    selectionFollowsToday.current = false;
     setSelectedDate(date);
     setCurrentDate(date);
   };
 
-  const openCreateModal = (date = selectedDate, startTime = "09:00") => {
+  const openCreateModal = (date?: Date, startTime = "09:00") => {
+    if (!link.ready) return;
+    // Refresh an implicit "today" when a tab crosses midnight, but never
+    // overwrite a deliberately selected date, deep link or time slot.
+    const creationDate = date ?? (selectionFollowsToday.current ? new Date() : selectedDate);
     setError(null);
-    setCreateInitialValues(buildCreateInitialValues(date, startTime));
+    setCreateInitialValues(buildCreateInitialValues(creationDate, startTime));
     setCreateModalOpen(true);
   };
 
@@ -163,6 +170,7 @@ export function useCalendarPage() {
 
       setEvents((currentEvents) => [...currentEvents, createdEvent]);
       setCreateModalOpen(false);
+      selectionFollowsToday.current = false;
       setSelectedDate(parseDateInput(createdEvent.date));
       setCurrentDate(parseDateInput(createdEvent.date));
     } catch (createError) {
@@ -282,6 +290,7 @@ export function useCalendarPage() {
     people,
     periodTitle,
     refreshData: loadData,
+    ready: link.ready,
     selectedDate,
     selectedEvent,
     setCreateModalOpen,

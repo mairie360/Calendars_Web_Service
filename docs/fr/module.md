@@ -32,6 +32,18 @@ Les attributs de présentation sombre/compacité sont respectés s'ils sont four
 cela n'ajoute pas de préférences persistées indisponibles et ne modifie ni données
 métier, contrats, API/BFF, bibliothèque partagée ni autre front.
 
+## Date d’ouverture et minuit (MAIR-407, volet date uniquement)
+
+Chaque page montée initialise le calendrier avec la date locale actuelle du
+navigateur, pas une date capturée au démarrage du module/serveur. Le rendu serveur
+et le début d’hydratation affichent un chargement sans date jusqu’à résolution
+du jour courant ou d’un lien valide. Après minuit, une nouvelle création actualise
+le jour implicite ; une sélection volontaire, un lien daté ou un créneau garde
+sa date/heure. La période consultée n’est jamais réinitialisée de force à minuit.
+Le marqueur du jour et les appels conformes au contrat existant sont préservés.
+Cela ne résout pas les autres constats de MAIR-407 concernant fuseau, proxy,
+logout ou infrastructure et ne modifie aucun API/BFF ni environnement.
+
 ## Enregistrement refusé des événements (MAIR-387)
 
 Les brouillons de création/modification restent ouverts jusqu’à confirmation

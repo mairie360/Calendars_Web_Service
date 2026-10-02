@@ -18,7 +18,22 @@ import { useCalendarPage } from "./calendar/use-calendar-page";
 
 export default function Page() {
   const calendar = useCalendarPage();
-  const gridRef = useCalendarTodayMarker(calendar.view, calendar.currentDate.getTime());
+  const gridRef = useCalendarTodayMarker(calendar.view, calendar.ready ? calendar.currentDate.getTime() : -1);
+
+  if (!calendar.ready) {
+    return (
+      <AppShell activeItem="calendar">
+        <PageTitleBar
+          title="Calendrier & Événements"
+          subtitle="Planifiez et organisez vos activités"
+          className="calendar-title-bar"
+        />
+        <Card className="mt-7 min-h-[620px] rounded-lg px-6 py-6">
+          <span role="status">Chargement des données du calendrier…</span>
+        </Card>
+      </AppShell>
+    );
+  }
 
   return (
     <AppShell activeItem="calendar">

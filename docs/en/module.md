@@ -29,6 +29,18 @@ Dark/density presentation attributes are honored if supplied; this does not
 provide unavailable persisted appearance preferences or change business data,
 contracts, APIs/BFFs, shared package or another frontend.
 
+## Opening dates and midnight (MAIR-407, date scope only)
+
+Each mounted page initializes its calendar from the current browser-local date,
+not a timestamp captured when the module/server started. Server and initial
+hydration show a date-free loading state before the browser resolves today or
+a valid linked date. A new event opened after midnight refreshes an implicit
+today default; deliberate date selection, a linked date or a time slot keeps
+its own date/time. Browsing periods is never forcibly reset at midnight.
+The existing today marker and contract-backed requests remain unchanged.
+This does not resolve the separate timezone, proxy, logout or infrastructure
+audit points in MAIR-407 and changes no API/BFF or environment.
+
 ## Refused event saves (MAIR-387)
 
 Create/edit drafts remain open until the existing BFF confirms a save. Pending
