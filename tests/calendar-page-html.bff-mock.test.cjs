@@ -11,8 +11,9 @@ const { alice, apiError, bootstrap, calendarEvent, installWindow, sessionRespons
 
 const { router } = installReactRuntime();
 const React = require('react');
+const { renderToStaticMarkup } = require('react-dom/server');
 const Page = loadTs('app/page').default;
-const { initialDate } = loadTs('app/calendar/constants');
+const initialDate = new Date();
 const { getPeriodTitle } = loadTs('app/calendar/date-utils');
 
 const front = new FrontHarness();
@@ -40,6 +41,25 @@ async function renderLoadedPage(body = bootstrap()) {
   return view.waitFor((html) => !html.includes('role="status"') && view.find('Header')[0]?.props.user.name !== 'Chargement…');
 }
 
+test('server renders on either side of a month boundary expose no server-local calendar date', () => {
+  const RealDate = Date;
+  try {
+    for (const clock of [new RealDate(2026, 8, 30, 23, 59).getTime(), new RealDate(2026, 9, 1, 0, 1).getTime()]) {
+      global.Date = class extends RealDate {
+        constructor(...args) { super(...(args.length ? args : [clock])); }
+        static now() { return clock; }
+      };
+      // Real SSR has no effects: this is not the effect-running mount harness.
+      const html = renderToStaticMarkup(React.createElement(Page));
+      assert.match(html, /<span role="status">Chargement des données du calendrier…<\/span>/);
+      assert.doesNotMatch(html, /calendar-month-grid|calendar-week-grid|Sélectionner le|>Nouvel événement<\/button>/);
+      assert.deepEqual(front.calendarBff.sequence(), []);
+    }
+  } finally {
+    global.Date = RealDate;
+  }
+});
+
 test('the first pass renders the loading state, the second the events answered by GET /calendar/bootstrap', async () => {
   front.calendarBff.on('get', '/calendar/bootstrap', { body: bootstrap() });
   view = mount(React.createElement(Page));
@@ -47,10 +67,13 @@ test('the first pass renders the loading state, the second the events answered b
   assert.equal(view.passes, 1);
   assert.match(view.html, /<span role="status">Chargement des données du calendrier…<\/span>/);
   assert.doesNotMatch(view.text(), /Événement 5/);
-  assert.match(view.html, new RegExp(`<h2[^>]*>${getPeriodTitle('month', initialDate)}</h2>`));
+  assert.doesNotMatch(view.html, new RegExp(`<h2[^>]*>${getPeriodTitle('month', initialDate)}</h2>`), 'do not expose server-local date markup before client initialization');
+  assert.equal(view.find('MonthGrid').length, 0);
+  assert.doesNotMatch(view.html, />Nouvel événement<\/button>/);
 
   const html = await view.waitFor((current) => !current.includes('role="status"'));
 
+  assert.match(html, new RegExp(`<h2[^>]*>${getPeriodTitle('month', initialDate)}</h2>`));
   assert.deepEqual(front.calendarBff.sequence().map((line) => line.split('?')[0]), ['GET /calendar/bootstrap']);
   assert.doesNotMatch(html, /role="alert"/);
   assert.match(view.text(), /Événement 5/);

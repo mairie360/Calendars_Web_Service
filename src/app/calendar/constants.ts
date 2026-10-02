@@ -1,7 +1,5 @@
 import type { CalendarAssignee, CalendarAssigneeId } from "./types";
 
-export const initialDate = new Date();
-
 const eventColors: Record<string, string> = {
   meeting: "bg-[#e9f2ff] text-[#1256a6]",
   activity: "bg-[#eaf7ee] text-[#257444]",

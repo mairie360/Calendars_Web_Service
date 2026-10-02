@@ -11,7 +11,7 @@ const { alice, apiError, bootstrap, calendarEvent, installWindow } = require('./
 stubModule('react', react);
 const { useCalendarPage } = loadTs('app/calendar/use-calendar-page');
 const { formatDateForQuery, getCalendarPeriodRange } = loadTs('app/calendar/date-utils');
-const { initialDate } = loadTs('app/calendar/constants');
+const initialDate = new Date();
 
 const front = new FrontHarness();
 let page;
