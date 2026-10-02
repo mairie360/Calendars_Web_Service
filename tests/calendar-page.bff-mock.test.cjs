@@ -282,6 +282,159 @@ test('handleSaveEvent reports a missing event', async () => {
   assert.equal((await page.waitFor((current) => !current.saving)).error, 'Événement introuvable');
 });
 
+test('a confirmed edit does not close another event selected during its request', async () => {
+  const state = await renderLoadedPage();
+  front.calendarBff.on('patch', '/calendar/events/{id}', ({ pathParams }) => ({
+    body: calendarEvent(Number(pathParams.id), { title: 'Confirmed event edit' }),
+  }));
+  state.handleEventClick(state.events[0]);
+  const request = state.handleSaveEvent({ ...state.events[0], title: 'Confirmed event edit' });
+  state.handleEventClick(state.events[1]);
+  assert.equal(await request, false);
+  const after = await page.waitFor(current => !current.saving);
+  assert.equal(after.events[0].title, 'Confirmed event edit');
+  assert.equal(after.selectedEvent?.id, state.events[1].id);
+});
+
+test('a confirmed edit does not close the same event reopened after explicit cancellation', async () => {
+  const state = await renderLoadedPage();
+  front.calendarBff.on('patch', '/calendar/events/{id}', ({ pathParams }) => ({
+    body: calendarEvent(Number(pathParams.id), { title: 'Confirmed earlier edit' }),
+  }));
+  state.handleEventClick(state.events[0]);
+  const request = state.handleSaveEvent({ ...state.events[0], title: 'Confirmed earlier edit' });
+  state.setSelectedEvent(null);
+  state.handleEventClick(state.events[0]);
+  assert.equal(await request, false);
+  const after = await page.waitFor(current => !current.saving);
+  assert.equal(after.events[0].title, 'Confirmed earlier edit');
+  assert.equal(after.selectedEvent?.id, state.events[0].id);
+});
+
+test('a confirmed deletion does not close another event selected during its request', async () => {
+  const state = await renderLoadedPage();
+  front.calendarBff.on('delete', '/calendar/events/{id}', { status: 204 });
+  state.handleEventClick(state.events[0]);
+  const request = state.handleDeleteEvent(state.events[0]);
+  state.handleEventClick(state.events[1]);
+  await request;
+  const after = await page.waitFor(current => !current.saving);
+  assert.deepEqual(after.events.map(event => event.id), [state.events[1].id]);
+  assert.equal(after.selectedEvent?.id, state.events[1].id);
+});
+
+test('a confirmed deletion closes even a reopened copy of the deleted event', async () => {
+  const state = await renderLoadedPage();
+  front.calendarBff.on('delete', '/calendar/events/{id}', { status: 204 });
+  state.handleEventClick(state.events[0]);
+  const request = state.handleDeleteEvent(state.events[0]);
+  state.setSelectedEvent(null);
+  state.handleEventClick(state.events[0]);
+  await request;
+  const after = await page.waitFor(current => !current.saving);
+  assert.deepEqual(after.events.map(event => event.id), [state.events[1].id]);
+  assert.equal(after.selectedEvent, null);
+});
+
+test('a bootstrap response started before a confirmed edit cannot restore the earlier event', async () => {
+  const state = await renderLoadedPage();
+  let reply;
+  front.calendarBff.on('get', '/calendar/bootstrap', () => new Promise(resolve => { reply = resolve; }));
+  const read = state.refreshData();
+  await page.waitFor(() => Boolean(reply));
+  front.calendarBff.on('patch', '/calendar/events/{id}', ({ pathParams }) => ({
+    body: calendarEvent(Number(pathParams.id), { title: 'Confirmed after read started' }),
+  }));
+  state.handleEventClick(state.events[0]);
+  await state.handleSaveEvent({ ...state.events[0], title: 'Confirmed after read started' });
+  reply({ body: bootstrap() });
+  await read;
+  const after = await page.waitFor(current => !current.loading && !current.saving);
+  assert.equal(after.events[0].title, 'Confirmed after read started');
+});
+
+test('only the latest retry may update events, errors or the loading state', async () => {
+  const state = await renderLoadedPage();
+  const replies = [];
+  front.calendarBff.on('get', '/calendar/bootstrap', () => new Promise(resolve => { replies.push(resolve); }));
+  const first = state.refreshData();
+  await page.waitFor(() => replies.length === 1);
+  const latest = state.refreshData();
+  await page.waitFor(() => replies.length === 2);
+  replies[0]({ status: 500, body: apiError('UNAVAILABLE', 'Earlier retry failed') });
+  await first;
+  const waiting = await page.waitFor(current => current.loading);
+  assert.equal(waiting.error, null);
+  replies[1]({ body: bootstrap({ events: [calendarEvent(42)] }) });
+  await latest;
+  const after = await page.waitFor(current => !current.loading);
+  assert.deepEqual(after.events.map(event => event.id), [42]);
+  assert.equal(after.error, null);
+});
+
+test('an earlier bootstrap cannot erase a confirmed creation and a fresh read remains authoritative', async () => {
+  const state = await renderLoadedPage();
+  let reply;
+  front.calendarBff.on('get', '/calendar/bootstrap', () => new Promise(resolve => { reply = resolve; }));
+  const read = state.refreshData();
+  await page.waitFor(() => Boolean(reply));
+  front.calendarBff.on('post', '/calendar/events', { status: 201, body: calendarEvent(42) });
+  const date = formatDateForQuery(state.currentDate);
+  await state.handleCreateEvent({ title: 'Confirmed creation', description: '', date, endDate: '', category: 'meeting', startTime: '09:00', endTime: '10:00', location: '', assigneeIds: [], recurrence: { frequency: 'none' } });
+  reply({ body: bootstrap() });
+  await read;
+  assert.deepEqual((await page.waitFor(current => !current.loading)).events.map(event => event.id), [5, 6, 42]);
+  front.calendarBff.on('get', '/calendar/bootstrap', { body: bootstrap({ events: [calendarEvent(42, { title: 'Fresh official version' })] }) });
+  await page.result.current.refreshData();
+  const after = await page.waitFor(current => !current.loading);
+  assert.deepEqual(after.events.map(event => event.id), [42]);
+  assert.equal(after.events[0].title, 'Fresh official version');
+});
+
+test('a stale read cannot resurrect a confirmed deletion or undo an approval', async () => {
+  for (const operation of ['delete', 'approve']) {
+    const state = await renderLoadedPage();
+    let reply;
+    front.calendarBff.on('get', '/calendar/bootstrap', () => new Promise(resolve => { reply = resolve; }));
+    const read = state.refreshData();
+    await page.waitFor(() => Boolean(reply));
+    state.handleEventClick(state.events[0]);
+    if (operation === 'delete') {
+      front.calendarBff.on('delete', '/calendar/events/{id}', { status: 204 });
+      await state.handleDeleteEvent(state.events[0]);
+    } else {
+      front.calendarBff.on('patch', '/calendar/events/{id}/approval', { body: calendarEvent(5, { approvalStatus: 'approved', canValidate: false }) });
+      await state.handleValidateEvent(state.events[0], 'approved');
+    }
+    reply({ body: bootstrap() });
+    await read;
+    const after = await page.waitFor(current => !current.loading && !current.saving);
+    if (operation === 'delete') assert.deepEqual(after.events.map(event => event.id), [6]);
+    else assert.equal(after.events[0].approvalStatus, 'approved');
+    page.unmount();
+    page = undefined;
+  }
+});
+
+test('a confirmed approval cannot replace another selection or reopen a closed event', async () => {
+  for (const close of [false, true]) {
+    const state = await renderLoadedPage();
+    front.calendarBff.on('patch', '/calendar/events/{id}/approval', ({ pathParams }) => ({
+      body: calendarEvent(Number(pathParams.id), { approvalStatus: 'approved', canValidate: false }),
+    }));
+    state.handleEventClick(state.events[0]);
+    const request = state.handleValidateEvent(state.events[0], 'approved');
+    if (close) state.setSelectedEvent(null);
+    else state.handleEventClick(state.events[1]);
+    await request;
+    const after = await page.waitFor(current => !current.saving);
+    assert.equal(after.events[0].approvalStatus, 'approved');
+    assert.equal(after.selectedEvent?.id ?? null, close ? null : state.events[1].id);
+    page.unmount();
+    page = undefined;
+  }
+});
+
 test('handleDeleteEvent deletes the event and removes it locally', async () => {
   const state = await renderLoadedPage();
   front.calendarBff.on('delete', '/calendar/events/{id}', { status: 204 });
@@ -336,6 +489,7 @@ test('handleValidateEvent sends the approval only for events the user can valida
   await page.result.current.handleValidateEvent(state.events[1], 'approved');
   assert.equal(front.calendarBff.calls('/calendar/events/{id}/approval').length, 0);
 
+  state.handleEventClick(state.events[0]);
   await page.result.current.handleValidateEvent(state.events[0], 'rejected');
   const after = await page.waitFor((current) => !current.saving);
 

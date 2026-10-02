@@ -46,8 +46,19 @@ export function useCalendarPage() {
   const [createInitialValues, setCreateInitialValues] = useState(() =>
     buildCreateInitialValues(currentDate),
   );
-  const [selectedEvent, setSelectedEvent] = useState<CalendarEventItem | null>(null);
+  const [selectedEvent, setSelectedEventState] = useState<CalendarEventItem | null>(null);
+  const eventSelectionRevision = useRef(0);
+  const setSelectedEvent = useCallback((event: CalendarEventItem | null) => {
+    eventSelectionRevision.current += 1;
+    setSelectedEventState(event);
+  }, []);
   const [loading, setLoading] = useState(true);
+  const calendarReadRevision = useRef(0);
+  const preserveConfirmedMutation = () => {
+    // A read started before this confirmation can only describe older data.
+    calendarReadRevision.current += 1;
+    setLoading(false);
+  };
   const [saving, setSaving] = useState(false);
   const mutationInFlight = useRef(false);
   const [error, setError] = useState<string | null>(null);
@@ -80,6 +91,8 @@ export function useCalendarPage() {
 
   const loadData = useCallback(
     async (signal?: AbortSignal) => {
+      const revision = ++calendarReadRevision.current;
+      const isCurrent = () => !signal?.aborted && calendarReadRevision.current === revision;
       setLoading(true);
 
       try {
@@ -89,7 +102,7 @@ export function useCalendarPage() {
           signal,
         });
 
-        if (signal?.aborted) return;
+        if (!isCurrent()) return;
 
         setEvents(calendarData.events);
         setPeople(calendarData.people);
@@ -98,7 +111,7 @@ export function useCalendarPage() {
         setError(null);
       } catch (loadError) {
         if (
-          signal?.aborted ||
+          !isCurrent() ||
           (loadError instanceof Error && loadError.name === "AbortError")
         ) {
           return;
@@ -106,7 +119,7 @@ export function useCalendarPage() {
 
         setError(formatCalendarApiError(loadError));
       } finally {
-        if (!signal?.aborted) setLoading(false);
+        if (isCurrent()) setLoading(false);
       }
     },
     [rangeFrom, rangeTo],
@@ -127,7 +140,7 @@ export function useCalendarPage() {
     const linkedEvent = events.find((event) => String(event.id) === link.eventId);
     if (linkedEvent) setSelectedEvent(linkedEvent);
     setLink({ ready: true, eventId: null });
-  }, [error, events, link.eventId, loading]);
+  }, [error, events, link.eventId, loading, setSelectedEvent]);
 
   const handlePrevious = () => {
     selectionFollowsToday.current = false;
@@ -169,6 +182,7 @@ export function useCalendarPage() {
     try {
       const createdEvent = await createCalendarEvent(values, people);
 
+      preserveConfirmedMutation();
       setEvents((currentEvents) => [...currentEvents, createdEvent]);
       setCreateModalOpen(false);
       selectionFollowsToday.current = false;
@@ -191,6 +205,7 @@ export function useCalendarPage() {
     mutationInFlight.current = true;
 
     const updatedEvent = updatedEventPayload as CalendarEventItem;
+    const selection = eventSelectionRevision.current;
 
     setSaving(true);
     setError(null);
@@ -198,6 +213,7 @@ export function useCalendarPage() {
     try {
       const savedEvent = await updateCalendarEvent(updatedEvent, people);
 
+      preserveConfirmedMutation();
       setEvents((currentEvents) =>
         currentEvents.map((event) =>
           String(event.id) === String(savedEvent.id)
@@ -205,8 +221,15 @@ export function useCalendarPage() {
             : event,
         ),
       );
-      setSelectedEvent(null);
-      return true;
+      const selectionUnchanged = eventSelectionRevision.current === selection;
+      if (selectionUnchanged) {
+        setSelectedEventState((current) =>
+          String(current?.id) === String(updatedEvent.id) ? null : current,
+        );
+      }
+      // A reopened or different form must not exit editing because an earlier
+      // form's write completed; the official event list still receives the result.
+      return selectionUnchanged;
     } catch (saveError) {
       setError(formatCalendarApiError(saveError));
       return false;
@@ -225,10 +248,15 @@ export function useCalendarPage() {
 
     try {
       await deleteCalendarEvent(eventToDelete.id);
+      preserveConfirmedMutation();
       setEvents((currentEvents) =>
         currentEvents.filter((event) => String(event.id) !== String(eventToDelete.id)),
       );
-      setSelectedEvent(null);
+      // A reopened copy of the deleted event is no longer official either.
+      // Never close a different event selected in the meantime.
+      setSelectedEventState((current) =>
+        String(current?.id) === String(eventToDelete.id) ? null : current,
+      );
     } catch (deleteError) {
       setError(formatCalendarApiError(deleteError));
     } finally {
@@ -244,6 +272,7 @@ export function useCalendarPage() {
     // Simple garde d'affichage : le BFF reste seul juge du droit de valider (403 sinon).
     if (mutationInFlight.current || !eventToValidate.canValidate) return;
     mutationInFlight.current = true;
+    const selection = eventSelectionRevision.current;
 
     setSaving(true);
     setError(null);
@@ -255,12 +284,17 @@ export function useCalendarPage() {
         people,
       );
 
+      preserveConfirmedMutation();
       setEvents((currentEvents) =>
         currentEvents.map((event) =>
           String(event.id) === String(savedEvent.id) ? savedEvent : event,
         ),
       );
-      setSelectedEvent(savedEvent);
+      if (eventSelectionRevision.current === selection) {
+        setSelectedEventState((current) =>
+          String(current?.id) === String(eventToValidate.id) ? savedEvent : current,
+        );
+      }
     } catch (validationError) {
       setError(formatCalendarApiError(validationError));
     } finally {
