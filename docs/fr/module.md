@@ -32,6 +32,17 @@ Les attributs de présentation sombre/compacité sont respectés s'ils sont four
 cela n'ajoute pas de préférences persistées indisponibles et ne modifie ni données
 métier, contrats, API/BFF, bibliothèque partagée ni autre front.
 
+## Enregistrement refusé des événements (MAIR-387)
+
+Les brouillons de création/modification restent ouverts jusqu’à confirmation
+du BFF existant. Les contrôles sont désactivés pendant l’enregistrement et une
+garde synchrone interdit les mutations doubles. État et erreurs sont annoncés
+dans le formulaire ; les champs refusés restent disponibles pour correction
+et nouvelle tentative. Une annulation explicite abandonne le brouillon ; la
+réouverture reprend les données officielles. Validation chronologique,
+récurrences et permissions publiées restent inchangées. Ce correctif résout
+un défaut hérité du prototype sans changer bibliothèque, API/BFF ni données.
+
 [Documentation technique](technical.md) · [English](../en/module.md) · [README](../../README.md)
 
 Afficher et piloter le calendrier municipal dans le navigateur, avec événements, affectations et validations fournis par BFF Calendar.

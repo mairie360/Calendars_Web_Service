@@ -120,6 +120,8 @@ export default function Page() {
         submitLabel="Créer"
         onCancel={() => calendar.setCreateModalOpen(false)}
         onCreate={calendar.handleCreateEvent}
+        saving={calendar.saving}
+        error={calendar.error}
       />
 
       <EventDetailsModal
@@ -137,6 +139,8 @@ export default function Page() {
         saveLabel="Enregistrer"
         onClose={() => calendar.setSelectedEvent(null)}
         onSave={calendar.handleSaveEvent}
+        saving={calendar.saving}
+        error={calendar.error}
         onDelete={calendar.handleDeleteEvent}
         onApprove={(event) => void calendar.handleValidateEvent(event, "approved")}
         onReject={(event) => void calendar.handleValidateEvent(event, "rejected")}

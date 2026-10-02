@@ -4,11 +4,53 @@ import {
 } from '@mairie360/lib-components';
 import type { ComponentProps, FormEvent, ReactNode } from 'react';
 import { useEffect, useState } from 'react';
+import { formatDateForQuery } from '../date-utils';
 import type { CalendarRecurrence } from '../types';
 import { validateEventChronology } from './validation';
 
 type CreateProps = ComponentProps<typeof LibraryCreateEventModal>;
 type DetailsProps = ComponentProps<typeof LibraryEventDetailsModal>;
+type SaveEvent = Parameters<NonNullable<DetailsProps['onSave']>>[0];
+type SaveFeedback = { saving?: boolean; error?: string | null };
+type ControlledDetailsProps = Omit<DetailsProps, 'onSave'> & SaveFeedback & {
+  onSave?: (event: SaveEvent) => boolean | Promise<boolean>;
+};
+
+function ModalFeedback({ subtitle, saving, error }: SaveFeedback & { subtitle?: ReactNode }) {
+  return (
+    <>
+      {subtitle}
+      {saving || error ? (
+        <span role={saving ? 'status' : 'alert'} className="mt-2 block font-semibold text-[#334155]">
+          {saving ? 'Enregistrement en cours…' : error}
+        </span>
+      ) : null}
+    </>
+  );
+}
+
+function valuesFromSubmittedEvent(event: SaveEvent): CreateProps['initialValues'] {
+  const dateText = (date: SaveEvent['date'] | undefined) =>
+    date instanceof Date ? formatDateForQuery(date) : date ?? '';
+  const nodeText = (value: ReactNode) => typeof value === 'string' || typeof value === 'number' ? String(value) : '';
+  return {
+    title: nodeText(event.title),
+    description: nodeText(event.description),
+    date: dateText(event.date),
+    endDate: dateText(event.endDate ?? event.date),
+    category: event.category ?? '',
+    service: event.service ?? '',
+    startTime: event.startTime ?? '',
+    endTime: event.endTime ?? '',
+    location: event.location ?? '',
+    assigneeIds: event.assigneeIds ?? event.assignees?.map(person => person.id) ?? [],
+    recurrence: {
+      ...event.recurrence,
+      frequency: event.recurrence?.frequency ?? 'none',
+      endsOn: dateText(event.recurrence?.endsOn),
+    },
+  };
+}
 
 function readFormValue(form: HTMLFormElement, id: string) {
   return form.querySelector<HTMLInputElement | HTMLSelectElement>(`#${id}`)?.value ?? '';
@@ -92,32 +134,76 @@ function ValidatedModal({
   );
 }
 
-export function CreateEventModal(props: CreateProps) {
+export function CreateEventModal({ saving = false, error, ...props }: CreateProps & SaveFeedback) {
   const initialFrequency = props.initialValues?.recurrence?.frequency;
   return (
     <ValidatedModal isOpen={props.isOpen} resetKey={String(props.initialValues?.date ?? '')} initialFrequency={initialFrequency}>
-      <LibraryCreateEventModal
-        {...props}
-        onCreate={(event) => props.onCreate({
-          ...event,
-          endDate: event.recurrence.frequency === 'none' ? event.endDate : event.date,
-        })}
-      />
+      <fieldset disabled={saving} aria-busy={saving} className="m-0 min-w-0 border-0 p-0">
+        <LibraryCreateEventModal
+          {...props}
+          subtitle={<ModalFeedback subtitle={props.subtitle} saving={saving} error={error} />}
+          onCancel={() => { if (!saving) props.onCancel(); }}
+          onCreate={(event) => {
+            if (!saving) props.onCreate({
+              ...event,
+              endDate: event.recurrence.frequency === 'none' ? event.endDate : event.date,
+            });
+          }}
+        />
+      </fieldset>
     </ValidatedModal>
   );
 }
 
-export function EventDetailsModal(props: DetailsProps) {
-  const initialFrequency = props.event?.recurrence?.frequency;
+function EventDetailsSession(props: ControlledDetailsProps & { event: SaveEvent }) {
+  // The published details component exits edit mode synchronously on submit.
+  // Own the submitted draft here until the existing BFF confirms the write.
+  const [draft, setDraft] = useState<CreateProps['initialValues']>();
+  const initialFrequency = draft?.recurrence?.frequency ?? props.event.recurrence?.frequency;
+  const saveDraft = async (event: SaveEvent) => {
+    if (props.saving || !props.onSave) return;
+    if (!draft) setDraft(valuesFromSubmittedEvent(event));
+    if (await props.onSave(event)) setDraft(undefined);
+  };
   return (
-    <ValidatedModal isOpen={props.isOpen && Boolean(props.event)} resetKey={String(props.event?.id ?? '')} initialFrequency={initialFrequency}>
-      <LibraryEventDetailsModal
-        {...props}
-        onSave={props.onSave ? (event) => props.onSave?.({
-          ...event,
-          endDate: event.recurrence && event.recurrence.frequency !== 'none' ? event.date : event.endDate,
-        }) : undefined}
-      />
+    <ValidatedModal isOpen={props.isOpen} resetKey={String(props.event.id)} initialFrequency={initialFrequency}>
+      <fieldset disabled={props.saving} aria-busy={Boolean(props.saving)} className="m-0 min-w-0 border-0 p-0">
+        {draft ? (
+          <LibraryCreateEventModal
+            isOpen
+            people={props.people}
+            categories={props.categories}
+            initialValues={draft}
+            canCreateRecurringEvents={props.canCreateRecurringEvents}
+            title="Modifier l’événement"
+            subtitle={<ModalFeedback subtitle="Modifier les informations de l’événement sélectionné" saving={props.saving} error={props.error} />}
+            cancelLabel={props.cancelLabel}
+            submitLabel={props.saveLabel ?? 'Enregistrer'}
+            onCancel={() => { if (!props.saving) setDraft(undefined); }}
+            onCreate={values => void saveDraft({
+              ...props.event,
+              ...values,
+              endDate: values.recurrence.frequency === 'none' ? values.endDate : values.date,
+              assignees: props.people?.filter(person => values.assigneeIds.some(id => String(id) === String(person.id))),
+            })}
+          />
+        ) : (
+          <LibraryEventDetailsModal
+            {...props}
+            onClose={() => { if (!props.saving) props.onClose(); }}
+            onSave={props.onSave ? (event) => void saveDraft({
+              ...event,
+              endDate: event.recurrence && event.recurrence.frequency !== 'none' ? event.date : event.endDate,
+            }) : undefined}
+          />
+        )}
+      </fieldset>
     </ValidatedModal>
   );
+}
+
+export function EventDetailsModal(props: ControlledDetailsProps) {
+  return props.isOpen && props.event
+    ? <EventDetailsSession key={String(props.event.id)} {...props} event={props.event} />
+    : null;
 }

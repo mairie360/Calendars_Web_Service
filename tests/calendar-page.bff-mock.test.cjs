@@ -204,7 +204,7 @@ test('handleSaveEvent patches the event and merges the saved version', async () 
   front.calendarBff.on('patch', '/calendar/events/{id}', ({ body, pathParams }) => ({ body: calendarEvent(Number(pathParams.id), { ...body, category: 'activity' }) }));
 
   state.handleEventClick(state.events[0]);
-  await page.result.current.handleSaveEvent({ ...state.events[0], title: 'Conseil renommé' });
+  assert.equal(await page.result.current.handleSaveEvent({ ...state.events[0], title: 'Conseil renommé' }), true);
   const saved = await page.waitFor((current) => !current.saving);
 
   assert.deepEqual(front.calendarBff.calls('/calendar/events/{id}', 'PATCH').map((call) => [call.pathParams.id, call.body.title]), [['5', 'Conseil renommé']]);
@@ -217,7 +217,7 @@ test('handleSaveEvent reports a missing event', async () => {
   const state = await renderLoadedPage();
   front.calendarBff.on('patch', '/calendar/events/{id}', { status: 404, body: apiError('NOT_FOUND', 'Événement introuvable') });
 
-  await page.result.current.handleSaveEvent(state.events[1]);
+  assert.equal(await page.result.current.handleSaveEvent(state.events[1]), false);
 
   assert.equal((await page.waitFor((current) => !current.saving)).error, 'Événement introuvable');
 });
@@ -231,6 +231,29 @@ test('handleDeleteEvent deletes the event and removes it locally', async () => {
 
   assert.deepEqual(front.calendarBff.calls('/calendar/events/{id}', 'DELETE').map((call) => call.pathParams.id), ['6']);
   assert.deepEqual(after.events.map((event) => event.id), [5]);
+});
+
+test('a synchronous repeated create or edit dispatch makes only one write and preserves refused official data', async () => {
+  const state = await renderLoadedPage();
+  state.handleEventClick(state.events[0]);
+  front.calendarBff.on('patch', '/calendar/events/{id}', { status: 403, body: apiError('FORBIDDEN', 'Réessayer la modification') });
+  const payload = { ...state.events[0], title: 'Draft, not official' };
+  const first = state.handleSaveEvent(payload);
+  assert.equal(await state.handleSaveEvent(payload), false);
+  assert.equal(await first, false);
+  const refused = await page.waitFor(current => !current.saving);
+  assert.equal(front.calendarBff.calls('/calendar/events/{id}', 'PATCH').length, 1);
+  assert.equal(refused.selectedEvent.title, state.events[0].title);
+  assert.deepEqual(refused.events, state.events);
+
+  refused.openCreateModal();
+  front.calendarBff.on('post', '/calendar/events', { status: 403, body: apiError('FORBIDDEN', 'Réessayer la création') });
+  const values = { title: 'Draft', description: '', date: '2026-09-16', endDate: '', category: 'other', startTime: '09:00', endTime: '10:00', location: '', assigneeIds: [], recurrence: { frequency: 'none' } };
+  await Promise.all([refused.handleCreateEvent(values), refused.handleCreateEvent(values)]);
+  const after = await page.waitFor(current => !current.saving);
+  assert.equal(front.calendarBff.calls('/calendar/events', 'POST').length, 1);
+  assert.equal(after.createModalOpen, true);
+  assert.deepEqual(after.events, state.events);
 });
 
 test('handleDeleteEvent reports a refused deletion', async () => {

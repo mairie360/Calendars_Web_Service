@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   createCalendarEvent,
   deleteCalendarEvent,
@@ -48,6 +48,7 @@ export function useCalendarPage() {
   const [selectedEvent, setSelectedEvent] = useState<CalendarEventItem | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const mutationInFlight = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [link, setLink] = useState<{ ready: boolean; eventId: string | null }>({
     ready: false,
@@ -140,6 +141,7 @@ export function useCalendarPage() {
   };
 
   const openCreateModal = (date = selectedDate, startTime = "09:00") => {
+    setError(null);
     setCreateInitialValues(buildCreateInitialValues(date, startTime));
     setCreateModalOpen(true);
   };
@@ -150,7 +152,8 @@ export function useCalendarPage() {
   };
 
   const handleCreateEvent = async (values: CreateCalendarEventValues) => {
-    if (saving) return;
+    if (mutationInFlight.current) return;
+    mutationInFlight.current = true;
 
     setSaving(true);
     setError(null);
@@ -165,16 +168,19 @@ export function useCalendarPage() {
     } catch (createError) {
       setError(formatCalendarApiError(createError));
     } finally {
+      mutationInFlight.current = false;
       setSaving(false);
     }
   };
 
   const handleEventClick = (event: unknown) => {
+    setError(null);
     setSelectedEvent(event as CalendarEventItem);
   };
 
   const handleSaveEvent = async (updatedEventPayload: unknown) => {
-    if (saving) return;
+    if (mutationInFlight.current) return false;
+    mutationInFlight.current = true;
 
     const updatedEvent = updatedEventPayload as CalendarEventItem;
 
@@ -192,15 +198,19 @@ export function useCalendarPage() {
         ),
       );
       setSelectedEvent(null);
+      return true;
     } catch (saveError) {
       setError(formatCalendarApiError(saveError));
+      return false;
     } finally {
+      mutationInFlight.current = false;
       setSaving(false);
     }
   };
 
   const handleDeleteEvent = async (eventToDelete: CalendarEventItem) => {
-    if (saving) return;
+    if (mutationInFlight.current) return;
+    mutationInFlight.current = true;
 
     setSaving(true);
     setError(null);
@@ -214,6 +224,7 @@ export function useCalendarPage() {
     } catch (deleteError) {
       setError(formatCalendarApiError(deleteError));
     } finally {
+      mutationInFlight.current = false;
       setSaving(false);
     }
   };
@@ -223,7 +234,8 @@ export function useCalendarPage() {
     approvalStatus: "approved" | "rejected",
   ) => {
     // Simple garde d'affichage : le BFF reste seul juge du droit de valider (403 sinon).
-    if (saving || !eventToValidate.canValidate) return;
+    if (mutationInFlight.current || !eventToValidate.canValidate) return;
+    mutationInFlight.current = true;
 
     setSaving(true);
     setError(null);
@@ -244,6 +256,7 @@ export function useCalendarPage() {
     } catch (validationError) {
       setError(formatCalendarApiError(validationError));
     } finally {
+      mutationInFlight.current = false;
       setSaving(false);
     }
   };
