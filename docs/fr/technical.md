@@ -1,5 +1,20 @@
 # Calendars_Web_Service — Documentation technique
 
+## Réponses tardives et résultats confirmés — MAIR-447
+
+Le hook distingue les lectures bootstrap successives par une révision en ref.
+Une mutation réellement confirmée invalide les lectures déjà commencées : elles
+ne peuvent plus rétablir une ancienne liste, erreur ou attente. Une nouvelle
+lecture reste autorisée et fait foi. Les mises à jour fonctionnelles conservent
+les autres événements et recalculent les statistiques depuis les données réelles.
+Une autre révision distingue les ouvertures/fermetures de fiche : les callbacks
+de modification et de validation ne remplacent pas une nouvelle sélection. Une
+suppression confirmée ferme toute copie de l’identifiant supprimé, pas une autre
+fiche. Cette dernière protection est défensive ; le formulaire reste verrouillé
+pendant la sauvegarde, conformément à MAIR-387. Le serveur HTTP de tests accepte
+des réponses différées pour reproduire les courses sans altérer les contrats.
+Aucun client réseau, proxy, route, API/BFF, paquet partagé ou environnement modifié.
+
 ## Pied de page partagé — MAIR-180
 
 L’audit CI inchangé a détecté la dépendance d’outillage transitive

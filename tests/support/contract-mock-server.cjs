@@ -88,7 +88,7 @@ class ContractMockServer {
       return send(res, 500, JSON.stringify({ code: 'NOT_MOCKED', message: 'Appel non mocké' }));
     }
 
-    const reply = handler(request);
+    const reply = await handler(request);
     const status = reply.status ?? 200;
     const { documented, schema } = this.contract.responseSchema(match, status);
     if (!documented) this.violations.push(`[${this.service}] ${method} ${match.template} : statut ${status} non documenté`);

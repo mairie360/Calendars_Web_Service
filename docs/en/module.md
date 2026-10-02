@@ -55,6 +55,18 @@ reopening starts from official event data. Chronology/recurrence validation and
 published permissions are unchanged. This corrects a defect inherited from the
 preserved prototype, without changing the shared package, API/BFF or data.
 
+## Confirmed results and delayed reads (MAIR-447)
+
+A calendar read started before a confirmed create, edit, delete or approval
+cannot replace that confirmed result. Concurrent retries accept only the latest
+response, including its error/loading state; a later fresh read remains authoritative.
+The hook also isolates completion callbacks from a different or explicitly closed
+event selection. A confirmed deletion closes any reopened copy of that deleted
+event, never another event. These selection checks are defensive: the current
+form continues to lock cancellation and writes while saving. Refused drafts,
+permissions and the existing contract/client are unchanged. No optimistic event,
+new endpoint, persistence guarantee or environment change is introduced.
+
 [Technical documentation](technical.md) · [Français](../fr/module.md) · [README](../../README.md)
 
 Display and operate the municipal calendar in the browser using events, assignments and approvals supplied by BFF Calendar.
