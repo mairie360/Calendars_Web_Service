@@ -38,6 +38,10 @@ a valid linked date. A new event opened after midnight refreshes an implicit
 today default; deliberate date selection, a linked date or a time slot keeps
 its own date/time. Browsing periods is never forcibly reset at midnight.
 The existing today marker and contract-backed requests remain unchanged.
+Period arrows keep the title, selected day, schedule, statistics, read range
+and new-event default aligned. Switching month/week/day cannot restore a stale
+selection; consecutive arrow actions retain functional date updates. A navigated
+period is deliberate and is not replaced by today when creation opens after midnight.
 This does not resolve the separate timezone, proxy, logout or infrastructure
 audit points in MAIR-407 and changes no API/BFF or environment.
 

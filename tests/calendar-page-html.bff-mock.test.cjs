@@ -185,6 +185,21 @@ test('changing the view re-renders the week grid with the reloaded events', asyn
   assert.match(view.text(), /Événement 5/);
 });
 
+test('day arrows render the navigated date in the actual schedule, statistics and new-event form', async () => {
+  window.location.search = '?date=2026-12-31';
+  await renderLoadedPage(bootstrap({ events: [calendarEvent(42, { date: '2027-01-01' })] }));
+  await view.act(() => view.props('CalendarToolbar').onViewChange('day'));
+  await view.waitFor(() => !view.html.includes('role="status"'));
+  await view.act(() => view.props('CalendarToolbar').onNext());
+  const html = await view.waitFor(() => !view.html.includes('role="status"') && view.props('CalendarToolbar').title === '1 janvier 2027');
+  assert.match(html, /aria-label="1 Janvier 2027 à 09:00"/);
+  assert.doesNotMatch(html, /aria-label="31 Décembre 2026 à/);
+  assert.equal(view.props('CalendarSidebar').stats[2].value, '1 événement');
+  await view.act(() => view.props('PageTitleBar').onAction());
+  assert.equal(view.props('CreateEventModal').initialValues.date, '01-01-2027');
+  assert.ok(front.calendarBff.sequence().every((call) => call.startsWith('GET /calendar/bootstrap?')));
+});
+
 test('calendar layout uses responsive grids and a bounded sidebar with BFF-backed events', async () => {
   const monthHtml = await renderLoadedPage();
 

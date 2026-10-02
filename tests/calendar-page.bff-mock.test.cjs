@@ -144,6 +144,66 @@ test('refreshData and date selection do not call anything outside the contract',
   assert.ok(front.calendarBff.sequence().every((call) => call.startsWith('GET /calendar/bootstrap?')));
 });
 
+test('day navigation keeps the selected day, statistics, read range and creation date aligned across the year boundary', async () => {
+  const window = installWindow();
+  window.location.search = '?date=2026-12-31';
+  try {
+    await renderLoadedPage(bootstrap({ events: [calendarEvent(42, { date: '2027-01-01' })] }));
+    const initialRequests = front.calendarBff.requests.length;
+    page.result.current.setView('day');
+    await page.waitFor((state) => !state.loading && front.calendarBff.requests.length === initialRequests + 1);
+    page.result.current.handleNext();
+    let state = await page.waitFor((current) => !current.loading && front.calendarBff.requests.length === initialRequests + 2);
+    assert.equal(formatDateForQuery(state.currentDate), '2027-01-01');
+    assert.equal(formatDateForQuery(state.selectedDate), '2027-01-01');
+    assert.equal(state.stats[2].value, '1 événement');
+    assert.equal(front.calendarBff.sequence().at(-1), 'GET /calendar/bootstrap?from=2027-01-01&to=2027-01-01');
+    state.openCreateModal();
+    state = await page.waitFor((current) => current.createModalOpen);
+    assert.equal(state.createInitialValues.date, '01-01-2027');
+    state.setCreateModalOpen(false);
+    page.result.current.handlePrevious();
+    state = await page.waitFor((current) => !current.loading && front.calendarBff.requests.length === initialRequests + 3);
+    assert.equal(formatDateForQuery(state.selectedDate), '2026-12-31');
+    assert.equal(state.stats[2].value, '0 événement');
+    assert.ok(front.calendarBff.sequence().every((call) => call.startsWith('GET /calendar/bootstrap?')));
+  } finally {
+    delete global.window;
+  }
+});
+
+for (const [mode, afterTwo, afterPrevious] of [
+  ['month', '2026-03-01', '2026-02-01'],
+  ['week', '2026-02-14', '2026-02-07'],
+]) {
+  test(`${mode} arrows preserve consecutive navigation and its deliberately selected creation date when switching to day`, async () => {
+    const window = installWindow();
+    window.location.search = '?date=2026-01-31';
+    try {
+      await renderLoadedPage(bootstrap({ events: [] }));
+      page.result.current.setView(mode);
+      await page.waitFor((state) => !state.loading && state.view === mode);
+      const sameRenderNext = page.result.current.handleNext;
+      sameRenderNext();
+      sameRenderNext();
+      let state = await page.waitFor((current) => !current.loading && formatDateForQuery(current.currentDate) === afterTwo);
+      assert.equal(formatDateForQuery(state.selectedDate), afterTwo);
+      state.handlePrevious();
+      state = await page.waitFor((current) => !current.loading && formatDateForQuery(current.currentDate) === afterPrevious);
+      assert.equal(formatDateForQuery(state.selectedDate), afterPrevious);
+      state.setView('day');
+      state = await page.waitFor((current) => !current.loading && current.view === 'day');
+      assert.equal(formatDateForQuery(state.selectedDate), afterPrevious);
+      state.openCreateModal();
+      state = await page.waitFor((current) => current.createModalOpen);
+      assert.equal(formatDateForQuery(state.createInitialValues.date), afterPrevious);
+      assert.ok(front.calendarBff.sequence().every((call) => call.startsWith('GET /calendar/bootstrap?')));
+    } finally {
+      delete global.window;
+    }
+  });
+}
+
 test('a BFF error on load is shown to the user', async () => {
   front.calendarBff.on('get', '/calendar/bootstrap', { status: 502, body: apiError('BAD_GATEWAY', 'Le service Calendar est indisponible.') });
   page = renderHook(useCalendarPage);

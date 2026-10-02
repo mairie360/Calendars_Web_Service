@@ -78,6 +78,28 @@ test('a deliberately selected date survives midnight instead of becoming today',
   assert.equal(state.createInitialValues.date, '17-09-2026');
 });
 
+for (const [mode, direction, expected] of [
+  ['month', 'handleNext', '2027-01-01'],
+  ['week', 'handlePrevious', '2026-12-24'],
+  ['day', 'handleNext', '2027-01-01'],
+]) {
+  test(`${mode} ${direction} makes an implicit date deliberate before a later midnight`, async () => {
+    at(2026, 11, 31, 23, 59);
+    await mountPage();
+    page.result.current.setView(mode);
+    await page.waitFor((state) => state.view === mode && !state.loading);
+    page.result.current[direction]();
+    let state = await page.waitFor((current) => !current.loading && formatDateForQuery(current.currentDate) === expected);
+    const reads = loads.length;
+    at(2027, 0, 2, 0, 1);
+    state.openCreateModal();
+    state = await page.waitFor((current) => current.createModalOpen);
+    assert.equal(formatDateForQuery(state.selectedDate), expected);
+    assert.equal(formatDateForQuery(state.createInitialValues.date), expected);
+    assert.equal(loads.length, reads, 'opening a navigated draft performs no data request');
+  });
+}
+
 test('valid deep links and explicit time slots keep their own dates', async () => {
   window.location.search = '?date=2026-12-04';
   let state = await mountPage();

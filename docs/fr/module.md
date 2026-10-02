@@ -41,6 +41,11 @@ du jour courant ou d’un lien valide. Après minuit, une nouvelle création act
 le jour implicite ; une sélection volontaire, un lien daté ou un créneau garde
 sa date/heure. La période consultée n’est jamais réinitialisée de force à minuit.
 Le marqueur du jour et les appels conformes au contrat existant sont préservés.
+Les flèches gardent cohérents titre, jour sélectionné, grille, statistiques,
+période chargée et date de création. Changer de vue mois/semaine/jour ne rétablit
+pas une ancienne sélection ; les flèches successives conservent leurs mises à
+jour fonctionnelles. Une période consultée volontairement n’est pas remplacée
+par le jour courant lors d’une création après minuit.
 Cela ne résout pas les autres constats de MAIR-407 concernant fuseau, proxy,
 logout ou infrastructure et ne modifie aucun API/BFF ni environnement.
 
