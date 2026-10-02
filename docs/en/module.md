@@ -29,6 +29,16 @@ Dark/density presentation attributes are honored if supplied; this does not
 provide unavailable persisted appearance preferences or change business data,
 contracts, APIs/BFFs, shared package or another frontend.
 
+## Refused event saves (MAIR-387)
+
+Create/edit drafts remain open until the existing BFF confirms a save. Pending
+controls are disabled and a synchronous guard prevents duplicate mutations.
+Status/errors are announced inside the form; refused edits retain all fields
+for correction and retry. Explicit cancellation discards the submitted draft;
+reopening starts from official event data. Chronology/recurrence validation and
+published permissions are unchanged. This corrects a defect inherited from the
+preserved prototype, without changing the shared package, API/BFF or data.
+
 [Technical documentation](technical.md) · [Français](../fr/module.md) · [README](../../README.md)
 
 Display and operate the municipal calendar in the browser using events, assignments and approvals supplied by BFF Calendar.

@@ -10,6 +10,12 @@ function depsChanged(previous, next) {
 let current;
 
 const react = {
+  useRef(initial) {
+    const hook = current;
+    const index = hook.cursor++;
+    if (!(index in hook.slots)) hook.slots[index] = { current: initial };
+    return hook.slots[index];
+  },
   useState(initial) {
     const hook = current;
     const index = hook.cursor++;
