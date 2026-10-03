@@ -3,10 +3,11 @@ import {
   EventDetailsModal as LibraryEventDetailsModal,
 } from '@mairie360/lib-components';
 import type { ComponentProps, FormEvent, ReactNode } from 'react';
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { formatDateForQuery } from '../date-utils';
 import type { CalendarRecurrence } from '../types';
 import { validateEventChronology } from './validation';
+import { manageCalendarModalFocus } from './modal-focus';
 
 type CreateProps = ComponentProps<typeof LibraryCreateEventModal>;
 type DetailsProps = ComponentProps<typeof LibraryEventDetailsModal>;
@@ -83,6 +84,11 @@ function ValidatedModal({
 }) {
   const [recurring, setRecurring] = useState(initialFrequency !== undefined && initialFrequency !== 'none');
   const [validationError, setValidationError] = useState('');
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    if (isOpen && modalRef.current) return manageCalendarModalFocus(modalRef.current);
+  }, [isOpen]);
 
   useEffect(() => {
     if (isOpen) {
@@ -116,6 +122,7 @@ function ValidatedModal({
 
   return (
     <div
+      ref={modalRef}
       className="calendar-validated-modal"
       data-recurring={recurring ? 'true' : 'false'}
       onSubmitCapture={handleSubmitCapture}
