@@ -86,3 +86,19 @@ Les régressions vérifient les deux images et les trois builds Compose. Un cont
 du runtime-base seul ne suffit pas : l’issue #204 reste ouverte jusqu’aux preuves
 de l’image complète sur main intégré, scan bloquant/signature/ZAP/k6 et copie
 locale préservée. Aucun gate Staging/Prod ni pin de cluster n’est changé.
+
+## Shared UI alignment / Alignement UI partagé — MAIR-180
+
+This consumer pins the published `@mairie360/lib-components@0.6.10`, including
+its exact download URL and SHA512 integrity. Only the shared UI entry changes
+in the lockfile; all other dependencies and security policies are preserved.
+Tracking: [MAIR-180](https://mairie-360.atlassian.net/browse/MAIR-180) and
+[cross-frontend issue](https://github.com/mairie360/Login_Web_Service/issues/142).
+Login stays standalone without header/sidebar/footer; authenticated module
+shells and the existing Elearning confirmation/rating features are preserved.
+No API/BFF, contract, runtime configuration, demo data or deployment approval change.
+
+Le pin exact et l'intégrité du package publié sont alignés sur Elearning sans
+le rétrograder. Les tests de release vérifient le manifeste, le lockfile et le
+vrai package installé. Une validation isolée ne remplace pas la CI verte,
+l'intégration des sept consommateurs et la recette de la copie locale livrée.
