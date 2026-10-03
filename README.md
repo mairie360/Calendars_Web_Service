@@ -86,3 +86,30 @@ Les régressions vérifient les deux images et les trois builds Compose. Un cont
 du runtime-base seul ne suffit pas : l’issue #204 reste ouverte jusqu’aux preuves
 de l’image complète sur main intégré, scan bloquant/signature/ZAP/k6 et copie
 locale préservée. Aucun gate Staging/Prod ni pin de cluster n’est changé.
+
+## Event modal keyboard focus / Focus clavier des événements (MAIR-318)
+
+[Issue #208](https://github.com/mairie360/Calendars_Web_Service/issues/208) follows
+the Calendars-only portion of the broader MAIR-318 accessibility task. The
+consumer keeps one focus session around the published detail/create/edit modal:
+opening focuses an available control, Tab/Shift+Tab stay inside, and a changed
+or fully disabled dialog receives focus while a write is pending. Existing
+Escape callbacks and saving guards remain in charge of closing. Closing returns
+to the opener, or the selected calendar view if a confirmed deletion removed it;
+an intentional external navigation is not overridden. Observers/listeners and
+temporary dialog attributes are cleaned up on close. No shared library,
+dependency, API/BFF, contract, authentication or deployment change is required.
+
+Le front conserve une seule session de focus pour les détails/création/édition :
+focus à l’ouverture, Tab/Maj+Tab contenus, repli sur le dialogue pendant une
+écriture, retour au déclencheur à la fermeture ou à la vue sélectionnée après
+suppression confirmée. Les callbacks Échap et gardes d’enregistrement existants
+sont conservés ; observateur, listeners et attributs temporaires sont nettoyés.
+Aucune modification des API/BFF, contrats, bibliothèque ou environnements.
+
+`node --test tests/calendar-modal-focus.test.cjs` covers the controller with DOM
+doubles; `tests/calendar-form-html.test.cjs` covers the existing form guards.
+Native browser verification remains necessary for React refs, real focus order,
+desktop/mobile, validation, pending/refused/confirmed writes and removed openers.
+This scoped correction is not a claim of complete RGAA/axe conformance for all
+routes, roles, zoom settings or assistive technologies.
