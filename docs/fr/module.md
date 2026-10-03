@@ -69,6 +69,14 @@ réussie correspondante, une nouvelle tentative d’écriture ou un nouveau
 formulaire explicite remet à zéro son propre retour. Les gardes de brouillon
 et de dernière lecture restent préservées.
 
+Les états de suppression et de validation/refus sont également annoncés **dans
+la fenêtre de détail**, via le titre public du composant partagé. Les contrôles
+restent verrouillés pendant l’écriture ; un refus conserve l’événement officiel
+et les actions autorisées pour une nouvelle tentative explicite. Une lecture
+réussie n’efface pas ce refus. Seule la réponse de mutation existante confirme
+la suppression ou le nouveau statut. Composant partagé, droits et détails sont
+inchangés.
+
 [Documentation technique](technical.md) · [English](../en/module.md) · [README](../../README.md)
 
 Afficher et piloter le calendrier municipal dans le navigateur, avec événements, affectations et validations fournis par BFF Calendar.

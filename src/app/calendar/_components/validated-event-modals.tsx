@@ -190,6 +190,17 @@ function EventDetailsSession(props: ControlledDetailsProps & { event: SaveEvent 
         ) : (
           <LibraryEventDetailsModal
             {...props}
+            title={props.saving || props.error ? (
+              <>
+                {props.title ?? 'Détail de l’événement'}
+                <span
+                  role={props.saving ? 'status' : 'alert'}
+                  className={`mt-2 block whitespace-normal break-words text-sm font-normal leading-5 ${props.saving ? 'text-[#e2e8f0]' : 'text-[#fecaca]'}`}
+                >
+                  {props.saving ? 'Enregistrement en cours…' : props.error}
+                </span>
+              </>
+            ) : props.title}
             onClose={() => { if (!props.saving) props.onClose(); }}
             onSave={props.onSave ? (event) => void saveDraft({
               ...event,
