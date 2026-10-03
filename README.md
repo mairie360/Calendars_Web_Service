@@ -27,6 +27,27 @@ Les guides décrivent le module implémenté, ses limites actuelles, le démarra
 
 ## Frontend image packaging / Packaging des images frontend (MAIR-436)
 
+The MAIR-230 prerequisite in [PR #205](https://github.com/mairie360/Calendars_Web_Service/pull/205)
+executes real blocking Semgrep and redacted Gitleaks under the exact required
+legacy status `CICD / Code Security Audit (Semgrep)`. Reviewed scanner actions
+are checked out at published CICD v4.0.1 commit
+`539847726d4058a9565c4f682c2d1d8302874b06`, with immutable checkout actions,
+full frontend history, no persisted credentials and read-only job permissions.
+The six rule packs and pinned scanner images are unchanged; findings or scanner
+errors fail the job. The shared v4.0.2 audit remains in place. No synthetic
+success, branch-protection change, scan bypass or shared CICD modification.
+`node --test tests/required-security-check.test.cjs` verifies this exact policy.
+
+Le prérequis MAIR-230 dans la PR #205 lance vraiment Semgrep et Gitleaks
+bloquants (secrets expurgés) sous le nom exact requis ci-dessus. Les actions
+publiées et relues sont épinglées au commit CICD v4.0.1 indiqué, avec checkout
+immuable, historique complet, credentials non persistés et lecture seule.
+Les six packs de règles et images de scanners restent inchangés ; findings et
+erreurs échouent. L'audit partagé v4.0.2 reste actif. Aucun succès artificiel,
+contournement de scan, changement de protection ou modification de CICD partagé.
+Les tests ci-dessus vérifient la politique exacte. L'ancienne issue #167 reste
+clôturée pour ses findings initiaux ; l'issue #204 suit ce nouveau prérequis.
+
 Production, development and both consumer workflows use exact Node `24.21.0`;
 the official Bookworm slim image is pinned by digest. Export the existing
 `NODE_AUTH_TOKEN` credential through your normal secure environment, never a
