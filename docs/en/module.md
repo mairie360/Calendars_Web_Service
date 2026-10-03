@@ -55,6 +55,13 @@ reopening starts from official event data. Chronology/recurrence validation and
 published permissions are unchanged. This corrects a defect inherited from the
 preserved prototype, without changing the shared package, API/BFF or data.
 
+Read failures and refused writes keep separate feedback. A late or retried
+bootstrap cannot clear a refused save or its in-form message; opening a form
+cannot clear a failed read. The calendar's **Retry** only reloads data, never
+replays an event write. Both failures remain visible when they coexist; only
+the corresponding successful read, a new write attempt or an explicit new
+form resets its own feedback. Existing draft and latest-read guards are preserved.
+
 ## Confirmed results and delayed reads (MAIR-447)
 
 A calendar read started before a confirmed create, edit, delete or approval

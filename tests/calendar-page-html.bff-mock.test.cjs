@@ -173,6 +173,44 @@ test('a BFF error is rendered as an alert with a retry button that reloads the c
   assert.doesNotMatch(html, /Réessayer/);
 });
 
+test('opening creation keeps the failed read and its retry, without claiming a refused save in the form', async () => {
+  front.calendarBff.on('get', '/calendar/bootstrap', { status: 502, body: apiError('UNAVAILABLE', 'Read unavailable') });
+  view = mount(React.createElement(Page));
+  await view.waitFor(html => html.includes('Read unavailable'));
+  await view.act(() => view.props('PageTitleBar').onAction());
+  assert.match(view.html, /<span role="alert">Calendrier : Read unavailable<\/span>/);
+  assert.match(view.text(), /Réessayer/);
+  assert.equal(view.props('CreateEventModal').error, null);
+  assert.equal(front.calendarBff.requests.length, 1);
+  await view.act(() => view.props('CreateEventModal').onCancel());
+  assert.match(view.text(), /Read unavailable/);
+});
+
+test('a successful independent read cannot hide a refused edit or reset its draft', async () => {
+  await renderLoadedPage();
+  await view.act(() => view.props('MonthGrid').onEventClick(view.props('MonthGrid').events[0]));
+  await view.click('Modifier');
+  await view.fire(props => props.id === 'event-title', 'onChange', { target: { value: 'Draft retained' } });
+  front.calendarBff.on('patch', '/calendar/events/{id}', { status: 403, body: apiError('FORBIDDEN', 'Edit refused') });
+  // Submit the actual shared form so the wrapper owns the refused draft too.
+  const form = view.hostElements((props, _text, tag) => tag === 'form' && props.onSubmit)[0];
+  await view.act(() => form.props.onSubmit({ preventDefault() {} }));
+  await view.waitFor(html => html.includes('Edit refused'));
+  front.calendarBff.on('get', '/calendar/bootstrap', { status: 502, body: apiError('UNAVAILABLE', 'Read unavailable') });
+  await view.act(() => view.props('CalendarToolbar').onViewChange('week'));
+  await view.waitFor(html => html.includes('Read unavailable'));
+  assert.match(view.text(), /Edit refused/);
+  assert.equal(view.props('EventDetailsModal').error, 'Edit refused');
+  front.calendarBff.on('get', '/calendar/bootstrap', { body: bootstrap() });
+  await view.click('Réessayer');
+  await view.waitFor(html => !html.includes('Read unavailable') && !html.includes('Chargement des données'));
+  assert.equal(view.props('EventDetailsModal').error, 'Edit refused');
+  assert.match(view.html, /<span role="alert"[^>]*>Edit refused<\/span>/);
+  assert.equal(view.hostElements(props => props.id === 'event-title')[0].props.value, 'Draft retained');
+  assert.doesNotMatch(view.text(), /Réessayer/);
+  assert.equal(front.calendarBff.calls('/calendar/events/{id}', 'PATCH').length, 1);
+});
+
 test('changing the view re-renders the week grid with the reloaded events', async () => {
   await renderLoadedPage();
 

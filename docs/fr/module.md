@@ -60,6 +60,15 @@ réouverture reprend les données officielles. Validation chronologique,
 récurrences et permissions publiées restent inchangées. Ce correctif résout
 un défaut hérité du prototype sans changer bibliothèque, API/BFF ni données.
 
+Les erreurs de lecture et les refus d’écriture gardent des retours distincts.
+Un bootstrap tardif ou relancé ne masque ni le refus d’enregistrement ni son
+message dans le formulaire ; ouvrir un formulaire n’efface pas une lecture
+échouée. **Réessayer** recharge uniquement les données, sans rejouer d’écriture.
+Les deux erreurs restent affichées si elles coexistent ; seule la lecture
+réussie correspondante, une nouvelle tentative d’écriture ou un nouveau
+formulaire explicite remet à zéro son propre retour. Les gardes de brouillon
+et de dernière lecture restent préservées.
+
 [Documentation technique](technical.md) · [English](../en/module.md) · [README](../../README.md)
 
 Afficher et piloter le calendrier municipal dans le navigateur, avec événements, affectations et validations fournis par BFF Calendar.
