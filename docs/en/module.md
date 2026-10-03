@@ -62,6 +62,13 @@ replays an event write. Both failures remain visible when they coexist; only
 the corresponding successful read, a new write attempt or an explicit new
 form resets its own feedback. Existing draft and latest-read guards are preserved.
 
+Delete and approve/reject outcomes are also announced **inside the event details
+dialog**, through the shared component's public title slot. Pending controls stay
+locked; a refused operation keeps the official event and authorized actions
+available for an explicit retry. A successful read cannot erase that refusal.
+Only the existing mutation response confirms removal or a changed approval status.
+The shared component, permissions and details content remain unchanged.
+
 ## Confirmed results and delayed reads (MAIR-447)
 
 A calendar read started before a confirmed create, edit, delete or approval

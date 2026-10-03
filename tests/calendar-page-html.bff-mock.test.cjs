@@ -295,6 +295,55 @@ test('clicking an event opens its details with the BFF permissions', async () =>
   assert.match(view.html, />Modifier</);
 });
 
+for (const [label, method, route, approvalStatus] of [
+  ['Supprimer', 'delete', '/calendar/events/{id}', null],
+  ['Valider', 'patch', '/calendar/events/{id}/approval', 'approved'],
+  ['Refuser', 'patch', '/calendar/events/{id}/approval', 'rejected'],
+]) {
+  test(`${label}: pending and refused outcomes are announced inside the real details dialog, then a confirmed retry alone changes the event`, async () => {
+    await renderLoadedPage();
+    const event = view.props('MonthGrid').events[0];
+    await view.act(() => view.props('MonthGrid').onEventClick(event));
+    let reply;
+    front.calendarBff.on(method, route, () => new Promise(resolve => { reply = resolve; }));
+    // Delete returns its promise, unlike the void approval handlers. Keep the
+    // click pending so this assertion observes the UI before either response.
+    const pendingClick = view.click(label);
+    await view.waitFor(() => Boolean(reply));
+    let dialog = view.html.slice(view.html.indexOf('role="dialog"'));
+    assert.match(dialog, /role="status"[^>]*>Enregistrement en cours…/);
+    assert.match(view.html, /<fieldset[^>]*disabled=""[^>]*aria-busy="true"/);
+    assert.doesNotMatch(dialog, />Supprimer<|>Valider<|>Refuser<|>Modifier</);
+    assert.equal(view.props('MonthGrid').events[0].approvalStatus, event.approvalStatus);
+    await view.act(() => reply({ status: 403, body: apiError('FORBIDDEN', `${label} refusé`) }));
+    await pendingClick;
+    await view.waitFor(html => html.includes(`${label} refusé`));
+    dialog = view.html.slice(view.html.indexOf('role="dialog"'));
+    assert.match(dialog, new RegExp(`role="alert"[^>]*>${label} refusé`));
+    assert.match(dialog, /Événement 5/);
+    assert.equal(view.props('MonthGrid').events[0].approvalStatus, event.approvalStatus);
+    // A read is not an acknowledgement of this refused detail action.
+    await view.act(() => view.props('CalendarToolbar').onViewChange('week'));
+    await view.waitFor(() => front.calendarBff.requests.length === 3 && !view.html.includes('role="status"'));
+    assert.match(view.html.slice(view.html.indexOf('role="dialog"')), new RegExp(`role="alert"[^>]*>${label} refusé`));
+    assert.equal(front.calendarBff.calls(route, method.toUpperCase()).length, 1);
+    front.calendarBff.on(method, route, approvalStatus
+      ? { body: calendarEvent(5, { approvalStatus }) }
+      : { status: 204 });
+    await view.click(label);
+    await view.waitFor(() => !view.html.includes('role="status"'));
+    assert.equal(front.calendarBff.calls(route, method.toUpperCase()).length, 2);
+    if (approvalStatus) {
+      assert.equal(view.props('WeekGrid').events[0].approvalStatus, approvalStatus);
+      assert.doesNotMatch(view.html.slice(view.html.indexOf('role="dialog"')), /role="alert"/);
+      assert.match(view.html, /role="dialog"/);
+    } else {
+      assert.equal(view.props('WeekGrid').events.some(item => item.id === event.id), false);
+      assert.doesNotMatch(view.html, /role="dialog"/);
+    }
+  });
+}
+
 test('a refused session logs out and reloads instead of rendering the calendar', async () => {
   front.userBff.on('get', '/me', { status: 401 });
   front.userBff.on('post', '/auth/logout', { body: { message: 'Logged out successfully' } });
