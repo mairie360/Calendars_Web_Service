@@ -61,7 +61,11 @@ export function useCalendarPage() {
   };
   const [saving, setSaving] = useState(false);
   const mutationInFlight = useRef(false);
-  const [error, setError] = useState<string | null>(null);
+  // Reads and writes have independent outcomes: a successful bootstrap cannot
+  // acknowledge a refused save, and opening a form cannot repair a failed read.
+  const [readError, setReadError] = useState<string | null>(null);
+  const [mutationError, setMutationError] = useState<string | null>(null);
+  const error = mutationError ?? readError;
   const [link, setLink] = useState<{ ready: boolean; eventId: string | null }>({
     ready: false,
     eventId: null,
@@ -108,7 +112,7 @@ export function useCalendarPage() {
         setPeople(calendarData.people);
         setCategories(calendarData.categories);
         setServices(calendarData.services);
-        setError(null);
+        setReadError(null);
       } catch (loadError) {
         if (
           !isCurrent() ||
@@ -117,7 +121,7 @@ export function useCalendarPage() {
           return;
         }
 
-        setError(formatCalendarApiError(loadError));
+        setReadError(formatCalendarApiError(loadError));
       } finally {
         if (isCurrent()) setLoading(false);
       }
@@ -135,12 +139,12 @@ export function useCalendarPage() {
   }, [link.ready, loadData]);
 
   useEffect(() => {
-    if (loading || error || !link.eventId) return;
+    if (loading || readError || !link.eventId) return;
 
     const linkedEvent = events.find((event) => String(event.id) === link.eventId);
     if (linkedEvent) setSelectedEvent(linkedEvent);
     setLink({ ready: true, eventId: null });
-  }, [error, events, link.eventId, loading, setSelectedEvent]);
+  }, [readError, events, link.eventId, loading, setSelectedEvent]);
 
   const handlePrevious = () => {
     selectionFollowsToday.current = false;
@@ -162,7 +166,7 @@ export function useCalendarPage() {
     // Refresh an implicit "today" when a tab crosses midnight, but never
     // overwrite a deliberately selected date, deep link or time slot.
     const creationDate = date ?? (selectionFollowsToday.current ? new Date() : selectedDate);
-    setError(null);
+    setMutationError(null);
     setCreateInitialValues(buildCreateInitialValues(creationDate, startTime));
     setCreateModalOpen(true);
   };
@@ -177,7 +181,7 @@ export function useCalendarPage() {
     mutationInFlight.current = true;
 
     setSaving(true);
-    setError(null);
+    setMutationError(null);
 
     try {
       const createdEvent = await createCalendarEvent(values, people);
@@ -188,7 +192,7 @@ export function useCalendarPage() {
       selectionFollowsToday.current = false;
       setCurrentDate(parseDateInput(createdEvent.date));
     } catch (createError) {
-      setError(formatCalendarApiError(createError));
+      setMutationError(formatCalendarApiError(createError));
     } finally {
       mutationInFlight.current = false;
       setSaving(false);
@@ -196,7 +200,7 @@ export function useCalendarPage() {
   };
 
   const handleEventClick = (event: unknown) => {
-    setError(null);
+    setMutationError(null);
     setSelectedEvent(event as CalendarEventItem);
   };
 
@@ -208,7 +212,7 @@ export function useCalendarPage() {
     const selection = eventSelectionRevision.current;
 
     setSaving(true);
-    setError(null);
+    setMutationError(null);
 
     try {
       const savedEvent = await updateCalendarEvent(updatedEvent, people);
@@ -231,7 +235,7 @@ export function useCalendarPage() {
       // form's write completed; the official event list still receives the result.
       return selectionUnchanged;
     } catch (saveError) {
-      setError(formatCalendarApiError(saveError));
+      setMutationError(formatCalendarApiError(saveError));
       return false;
     } finally {
       mutationInFlight.current = false;
@@ -244,7 +248,7 @@ export function useCalendarPage() {
     mutationInFlight.current = true;
 
     setSaving(true);
-    setError(null);
+    setMutationError(null);
 
     try {
       await deleteCalendarEvent(eventToDelete.id);
@@ -258,7 +262,7 @@ export function useCalendarPage() {
         String(current?.id) === String(eventToDelete.id) ? null : current,
       );
     } catch (deleteError) {
-      setError(formatCalendarApiError(deleteError));
+      setMutationError(formatCalendarApiError(deleteError));
     } finally {
       mutationInFlight.current = false;
       setSaving(false);
@@ -275,7 +279,7 @@ export function useCalendarPage() {
     const selection = eventSelectionRevision.current;
 
     setSaving(true);
-    setError(null);
+    setMutationError(null);
 
     try {
       const savedEvent = await updateCalendarEventApproval(
@@ -296,7 +300,7 @@ export function useCalendarPage() {
         );
       }
     } catch (validationError) {
-      setError(formatCalendarApiError(validationError));
+      setMutationError(formatCalendarApiError(validationError));
     } finally {
       mutationInFlight.current = false;
       setSaving(false);
@@ -320,11 +324,13 @@ export function useCalendarPage() {
     handleSelectSlot,
     handleValidateEvent,
     loading,
+    mutationError,
     openCreateModal,
     people,
     periodTitle,
     refreshData: loadData,
     ready: link.ready,
+    readError,
     selectedDate,
     selectedEvent,
     setCreateModalOpen,
