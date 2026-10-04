@@ -100,6 +100,14 @@ Business domain: Calendar.
 
 ## Typical workflow
 
+Event dialogs own their draft and keyboard focus until the existing operation
+confirms the write or the user cancels. A concurrent category read cannot reset
+entered fields or clear a refused-write message. Pending controls stay disabled;
+after refusal, only an explicit retry submits again. Closing returns focus to
+the opening control, or the selected view if that control has been removed.
+These frontend behaviors do not imply deployed permission/persistence or full
+accessibility certification; those require their own acceptance evidence.
+
 1. Load a date range through `/calendar/bootstrap`, including the month in a valid event link.
 2. Create or update an event and choose authorized assignees.
 3. Inspect approval status and reload the date range after a mutation.

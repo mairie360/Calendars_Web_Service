@@ -97,3 +97,30 @@ La reprise des brouillons Calendars conserve aussi les saisies lorsqu’une lect
 apporte ou réordonne les catégories réelles. Chaque ouverture initialise son
 propre brouillon ; annuler puis rouvrir reprend les nouveaux defaults. Le choix
 vide de présentation ne remplace aucune donnée métier ni ne modifie le contrat.
+
+## Combined dialog acceptance / Validation des dialogues composés
+
+The candidate combines MAIR-387 / PR #206 with MAIR-318 / PR #209 without
+changing clients, contracts, dependencies or the published shared library.
+The cross-feature real-page/HTTP regression preserves the edited title and
+category through a pending PATCH, reordered category reads, refusal and a second
+read; only the explicit confirmed retry updates the event and closes the dialog.
+On 4 October 2026, 217 Node tests passed (34 targeted page/form/focus cases),
+with unchanged 60% coverage gates. TypeScript, contracts and isolated one-worker
+production build passed; lint retained four existing warnings and no errors.
+Native desktop 1280×720 and measured mobile 390×844 verified PATCH/POST refusal
+before an eight-second GET, retained fields and in-dialog feedback after that
+read, both Tab boundaries, pending controls, confirmed retry and focus return.
+Mobile cancel/reopen used a fresh draft. Disposable ledger: nine GET, two PATCH
+and two POST, zero contract violations and relevant console warnings/errors.
+No new native deletion/approval, recurrence, zoom, deployed-role/persistence or
+complete accessibility certification is implied. Remote CI, integration and
+exact-main/current-local checks remain separate gates; never waive a red audit.
+
+La composition conserve les brouillons et les erreurs de MAIR-387 avec la
+session de focus de MAIR-318. La recette croisée vérifie les refus avant la
+lecture tardive, les champs et le retour clavier après confirmation, sur desktop
+et mobile mesuré. Les données jetables et outils de recette restent hors produit.
+Les API/BFF, contrats, dépendances et bibliothèque partagée sont inchangés.
+Les contrôles CI réels, l'intégration puis la copie locale exacte restent requis ;
+ce candidat ne signifie ni livraison main ni validation globale de l'accessibilité.
