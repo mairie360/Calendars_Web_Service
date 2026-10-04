@@ -113,3 +113,15 @@ Native browser verification remains necessary for React refs, real focus order,
 desktop/mobile, validation, pending/refused/confirmed writes and removed openers.
 This scoped correction is not a claim of complete RGAA/axe conformance for all
 routes, roles, zoom settings or assistive technologies.
+## Drafts during category reads / Brouillons pendant les lectures de catégories
+
+Calendar draft recovery (MAIR-387 / issue #196) also protects fields when real
+category options first arrive or are reordered. The frontend keeps initialization
+owned by each form opening; cancel/reopen gets fresh values and the already-loaded
+default. A presentation-only empty choice keeps incoming options from resetting
+the shared form; it is not business data. The shared library and BFF are unchanged.
+
+La reprise des brouillons Calendars conserve aussi les saisies lorsqu’une lecture
+apporte ou réordonne les catégories réelles. Chaque ouverture initialise son
+propre brouillon ; annuler puis rouvrir reprend les nouveaux defaults. Le choix
+vide de présentation ne remplace aucune donnée métier ni ne modifie le contrat.

@@ -173,6 +173,44 @@ test('a BFF error is rendered as an alert with a retry button that reloads the c
   assert.doesNotMatch(html, /Réessayer/);
 });
 
+test('opening creation keeps the failed read and its retry, without claiming a refused save in the form', async () => {
+  front.calendarBff.on('get', '/calendar/bootstrap', { status: 502, body: apiError('UNAVAILABLE', 'Read unavailable') });
+  view = mount(React.createElement(Page));
+  await view.waitFor(html => html.includes('Read unavailable'));
+  await view.act(() => view.props('PageTitleBar').onAction());
+  assert.match(view.html, /<span role="alert">Calendrier : Read unavailable<\/span>/);
+  assert.match(view.text(), /Réessayer/);
+  assert.equal(view.props('CreateEventModal').error, null);
+  assert.equal(front.calendarBff.requests.length, 1);
+  await view.act(() => view.props('CreateEventModal').onCancel());
+  assert.match(view.text(), /Read unavailable/);
+});
+
+test('a successful independent read cannot hide a refused edit or reset its draft', async () => {
+  await renderLoadedPage();
+  await view.act(() => view.props('MonthGrid').onEventClick(view.props('MonthGrid').events[0]));
+  await view.click('Modifier');
+  await view.fire(props => props.id === 'event-title', 'onChange', { target: { value: 'Draft retained' } });
+  front.calendarBff.on('patch', '/calendar/events/{id}', { status: 403, body: apiError('FORBIDDEN', 'Edit refused') });
+  // Submit the actual shared form so the wrapper owns the refused draft too.
+  const form = view.hostElements((props, _text, tag) => tag === 'form' && props.onSubmit)[0];
+  await view.act(() => form.props.onSubmit({ preventDefault() {} }));
+  await view.waitFor(html => html.includes('Edit refused'));
+  front.calendarBff.on('get', '/calendar/bootstrap', { status: 502, body: apiError('UNAVAILABLE', 'Read unavailable') });
+  await view.act(() => view.props('CalendarToolbar').onViewChange('week'));
+  await view.waitFor(html => html.includes('Read unavailable'));
+  assert.match(view.text(), /Edit refused/);
+  assert.equal(view.props('EventDetailsModal').error, 'Edit refused');
+  front.calendarBff.on('get', '/calendar/bootstrap', { body: bootstrap() });
+  await view.click('Réessayer');
+  await view.waitFor(html => !html.includes('Read unavailable') && !html.includes('Chargement des données'));
+  assert.equal(view.props('EventDetailsModal').error, 'Edit refused');
+  assert.match(view.html, /<span role="alert"[^>]*>Edit refused<\/span>/);
+  assert.equal(view.hostElements(props => props.id === 'event-title')[0].props.value, 'Draft retained');
+  assert.doesNotMatch(view.text(), /Réessayer/);
+  assert.equal(front.calendarBff.calls('/calendar/events/{id}', 'PATCH').length, 1);
+});
+
 test('changing the view re-renders the week grid with the reloaded events', async () => {
   await renderLoadedPage();
 
@@ -256,6 +294,55 @@ test('clicking an event opens its details with the BFF permissions', async () =>
   assert.match(view.html, />Supprimer</);
   assert.match(view.html, />Modifier</);
 });
+
+for (const [label, method, route, approvalStatus] of [
+  ['Supprimer', 'delete', '/calendar/events/{id}', null],
+  ['Valider', 'patch', '/calendar/events/{id}/approval', 'approved'],
+  ['Refuser', 'patch', '/calendar/events/{id}/approval', 'rejected'],
+]) {
+  test(`${label}: pending and refused outcomes are announced inside the real details dialog, then a confirmed retry alone changes the event`, async () => {
+    await renderLoadedPage();
+    const event = view.props('MonthGrid').events[0];
+    await view.act(() => view.props('MonthGrid').onEventClick(event));
+    let reply;
+    front.calendarBff.on(method, route, () => new Promise(resolve => { reply = resolve; }));
+    // Delete returns its promise, unlike the void approval handlers. Keep the
+    // click pending so this assertion observes the UI before either response.
+    const pendingClick = view.click(label);
+    await view.waitFor(() => Boolean(reply));
+    let dialog = view.html.slice(view.html.indexOf('role="dialog"'));
+    assert.match(dialog, /role="status"[^>]*>Enregistrement en cours…/);
+    assert.match(view.html, /<fieldset[^>]*disabled=""[^>]*aria-busy="true"/);
+    assert.doesNotMatch(dialog, />Supprimer<|>Valider<|>Refuser<|>Modifier</);
+    assert.equal(view.props('MonthGrid').events[0].approvalStatus, event.approvalStatus);
+    await view.act(() => reply({ status: 403, body: apiError('FORBIDDEN', `${label} refusé`) }));
+    await pendingClick;
+    await view.waitFor(html => html.includes(`${label} refusé`));
+    dialog = view.html.slice(view.html.indexOf('role="dialog"'));
+    assert.match(dialog, new RegExp(`role="alert"[^>]*>${label} refusé`));
+    assert.match(dialog, /Événement 5/);
+    assert.equal(view.props('MonthGrid').events[0].approvalStatus, event.approvalStatus);
+    // A read is not an acknowledgement of this refused detail action.
+    await view.act(() => view.props('CalendarToolbar').onViewChange('week'));
+    await view.waitFor(() => front.calendarBff.requests.length === 3 && !view.html.includes('role="status"'));
+    assert.match(view.html.slice(view.html.indexOf('role="dialog"')), new RegExp(`role="alert"[^>]*>${label} refusé`));
+    assert.equal(front.calendarBff.calls(route, method.toUpperCase()).length, 1);
+    front.calendarBff.on(method, route, approvalStatus
+      ? { body: calendarEvent(5, { approvalStatus }) }
+      : { status: 204 });
+    await view.click(label);
+    await view.waitFor(() => !view.html.includes('role="status"'));
+    assert.equal(front.calendarBff.calls(route, method.toUpperCase()).length, 2);
+    if (approvalStatus) {
+      assert.equal(view.props('WeekGrid').events[0].approvalStatus, approvalStatus);
+      assert.doesNotMatch(view.html.slice(view.html.indexOf('role="dialog"')), /role="alert"/);
+      assert.match(view.html, /role="dialog"/);
+    } else {
+      assert.equal(view.props('WeekGrid').events.some(item => item.id === event.id), false);
+      assert.doesNotMatch(view.html, /role="dialog"/);
+    }
+  });
+}
 
 test('a refused session logs out and reloads instead of rendering the calendar', async () => {
   front.userBff.on('get', '/me', { status: 401 });

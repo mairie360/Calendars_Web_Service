@@ -141,13 +141,27 @@ function ValidatedModal({
   );
 }
 
-export function CreateEventModal({ saving = false, error, ...props }: CreateProps & SaveFeedback) {
-  const initialFrequency = props.initialValues?.recurrence?.frequency;
+function formCategories(categories: CreateProps['categories']) {
+  // The shared form resets when its first category changes. Keep a stable UI
+  // placeholder first, while exposing every real option received from the BFF.
+  return [{ label: 'Sélectionner une catégorie', value: '' }, ...(categories ?? []).filter(category => category.value !== '')];
+}
+
+function CreateEventSession({ saving = false, error, ...props }: CreateProps & SaveFeedback) {
+  // A draft belongs to this opening, not to subsequent reference-data reads.
+  // Preserve the existing initial default when categories are already loaded.
+  const [initialValues] = useState(() => ({
+    ...props.initialValues,
+    category: props.initialValues?.category ?? props.categories?.[0]?.value ?? '',
+  }));
+  const initialFrequency = initialValues.recurrence?.frequency;
   return (
-    <ValidatedModal isOpen={props.isOpen} resetKey={String(props.initialValues?.date ?? '')} initialFrequency={initialFrequency}>
+    <ValidatedModal isOpen={props.isOpen} resetKey={String(initialValues.date ?? '')} initialFrequency={initialFrequency}>
       <fieldset disabled={saving} aria-busy={saving} className="m-0 min-w-0 border-0 p-0">
         <LibraryCreateEventModal
           {...props}
+          categories={formCategories(props.categories)}
+          initialValues={initialValues}
           subtitle={<ModalFeedback subtitle={props.subtitle} saving={saving} error={error} />}
           onCancel={() => { if (!saving) props.onCancel(); }}
           onCreate={(event) => {
@@ -160,6 +174,10 @@ export function CreateEventModal({ saving = false, error, ...props }: CreateProp
       </fieldset>
     </ValidatedModal>
   );
+}
+
+export function CreateEventModal(props: CreateProps & SaveFeedback) {
+  return props.isOpen ? <CreateEventSession {...props} /> : null;
 }
 
 function EventDetailsSession(props: ControlledDetailsProps & { event: SaveEvent }) {
@@ -179,7 +197,7 @@ function EventDetailsSession(props: ControlledDetailsProps & { event: SaveEvent 
           <LibraryCreateEventModal
             isOpen
             people={props.people}
-            categories={props.categories}
+            categories={formCategories(props.categories)}
             initialValues={draft}
             canCreateRecurringEvents={props.canCreateRecurringEvents}
             title="Modifier l’événement"
@@ -197,6 +215,18 @@ function EventDetailsSession(props: ControlledDetailsProps & { event: SaveEvent 
         ) : (
           <LibraryEventDetailsModal
             {...props}
+            categories={formCategories(props.categories)}
+            title={props.saving || props.error ? (
+              <>
+                {props.title ?? 'Détail de l’événement'}
+                <span
+                  role={props.saving ? 'status' : 'alert'}
+                  className={`mt-2 block whitespace-normal break-words text-sm font-normal leading-5 ${props.saving ? 'text-[#e2e8f0]' : 'text-[#fecaca]'}`}
+                >
+                  {props.saving ? 'Enregistrement en cours…' : props.error}
+                </span>
+              </>
+            ) : props.title}
             onClose={() => { if (!props.saving) props.onClose(); }}
             onSave={props.onSave ? (event) => void saveDraft({
               ...event,
