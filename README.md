@@ -15,6 +15,12 @@ The guides describe the implemented module, its current limitations, local setup
 
 Les guides décrivent le module implémenté, ses limites actuelles, le démarrage local, les routes, les données, les vérifications et la CI/CD.
 
+Calendar-scoped sidebar styles restore the reference's 44px navigation targets
+and shadow without replacing the published mobile Close control or session.
+Les styles de sidebar limités à Calendars rétablissent les cibles de 44px et
+l'ombre de la référence sans remplacer le bouton Fermer mobile ni la session.
+Tracking / Suivi: MAIR-180, [issue #210](https://github.com/mairie360/Calendars_Web_Service/issues/210).
+
 ## Contracts and background / Contrats et compléments
 
 - [BFF.md](BFF.md)
