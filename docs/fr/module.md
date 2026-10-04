@@ -125,3 +125,21 @@ Le fonctionnement dépend d’identifiants utilisateurs cohérents entre Core et
 ## Pour développer ou exploiter ce module
 
 Le [guide technique](technical.md) détaille architecture, configuration, routes, session, persistance, tests et CI/CD. Il décrit les sources de vérité et les étapes de synchronisation des contrats avec les dépôts associés.
+
+## Composition du package publié — 4 octobre 2026
+
+Le candidat composé réunit protection des brouillons/refus, focus des dialogues
+et UI publiée0.6.10 vérifiée SHA512.217 régressions Node passent séquentiellement,
+avec couverture91.03/92.54/96.70% et seuils60% inchangés. TypeScript, contrôle du
+snapshot OpenAPI/types générés, lint (quatre warnings hérités) et build production
+un worker passent. Native1280×720 et mobile réellement390×844 : édition pending/
+refus conserve titre/catégorie, retry explicitement confirmé, deux frontières
+clavier, retour au déclencheur ; annulation/réouverture crée un brouillon neuf.
+Ledger4appels=2GET+2PATCH, même payload retry, aucune violation/console pertinente.
+Cette recette avec pin ne rejoue pas la lecture retardée8s, création/validation/
+suppression native ni la comparaison appariée exhaustive ; leurs anciennes preuves
+gardent leurs heads. Droits/persistance déployés, image complète et accessibilité
+globale restent non certifiés. Intégration et copie exacte main attendent une CI
+réellement verte, aucun bypass d'audit rouge. Seuls pin/tests/docs consommateur
+s'ajoutent : aucune API/BFF, client/proxy/contrat/auth/sécurité/donnée démo ni
+approbation de déploiement modifiée.

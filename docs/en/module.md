@@ -129,3 +129,22 @@ Operation depends on consistent user identifiers between Core and Calendar and t
 ## Developing or operating this module
 
 The [technical guide](technical.md) covers architecture, configuration, routes, session handling, persistence, tests and CI/CD. It describes sources of truth and contract synchronization with associated repositories.
+
+## Published UI composition — 4 October 2026
+
+The composed candidate includes event refusal/draft protection, modal focus and
+published shared UI0.6.10. With the genuine SHA512-verified artifact,217 Node
+regressions pass sequentially (91.03% lines/92.54% branches/96.70% functions;
+unchanged60% gates). TypeScript, the committed OpenAPI/generated-type check,
+lint (four inherited warnings) and the one-worker production build pass.
+Native1280x720 and measured390x844 verify a pending/refused edit with retained
+title/category, explicit confirmed retry, both keyboard boundaries, focus return,
+and cancellation/reopening of a fresh creation draft. Four mock upstream calls
+(two GET/two PATCH), identical retry payloads, no validation violations or relevant
+console logs. This pin-composed recipe does not repeat the earlier eight-second
+read, native create/approval/delete or exhaustive paired-prototype checks; those
+historical proofs keep their candidate heads. No deployed rights/persistence,
+complete image or global accessibility certification is claimed. Integration and
+exact-main snapshot refresh still require actual green CI; never waive a red audit.
+Only consumer pin/tests/docs are added here; no API/BFF, contract/client/proxy,
+authentication, security policy, demo data or deployment change.

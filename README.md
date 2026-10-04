@@ -168,3 +168,40 @@ Le pin exact et l'intégrité du package publié sont alignés sur Elearning san
 le rétrograder. Les tests de release vérifient le manifeste, le lockfile et le
 vrai package installé. Une validation isolée ne remplace pas la CI verte,
 l'intégration des sept consommateurs et la recette de la copie locale livrée.
+
+## Published UI composition — 4 October 2026
+
+The composed candidate includes event refusal/draft protection, modal focus and
+published shared UI0.6.10. With the genuine SHA512-verified artifact,217 Node
+regressions pass sequentially (91.03% lines/92.54% branches/96.70% functions;
+unchanged60% gates). TypeScript, the committed OpenAPI/generated-type check,
+lint (four inherited warnings) and the one-worker production build pass.
+Native1280x720 and measured390x844 verify a pending/refused edit with retained
+title/category, explicit confirmed retry, both keyboard boundaries, focus return,
+and cancellation/reopening of a fresh creation draft. Four mock upstream calls
+(two GET/two PATCH), identical retry payloads, no validation violations or relevant
+console logs. This pin-composed recipe does not repeat the earlier eight-second
+read, native create/approval/delete or exhaustive paired-prototype checks; those
+historical proofs keep their candidate heads. No deployed rights/persistence,
+complete image or global accessibility certification is claimed. Integration and
+exact-main snapshot refresh still require actual green CI; never waive a red audit.
+Only consumer pin/tests/docs are added here; no API/BFF, contract/client/proxy,
+authentication, security policy, demo data or deployment change.
+
+## Composition du package publié — 4 octobre 2026
+
+Le candidat composé réunit protection des brouillons/refus, focus des dialogues
+et UI publiée0.6.10 vérifiée SHA512.217 régressions Node passent séquentiellement,
+avec couverture91.03/92.54/96.70% et seuils60% inchangés. TypeScript, contrôle du
+snapshot OpenAPI/types générés, lint (quatre warnings hérités) et build production
+un worker passent. Native1280×720 et mobile réellement390×844 : édition pending/
+refus conserve titre/catégorie, retry explicitement confirmé, deux frontières
+clavier, retour au déclencheur ; annulation/réouverture crée un brouillon neuf.
+Ledger4appels=2GET+2PATCH, même payload retry, aucune violation/console pertinente.
+Cette recette avec pin ne rejoue pas la lecture retardée8s, création/validation/
+suppression native ni la comparaison appariée exhaustive ; leurs anciennes preuves
+gardent leurs heads. Droits/persistance déployés, image complète et accessibilité
+globale restent non certifiés. Intégration et copie exacte main attendent une CI
+réellement verte, aucun bypass d'audit rouge. Seuls pin/tests/docs consommateur
+s'ajoutent : aucune API/BFF, client/proxy/contrat/auth/sécurité/donnée démo ni
+approbation de déploiement modifiée.
