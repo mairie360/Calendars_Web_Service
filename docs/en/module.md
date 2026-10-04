@@ -9,6 +9,11 @@ AppShell with the existing BFF-backed user session. Its main viewport scrolls
 without moving the header or footer. Attachments and business documents inside
 active modules are not removed.
 
+Calendar-scoped styles preserve the reference sidebar's 44px navigation targets
+and separating shadow. The mobile sidebar stays below the published Close
+control; keyboard dismissal and focus management remain owned by the shared
+component. No prototype identity, notifications or appearance data are copied.
+
 ## One account destination
 
 Profile access now opens **Settings**. Existing `/profile` bookmarks and subpaths

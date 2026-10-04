@@ -10,6 +10,12 @@ utilisateur fournie par le BFF. Son contenu défile sans déplacer l'en-tête ni
 le pied de page. Les pièces jointes et documents métier des modules actifs ne
 sont pas supprimés.
 
+Les styles limités à Calendars conservent les cibles de navigation de 44px et
+l'ombre de séparation de la référence. La sidebar mobile reste sous le bouton
+Fermer publié ; la fermeture clavier et la gestion du focus restent assurées
+par le composant partagé. Aucune identité, notification ou préférence du
+prototype n'est recopiée.
+
 ## Un seul espace compte
 
 Le profil est désormais ouvert dans **Paramètres (Settings)**. Les anciens liens
