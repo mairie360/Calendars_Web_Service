@@ -211,6 +211,47 @@ test('a successful independent read cannot hide a refused edit or reset its draf
   assert.equal(front.calendarBff.calls('/calendar/events/{id}', 'PATCH').length, 1);
 });
 
+test('pending and refused edit keeps its draft through reordered category reads, then confirms only an explicit retry', async () => {
+  await renderLoadedPage();
+  const event = view.props('MonthGrid').events[0];
+  await view.act(() => view.props('MonthGrid').onEventClick(event));
+  await view.click('Modifier');
+  await view.fire(props => props.id === 'event-title', 'onChange', { target: { value: 'Combined draft' } });
+  await view.fire(props => props.id === 'event-category', 'onChange', { target: { value: 'other' } });
+  let reply;
+  front.calendarBff.on('patch', '/calendar/events/{id}', () => new Promise(resolve => { reply = resolve; }));
+  const submitEdit = () => view.hostElements((props, _text, tag) => tag === 'form' && props.onSubmit)[0]
+    .props.onSubmit({ preventDefault() {} });
+  await view.act(submitEdit);
+  await view.waitFor(() => Boolean(reply));
+  assert.match(view.html, /<fieldset[^>]*disabled=""[^>]*aria-busy="true"/);
+  const reordered = bootstrap({ categories: [{ label: 'Autre reçue', value: 'other' }, { label: 'Réunion reçue', value: 'meeting' }] });
+  front.calendarBff.on('get', '/calendar/bootstrap', { body: reordered });
+  await view.act(() => view.props('CalendarToolbar').onViewChange('week'));
+  await view.waitFor(() => view.props('EventDetailsModal').categories[0].value === 'other');
+  assert.equal(view.hostElements(props => props.id === 'event-title')[0].props.value, 'Combined draft');
+  assert.equal(view.hostElements(props => props.id === 'event-category')[0].props.value, 'other');
+  assert.equal(view.props('EventDetailsModal').saving, true);
+  await view.act(() => reply({ status: 403, body: apiError('FORBIDDEN', 'Combined edit refused') }));
+  await view.waitFor(html => html.includes('Combined edit refused'));
+  front.calendarBff.on('get', '/calendar/bootstrap', { body: bootstrap() });
+  await view.act(() => view.props('CalendarToolbar').onViewChange('day'));
+  await view.waitFor(() => !view.props('EventDetailsModal').saving && view.props('EventDetailsModal').categories[0].value === 'meeting');
+  assert.equal(view.hostElements(props => props.id === 'event-title')[0].props.value, 'Combined draft');
+  assert.equal(view.hostElements(props => props.id === 'event-category')[0].props.value, 'other');
+  assert.match(view.html.slice(view.html.indexOf('role="dialog"')), /role="alert"[^>]*>Combined edit refused/);
+  assert.equal(front.calendarBff.calls('/calendar/events/{id}', 'PATCH').length, 1);
+  const confirmed = calendarEvent(event.id, { ...event, title: 'Combined draft', category: 'other' });
+  front.calendarBff.on('patch', '/calendar/events/{id}', { body: confirmed });
+  await view.act(submitEdit);
+  await view.waitFor(() => !view.html.includes('Modifier l’événement') && !view.html.includes('Enregistrement en cours'));
+  assert.equal(front.calendarBff.calls('/calendar/events/{id}', 'PATCH').length, 2);
+  assert.equal(view.props('DaySchedule').events[0].title, 'Combined draft');
+  assert.equal(view.props('DaySchedule').events[0].category, 'other');
+  assert.doesNotMatch(view.html, /role="dialog"/);
+  assert.doesNotMatch(view.html, /Combined edit refused/);
+});
+
 test('changing the view re-renders the week grid with the reloaded events', async () => {
   await renderLoadedPage();
 
