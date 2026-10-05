@@ -15,6 +15,12 @@ The guides describe the implemented module, its current limitations, local setup
 
 Les guides décrivent le module implémenté, ses limites actuelles, le démarrage local, les routes, les données, les vérifications et la CI/CD.
 
+Calendar-scoped sidebar styles restore the reference's 44px navigation targets
+and shadow without replacing the published mobile Close control or session.
+Les styles de sidebar limités à Calendars rétablissent les cibles de 44px et
+l'ombre de la référence sans remplacer le bouton Fermer mobile ni la session.
+Tracking / Suivi: MAIR-180, [issue #210](https://github.com/mairie360/Calendars_Web_Service/issues/210).
+
 ## Contracts and background / Contrats et compléments
 
 - [BFF.md](BFF.md)
@@ -86,3 +92,122 @@ Les régressions vérifient les deux images et les trois builds Compose. Un cont
 du runtime-base seul ne suffit pas : l’issue #204 reste ouverte jusqu’aux preuves
 de l’image complète sur main intégré, scan bloquant/signature/ZAP/k6 et copie
 locale préservée. Aucun gate Staging/Prod ni pin de cluster n’est changé.
+
+## Event modal keyboard focus / Focus clavier des événements (MAIR-318)
+
+[Issue #208](https://github.com/mairie360/Calendars_Web_Service/issues/208) follows
+the Calendars-only portion of the broader MAIR-318 accessibility task. The
+consumer keeps one focus session around the published detail/create/edit modal:
+opening focuses an available control, Tab/Shift+Tab stay inside, and a changed
+or fully disabled dialog receives focus while a write is pending. Existing
+Escape callbacks and saving guards remain in charge of closing. Closing returns
+to the opener, or the selected calendar view if a confirmed deletion removed it;
+an intentional external navigation is not overridden. Observers/listeners and
+temporary dialog attributes are cleaned up on close. No shared library,
+dependency, API/BFF, contract, authentication or deployment change is required.
+
+Le front conserve une seule session de focus pour les détails/création/édition :
+focus à l’ouverture, Tab/Maj+Tab contenus, repli sur le dialogue pendant une
+écriture, retour au déclencheur à la fermeture ou à la vue sélectionnée après
+suppression confirmée. Les callbacks Échap et gardes d’enregistrement existants
+sont conservés ; observateur, listeners et attributs temporaires sont nettoyés.
+Aucune modification des API/BFF, contrats, bibliothèque ou environnements.
+
+`node --test tests/calendar-modal-focus.test.cjs` covers the controller with DOM
+doubles; `tests/calendar-form-html.test.cjs` covers the existing form guards.
+Native browser verification remains necessary for React refs, real focus order,
+desktop/mobile, validation, pending/refused/confirmed writes and removed openers.
+This scoped correction is not a claim of complete RGAA/axe conformance for all
+routes, roles, zoom settings or assistive technologies.
+## Drafts during category reads / Brouillons pendant les lectures de catégories
+
+Calendar draft recovery (MAIR-387 / issue #196) also protects fields when real
+category options first arrive or are reordered. The frontend keeps initialization
+owned by each form opening; cancel/reopen gets fresh values and the already-loaded
+default. A presentation-only empty choice keeps incoming options from resetting
+the shared form; it is not business data. The shared library and BFF are unchanged.
+
+La reprise des brouillons Calendars conserve aussi les saisies lorsqu’une lecture
+apporte ou réordonne les catégories réelles. Chaque ouverture initialise son
+propre brouillon ; annuler puis rouvrir reprend les nouveaux defaults. Le choix
+vide de présentation ne remplace aucune donnée métier ni ne modifie le contrat.
+
+## Combined dialog acceptance / Validation des dialogues composés
+
+The candidate combines MAIR-387 / PR #206 with MAIR-318 / PR #209 without
+changing clients, contracts, dependencies or the published shared library.
+The cross-feature real-page/HTTP regression preserves the edited title and
+category through a pending PATCH, reordered category reads, refusal and a second
+read; only the explicit confirmed retry updates the event and closes the dialog.
+On 4 October 2026, 217 Node tests passed (34 targeted page/form/focus cases),
+with unchanged 60% coverage gates. TypeScript, contracts and isolated one-worker
+production build passed; lint retained four existing warnings and no errors.
+Native desktop 1280×720 and measured mobile 390×844 verified PATCH/POST refusal
+before an eight-second GET, retained fields and in-dialog feedback after that
+read, both Tab boundaries, pending controls, confirmed retry and focus return.
+Mobile cancel/reopen used a fresh draft. Disposable ledger: nine GET, two PATCH
+and two POST, zero contract violations and relevant console warnings/errors.
+No new native deletion/approval, recurrence, zoom, deployed-role/persistence or
+complete accessibility certification is implied. Remote CI, integration and
+exact-main/current-local checks remain separate gates; never waive a red audit.
+
+La composition conserve les brouillons et les erreurs de MAIR-387 avec la
+session de focus de MAIR-318. La recette croisée vérifie les refus avant la
+lecture tardive, les champs et le retour clavier après confirmation, sur desktop
+et mobile mesuré. Les données jetables et outils de recette restent hors produit.
+Les API/BFF, contrats, dépendances et bibliothèque partagée sont inchangés.
+Les contrôles CI réels, l'intégration puis la copie locale exacte restent requis ;
+ce candidat ne signifie ni livraison main ni validation globale de l'accessibilité.
+
+## Shared UI alignment / Alignement UI partagé — MAIR-180
+
+This consumer pins the published `@mairie360/lib-components@0.6.10`, including
+its exact download URL and SHA512 integrity. Only the shared UI entry changes
+in the lockfile; all other dependencies and security policies are preserved.
+Tracking: [MAIR-180](https://mairie-360.atlassian.net/browse/MAIR-180) and
+[cross-frontend issue](https://github.com/mairie360/Login_Web_Service/issues/142).
+Login stays standalone without header/sidebar/footer; authenticated module
+shells and the existing Elearning confirmation/rating features are preserved.
+No API/BFF, contract, runtime configuration, demo data or deployment approval change.
+
+Le pin exact et l'intégrité du package publié sont alignés sur Elearning sans
+le rétrograder. Les tests de release vérifient le manifeste, le lockfile et le
+vrai package installé. Une validation isolée ne remplace pas la CI verte,
+l'intégration des sept consommateurs et la recette de la copie locale livrée.
+
+## Published UI composition — 4 October 2026
+
+The composed candidate includes event refusal/draft protection, modal focus and
+published shared UI0.6.10. With the genuine SHA512-verified artifact,217 Node
+regressions pass sequentially (91.03% lines/92.54% branches/96.70% functions;
+unchanged60% gates). TypeScript, the committed OpenAPI/generated-type check,
+lint (four inherited warnings) and the one-worker production build pass.
+Native1280x720 and measured390x844 verify a pending/refused edit with retained
+title/category, explicit confirmed retry, both keyboard boundaries, focus return,
+and cancellation/reopening of a fresh creation draft. Four mock upstream calls
+(two GET/two PATCH), identical retry payloads, no validation violations or relevant
+console logs. This pin-composed recipe does not repeat the earlier eight-second
+read, native create/approval/delete or exhaustive paired-prototype checks; those
+historical proofs keep their candidate heads. No deployed rights/persistence,
+complete image or global accessibility certification is claimed. Integration and
+exact-main snapshot refresh still require actual green CI; never waive a red audit.
+Only consumer pin/tests/docs are added here; no API/BFF, contract/client/proxy,
+authentication, security policy, demo data or deployment change.
+
+## Composition du package publié — 4 octobre 2026
+
+Le candidat composé réunit protection des brouillons/refus, focus des dialogues
+et UI publiée0.6.10 vérifiée SHA512.217 régressions Node passent séquentiellement,
+avec couverture91.03/92.54/96.70% et seuils60% inchangés. TypeScript, contrôle du
+snapshot OpenAPI/types générés, lint (quatre warnings hérités) et build production
+un worker passent. Native1280×720 et mobile réellement390×844 : édition pending/
+refus conserve titre/catégorie, retry explicitement confirmé, deux frontières
+clavier, retour au déclencheur ; annulation/réouverture crée un brouillon neuf.
+Ledger4appels=2GET+2PATCH, même payload retry, aucune violation/console pertinente.
+Cette recette avec pin ne rejoue pas la lecture retardée8s, création/validation/
+suppression native ni la comparaison appariée exhaustive ; leurs anciennes preuves
+gardent leurs heads. Droits/persistance déployés, image complète et accessibilité
+globale restent non certifiés. Intégration et copie exacte main attendent une CI
+réellement verte, aucun bypass d'audit rouge. Seuls pin/tests/docs consommateur
+s'ajoutent : aucune API/BFF, client/proxy/contrat/auth/sécurité/donnée démo ni
+approbation de déploiement modifiée.

@@ -9,6 +9,11 @@ AppShell with the existing BFF-backed user session. Its main viewport scrolls
 without moving the header or footer. Attachments and business documents inside
 active modules are not removed.
 
+Calendar-scoped styles preserve the reference sidebar's 44px navigation targets
+and separating shadow. The mobile sidebar stays below the published Close
+control; keyboard dismissal and focus management remain owned by the shared
+component. No prototype identity, notifications or appearance data are copied.
+
 ## One account destination
 
 Profile access now opens **Settings**. Existing `/profile` bookmarks and subpaths
@@ -55,6 +60,20 @@ reopening starts from official event data. Chronology/recurrence validation and
 published permissions are unchanged. This corrects a defect inherited from the
 preserved prototype, without changing the shared package, API/BFF or data.
 
+Read failures and refused writes keep separate feedback. A late or retried
+bootstrap cannot clear a refused save or its in-form message; opening a form
+cannot clear a failed read. The calendar's **Retry** only reloads data, never
+replays an event write. Both failures remain visible when they coexist; only
+the corresponding successful read, a new write attempt or an explicit new
+form resets its own feedback. Existing draft and latest-read guards are preserved.
+
+Delete and approve/reject outcomes are also announced **inside the event details
+dialog**, through the shared component's public title slot. Pending controls stay
+locked; a refused operation keeps the official event and authorized actions
+available for an explicit retry. A successful read cannot erase that refusal.
+Only the existing mutation response confirms removal or a changed approval status.
+The shared component, permissions and details content remain unchanged.
+
 ## Confirmed results and delayed reads (MAIR-447)
 
 A calendar read started before a confirmed create, edit, delete or approval
@@ -86,6 +105,14 @@ Business domain: Calendar.
 
 ## Typical workflow
 
+Event dialogs own their draft and keyboard focus until the existing operation
+confirms the write or the user cancels. A concurrent category read cannot reset
+entered fields or clear a refused-write message. Pending controls stay disabled;
+after refusal, only an explicit retry submits again. Closing returns focus to
+the opening control, or the selected view if that control has been removed.
+These frontend behaviors do not imply deployed permission/persistence or full
+accessibility certification; those require their own acceptance evidence.
+
 1. Load a date range through `/calendar/bootstrap`, including the month in a valid event link.
 2. Create or update an event and choose authorized assignees.
 3. Inspect approval status and reload the date range after a mutation.
@@ -107,3 +134,22 @@ Operation depends on consistent user identifiers between Core and Calendar and t
 ## Developing or operating this module
 
 The [technical guide](technical.md) covers architecture, configuration, routes, session handling, persistence, tests and CI/CD. It describes sources of truth and contract synchronization with associated repositories.
+
+## Published UI composition — 4 October 2026
+
+The composed candidate includes event refusal/draft protection, modal focus and
+published shared UI0.6.10. With the genuine SHA512-verified artifact,217 Node
+regressions pass sequentially (91.03% lines/92.54% branches/96.70% functions;
+unchanged60% gates). TypeScript, the committed OpenAPI/generated-type check,
+lint (four inherited warnings) and the one-worker production build pass.
+Native1280x720 and measured390x844 verify a pending/refused edit with retained
+title/category, explicit confirmed retry, both keyboard boundaries, focus return,
+and cancellation/reopening of a fresh creation draft. Four mock upstream calls
+(two GET/two PATCH), identical retry payloads, no validation violations or relevant
+console logs. This pin-composed recipe does not repeat the earlier eight-second
+read, native create/approval/delete or exhaustive paired-prototype checks; those
+historical proofs keep their candidate heads. No deployed rights/persistence,
+complete image or global accessibility certification is claimed. Integration and
+exact-main snapshot refresh still require actual green CI; never waive a red audit.
+Only consumer pin/tests/docs are added here; no API/BFF, contract/client/proxy,
+authentication, security policy, demo data or deployment change.

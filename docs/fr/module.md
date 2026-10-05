@@ -10,6 +10,12 @@ utilisateur fournie par le BFF. Son contenu défile sans déplacer l'en-tête ni
 le pied de page. Les pièces jointes et documents métier des modules actifs ne
 sont pas supprimés.
 
+Les styles limités à Calendars conservent les cibles de navigation de 44px et
+l'ombre de séparation de la référence. La sidebar mobile reste sous le bouton
+Fermer publié ; la fermeture clavier et la gestion du focus restent assurées
+par le composant partagé. Aucune identité, notification ou préférence du
+prototype n'est recopiée.
+
 ## Un seul espace compte
 
 Le profil est désormais ouvert dans **Paramètres (Settings)**. Les anciens liens
@@ -60,6 +66,23 @@ réouverture reprend les données officielles. Validation chronologique,
 récurrences et permissions publiées restent inchangées. Ce correctif résout
 un défaut hérité du prototype sans changer bibliothèque, API/BFF ni données.
 
+Les erreurs de lecture et les refus d’écriture gardent des retours distincts.
+Un bootstrap tardif ou relancé ne masque ni le refus d’enregistrement ni son
+message dans le formulaire ; ouvrir un formulaire n’efface pas une lecture
+échouée. **Réessayer** recharge uniquement les données, sans rejouer d’écriture.
+Les deux erreurs restent affichées si elles coexistent ; seule la lecture
+réussie correspondante, une nouvelle tentative d’écriture ou un nouveau
+formulaire explicite remet à zéro son propre retour. Les gardes de brouillon
+et de dernière lecture restent préservées.
+
+Les états de suppression et de validation/refus sont également annoncés **dans
+la fenêtre de détail**, via le titre public du composant partagé. Les contrôles
+restent verrouillés pendant l’écriture ; un refus conserve l’événement officiel
+et les actions autorisées pour une nouvelle tentative explicite. Une lecture
+réussie n’efface pas ce refus. Seule la réponse de mutation existante confirme
+la suppression ou le nouveau statut. Composant partagé, droits et détails sont
+inchangés.
+
 [Documentation technique](technical.md) · [English](../en/module.md) · [README](../../README.md)
 
 Afficher et piloter le calendrier municipal dans le navigateur, avec événements, affectations et validations fournis par BFF Calendar.
@@ -78,6 +101,14 @@ Domaine fonctionnel: Calendrier.
 - Sélection des personnes, catégories et services; affichage de la validation et de la récurrence.
 
 ## Parcours type
+
+Chaque dialogue conserve son brouillon et son focus clavier jusqu'à confirmation
+de l'opération existante ou annulation. Une lecture concurrente des catégories
+ne réinitialise pas les champs ni le message de refus. Les commandes restent
+désactivées pendant l'écriture ; après refus, seule une nouvelle tentative
+explicite soumet à nouveau. La fermeture restitue le focus au déclencheur ou à la
+vue sélectionnée si celui-ci a disparu. Ces comportements frontend ne certifient
+ni les droits/persistances déployés ni l'accessibilité globale, à vérifier séparément.
 
 1. Charger le calendrier sur une période avec `/calendar/bootstrap`, dont le mois indiqué par un lien valide.
 2. Créer ou modifier un événement et choisir les personnes autorisées.
@@ -100,3 +131,21 @@ Le fonctionnement dépend d’identifiants utilisateurs cohérents entre Core et
 ## Pour développer ou exploiter ce module
 
 Le [guide technique](technical.md) détaille architecture, configuration, routes, session, persistance, tests et CI/CD. Il décrit les sources de vérité et les étapes de synchronisation des contrats avec les dépôts associés.
+
+## Composition du package publié — 4 octobre 2026
+
+Le candidat composé réunit protection des brouillons/refus, focus des dialogues
+et UI publiée0.6.10 vérifiée SHA512.217 régressions Node passent séquentiellement,
+avec couverture91.03/92.54/96.70% et seuils60% inchangés. TypeScript, contrôle du
+snapshot OpenAPI/types générés, lint (quatre warnings hérités) et build production
+un worker passent. Native1280×720 et mobile réellement390×844 : édition pending/
+refus conserve titre/catégorie, retry explicitement confirmé, deux frontières
+clavier, retour au déclencheur ; annulation/réouverture crée un brouillon neuf.
+Ledger4appels=2GET+2PATCH, même payload retry, aucune violation/console pertinente.
+Cette recette avec pin ne rejoue pas la lecture retardée8s, création/validation/
+suppression native ni la comparaison appariée exhaustive ; leurs anciennes preuves
+gardent leurs heads. Droits/persistance déployés, image complète et accessibilité
+globale restent non certifiés. Intégration et copie exacte main attendent une CI
+réellement verte, aucun bypass d'audit rouge. Seuls pin/tests/docs consommateur
+s'ajoutent : aucune API/BFF, client/proxy/contrat/auth/sécurité/donnée démo ni
+approbation de déploiement modifiée.
