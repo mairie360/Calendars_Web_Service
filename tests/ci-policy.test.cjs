@@ -49,23 +49,44 @@ test('production keeps the non-root standalone Node and curl runtime without unu
 
 test('Docker excludes local environments and artifacts while retaining tracked npm policy', () => {
   const patterns = read('.dockerignore').split(/\r?\n/).map(line => line.trim());
-  for (const item of ['node_modules', '.next', '.git', '.env*', '.npmrc.*', 'cicd-repo', 'coverage', 'test-results', 'playwright-report']) assert.ok(patterns.includes(item), item);
+  for (const item of ['node_modules', '.next', '.git', '.env*', '.npmrc.*', 'cicd-repo', 'rgaa-report', '.rgaa-ai-cache', 'coverage', 'test-results', 'playwright-report']) assert.ok(patterns.includes(item), item);
   assert.ok(!patterns.includes('.npmrc') && !patterns.includes('.npmrc*'));
 });
 
-test('all three Compose frontend builds use the required secret without runtime credentials', () => {
+test('the development Compose build uses the required secret without runtime credentials', () => {
   const yaml = require('js-yaml');
-  for (const file of ['docker-compose.yml', 'docker-compose-security.yml', 'docker-compose-performance.yml']) {
+  const compose = yaml.load(read('docker-compose.yml'));
+  assert.deepEqual(compose.secrets, { node_auth_token: { environment: 'NODE_AUTH_TOKEN' } });
+  assert.deepEqual(compose.services['calendar-front'].build, {
+    context: '.', dockerfile: 'development.Dockerfile', secrets: ['node_auth_token'],
+  });
+  for (const [name, service] of Object.entries(compose.services)) {
+    assert.ok(!service.secrets, `${name}: no runtime secret`);
+    assert.ok(!service.environment || !Object.hasOwn(service.environment, 'NODE_AUTH_TOKEN'), `${name}: no runtime token`);
+    if (name !== 'calendar-front') assert.ok(!service.build, `${name}: unchanged existing image`);
+  }
+});
+
+test('isolated test stacks run the published image, the scripts build it with a secret only', () => {
+  const yaml = require('js-yaml');
+  const stacks = {
+    'docker-compose-security.yml': 'security_test.sh',
+    'docker-compose-performance.yml': 'performance_test.sh',
+    'docker-compose-accessibility.yml': 'accessibility_test.sh',
+  };
+  for (const [file, script] of Object.entries(stacks)) {
     const compose = yaml.load(read(file));
-    assert.deepEqual(compose.secrets, { node_auth_token: { environment: 'NODE_AUTH_TOKEN' } });
-    assert.deepEqual(compose.services['calendar-front'].build, {
-      context: '.', dockerfile: file === 'docker-compose.yml' ? 'development.Dockerfile' : 'Dockerfile', secrets: ['node_auth_token'],
-    });
+    // The CI exports IMAGE_REF (dev-<sha> for ZAP / k6, staging-<sha> for RGAA): never rebuilt.
+    assert.match(compose.services['calendar-front'].image, /^\$\{IMAGE_REF:\?/);
+    assert.ok(!compose.secrets, `${file}: no build secret left`);
     for (const [name, service] of Object.entries(compose.services)) {
-      assert.ok(!service.secrets, `${name}: no runtime secret`);
-      assert.ok(!service.environment || !Object.hasOwn(service.environment, 'NODE_AUTH_TOKEN'), `${name}: no runtime token`);
-      if (name !== 'calendar-front') assert.ok(!service.build, `${name}: unchanged existing image`);
+      assert.ok(!service.build, `${file} ${name}: no build`);
+      assert.ok(!service.secrets, `${file} ${name}: no runtime secret`);
+      assert.ok(!service.environment || !Object.hasOwn(service.environment, 'NODE_AUTH_TOKEN'), `${file} ${name}: no runtime token`);
     }
+    const shell = read(script);
+    assert.match(shell, /docker build -t calendar-front:local --secret id=node_auth_token,env=NODE_AUTH_TOKEN \./);
+    assert.doesNotMatch(shell, /--build-arg|up -d --build/);
   }
 });
 
@@ -74,5 +95,7 @@ test('consumer CI retains blocking security defaults and explicit named secrets'
   assert.doesNotMatch(ci, /secrets:\s*inherit|continue-on-error:|image_scan_fail_on_findings:|semgrep_fail_on_findings:\s*false/);
   assert.deepEqual([...ci.matchAll(/^ {6}([A-Z0-9_]+): \$\{\{ secrets\.([A-Z0-9_]+) \}\}$/gm)].map(([, target, source]) => [target, source]), [
     ['CODECOV_TOKEN', 'CODECOV_TOKEN'], ['N8N_WEBHOOK_SECRET', 'N8N_WEBHOOK_SECRET'],
+    // AI pre-audit of the RGAA check (release-prod), MAIR-320.
+    ['ANTHROPIC_API_KEY', 'ANTHROPIC_API_KEY'],
   ]);
 });
