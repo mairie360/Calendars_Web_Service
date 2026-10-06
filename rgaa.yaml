@@ -178,15 +178,16 @@ states:
     as: agent
     route: /?date=2026-01-15&event=900
     steps:
+      # The sidebar repeats the description: look for it in the dialog.
       - wait_for: { role: dialog, name: Détail de l’événement }
-      - wait_for: { text: Séance publique du conseil municipal. }
+      - wait_for: { selector: '[role="dialog"] p:has-text("Séance publique du conseil municipal.")' }
   - id: event-recurring
     description: Details of a weekly event
     as: agent
     route: /?date=2026-01-13&event=904
     steps:
       - wait_for: { role: dialog, name: Détail de l’événement }
-      - wait_for: { text: Accueil des habitants sans rendez-vous. }
+      - wait_for: { selector: '[role="dialog"] p:has-text("Accueil des habitants sans rendez-vous.")' }
   - id: event-edit
     description: Edit form of an event (nothing saved)
     as: agent
@@ -200,7 +201,7 @@ states:
     route: /?date=2026-01-16&event=901
     steps:
       - wait_for: { role: dialog, name: Détail de l’événement }
-      - wait_for: { text: Initiation aux démarches en ligne. }
+      - wait_for: { selector: '[role="dialog"] p:has-text("Initiation aux démarches en ligne.")' }
       - wait_for: { text: En attente }
   - id: event-to-validate
     description: The same event seen by the Responsable (Valider / Refuser, not clicked)
@@ -208,7 +209,7 @@ states:
     route: /?date=2026-01-16&event=901
     steps:
       - wait_for: { role: dialog, name: Détail de l’événement }
-      - wait_for: { text: Initiation aux démarches en ligne. }
+      - wait_for: { selector: '[role="dialog"] p:has-text("Initiation aux démarches en ligne.")' }
       - wait_for: { role: button, name: Valider, exact: true }
   - id: event-created
     description: An event created (the dialog closes, the event appears in the month)
