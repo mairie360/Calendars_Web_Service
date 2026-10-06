@@ -105,11 +105,12 @@ Business domain: Calendar.
 
 ## Typical workflow
 
-Event dialogs own their draft and keyboard focus until the existing operation
+Event dialogs own their draft until the existing operation
 confirms the write or the user cancels. A concurrent category read cannot reset
 entered fields or clear a refused-write message. Pending controls stay disabled;
-after refusal, only an explicit retry submits again. Closing returns focus to
-the opening control, or the selected view if that control has been removed.
+after refusal, only an explicit retry submits again. The dedicated dialog-focus
+correction (MAIR-318/#208) is postponed with RGAA and is not included in this
+functional-only composition. Historical focus evidence does not certify it.
 These frontend behaviors do not imply deployed permission/persistence or full
 accessibility certification; those require their own acceptance evidence.
 

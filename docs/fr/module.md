@@ -102,12 +102,14 @@ Domaine fonctionnel: Calendrier.
 
 ## Parcours type
 
-Chaque dialogue conserve son brouillon et son focus clavier jusqu'à confirmation
+Chaque dialogue conserve son brouillon jusqu'à confirmation
 de l'opération existante ou annulation. Une lecture concurrente des catégories
 ne réinitialise pas les champs ni le message de refus. Les commandes restent
 désactivées pendant l'écriture ; après refus, seule une nouvelle tentative
-explicite soumet à nouveau. La fermeture restitue le focus au déclencheur ou à la
-vue sélectionnée si celui-ci a disparu. Ces comportements frontend ne certifient
+explicite soumet à nouveau. La correction dédiée au focus des dialogues
+(MAIR-318/#208) est reportée avec le RGAA et n'est pas incluse dans cette
+composition fonctionnelle seule ; l'ancienne recette clavier ne la certifie pas.
+Ces comportements frontend ne certifient
 ni les droits/persistances déployés ni l'accessibilité globale, à vérifier séparément.
 
 1. Charger le calendrier sur une période avec `/calendar/bootstrap`, dont le mois indiqué par un lien valide.

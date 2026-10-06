@@ -104,7 +104,78 @@ apporte ou réordonne les catégories réelles. Chaque ouverture initialise son
 propre brouillon ; annuler puis rouvrir reprend les nouveaux defaults. Le choix
 vide de présentation ne remplace aucune donnée métier ni ne modifie le contrat.
 
-## Combined dialog acceptance / Validation des dialogues composés
+## Functional-only composition / Composition fonctionnelle seule
+
+The branch `fix/calendars-functional-stabilization` starts from protected main
+fd2897c and composes existing MAIR-387/#196 read/write isolation, visible detail
+feedback and category-draft ownership, the cross-flow regression, published UI
+alignment and reference sidebar presentation (#210/MAIR-180). Source comparison
+with mixed candidate79f71e0 finds only the dedicated modal-focus helper and its
+wiring absent; all other functional sources, clients, contracts and workflows
+are identical. Commit5d13a90 and merge1928d75 are not imported. Neither helper
+nor its dedicated tests existed on main: no existing RGAA check is disabled.
+MAIR-318/#208 remains open/postponed; original mixed PR209 and the old local
+are preserved. Real applicable CI and protected-main/local-current acceptance
+remain necessary before closing each existing ticket.
+
+La branche fonctionnelle repart de mainfd2897c sans la tranche dédiée au focus.
+Les corrections métier existantes de MAIR-387 et la présentation MAIR-180 sont
+conservées ; pas de changement API/BFF, contrat, contrôle RGAA/sécurité ou
+protection de main. La PR209 mixte et l'ancienne version restent intactes.
+
+### Functional-only verification — 6 October 2026
+
+The composed functional source passes211 Node tests with no failures, skips or
+cancellations and unchanged60% coverage gates (91.08/92.56/96.52%). TypeScript,
+committed Calendar OpenAPI/generated-type consistency, lint (zero errors/four
+inherited warnings) and a fresh Next16.3.6 webpack production build pass.
+Dependencies matching the mixed manifest/lock are reused; local Node24.6 is not
+CI24.21 or fresh-install/image certification. Temporary CPU1/768MiB build settings
+are restored exactly. No raw SDK-spec export comparison is claimed.
+
+An additional full probe against Login's published User0.5.0 snapshot yields
+208passes/3failures: two synthetic401 and one502 session replies are not declared
+by that success-only export. The normal harness uses its existing minimal User
+operation/status fallback; its passing suite is not strict negative-User-schema
+certification. The three diagnostic failures are recorded, not suppressed or
+counted as passing; neither the harness, snapshot nor SDK is edited. Native QA
+validates its User200 reply against that published frontend snapshot read-only.
+
+Fresh native1280×720 and independently measured390×844/document390 verify refused
+desktop edit/draft retention and identical explicit retry, then mobile create
+pending/refusal before an eight-second read completes and reorders categories.
+Title, description, location, selected category and in-dialog refusal survive
+that completed read. Only an explicit identical retry confirms and closes;
+cancel/reopen gives an empty fresh title without another write. The ledger has
+8GET/4PATCH/2POST, three identical refusal/retry body pairs, zero contract violations
+and two timed8002/8001ms reads. The desktop reads completed before its second
+refusal, so only the mobile recipe proves native refusal-before-read completion.
+The first attempted desktop view change did not initiate a read; it is not proof
+of the concurrent-read case. The browser's short observation timeout on the mobile
+read was followed by the same live recipe, not a restarted server.
+
+Identity, content, no framework overlay, console warn/error empty and screenshots
+are checked; no document overflow at the measured widths. No dedicated focus/RGAA,
+native delete/approval/recurrence/zoom, deployed permissions/auth/persistence,
+complete image or new exhaustive paired-reference certification is inferred.
+Own helper/front/tabs are stopped. Exact-head CI and protected-main/local-current
+integration remain outstanding; each ticket retains its separate open criteria.
+
+La composition fonctionnelle passe211tests, types/contrat local/lint/build avec
+seuils inchangés. Le contrôle supplémentaire User0.5.0 a trois échecs de fixtures
+négatives401/502 non exportées : ne pas les déclarer verts ni modifier le contrat
+ou le harnais. Recette fraîche desktopédition et mobilecréation390×844 : refus
+avant lecture retardée/recatégorisation, brouillon/message conservés, retry unique
+confirmé et annulation/réouverture vierge.8GET/4PATCH/2POST, trois paires identiques,
+zéro violation sur ces réponses déclarées. Pas certification RGAA, droits ou
+persistance déployés ; processus arrêtés, CI/main/local-current encore requis.
+
+## Historical mixed dialog acceptance / Validation historique des dialogues mixtes
+
+The following 4 October record belongs to the historical mixed candidate,
+including its focus correction. It is retained for provenance, not claimed as
+fresh verification of the functional-only branch. Revision-specific checks and
+their limitations must be reported separately; no RGAA acceptance is claimed.
 
 The candidate combines MAIR-387 / PR #206 with MAIR-318 / PR #209 without
 changing clients, contracts, dependencies or the published shared library.
