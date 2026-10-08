@@ -50,14 +50,22 @@ export default function Page() {
           <div className="px-6 pb-8 pt-6">
             {calendar.loading || calendar.saving || calendar.error ? (
               <div className="mb-5 flex flex-col gap-3 rounded-md border border-[#d8d2ca] bg-[#fbfaf9] px-4 py-3 text-sm text-[#334155] sm:flex-row sm:items-center sm:justify-between">
-                <span role={calendar.error ? "alert" : "status"}>
-                  {calendar.error
-                    ? `Calendrier : ${calendar.error}`
-                    : calendar.saving
-                      ? "Enregistrement en cours…"
-                      : "Chargement des données du calendrier…"}
-                </span>
-                {calendar.error ? (
+                <div className="flex flex-col gap-2">
+                  {calendar.readError ? (
+                    <span role="alert">Calendrier : {calendar.readError}</span>
+                  ) : null}
+                  {calendar.mutationError ? (
+                    <span role="alert">Enregistrement : {calendar.mutationError}</span>
+                  ) : null}
+                  {calendar.loading || calendar.saving ? (
+                    <span role="status">
+                      {calendar.saving
+                        ? "Enregistrement en cours…"
+                        : "Chargement des données du calendrier…"}
+                    </span>
+                  ) : null}
+                </div>
+                {calendar.readError ? (
                   <button
                     type="button"
                     className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-[#d8d2ca] bg-white px-3 text-sm font-semibold text-[#172033] transition hover:bg-[#f8fafc] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3b82f6]/25"
@@ -136,7 +144,7 @@ export default function Page() {
         onCancel={() => calendar.setCreateModalOpen(false)}
         onCreate={calendar.handleCreateEvent}
         saving={calendar.saving}
-        error={calendar.error}
+        error={calendar.mutationError}
       />
 
       <EventDetailsModal
@@ -155,7 +163,7 @@ export default function Page() {
         onClose={() => calendar.setSelectedEvent(null)}
         onSave={calendar.handleSaveEvent}
         saving={calendar.saving}
-        error={calendar.error}
+        error={calendar.mutationError}
         onDelete={calendar.handleDeleteEvent}
         onApprove={(event) => void calendar.handleValidateEvent(event, "approved")}
         onReject={(event) => void calendar.handleValidateEvent(event, "rejected")}

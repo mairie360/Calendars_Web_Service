@@ -11,6 +11,19 @@ function declarations(selector) {
   return css.slice(start, css.indexOf('}', start));
 }
 
+test('calendar navigation preserves the measured reference target height and separating shadow', () => {
+  const sidebar = '.calendar-scroll-shell aside[aria-label="Navigation principale"]';
+  assert.match(declarations(sidebar), /position: relative;/);
+  assert.match(declarations(sidebar), /z-index: 20;/);
+  assert.match(declarations(sidebar), /box-shadow: 8px 0 24px rgb\(12 28 48 \/ 28%\);/);
+  assert.match(declarations(`${sidebar} > nav button`), /min-height: 44px;/);
+  assert.match(declarations(`${sidebar} > nav button`), /flex-shrink: 0;/);
+});
+
+test('mobile navigation shadow stays below the published Close control', () => {
+  assert.match(declarations('.calendar-scroll-shell [role="dialog"][aria-label="Navigation mobile"] aside[aria-label="Navigation principale"]'), /z-index: 0;/);
+});
+
 test('calendar grids fit their viewport without horizontal page scrolling', () => {
   assert.match(declarations('.calendar-board'), /grid-template-columns: minmax\(0, 1fr\);/);
   assert.match(css, /\.calendar-grid-viewport \{\s*overflow-x: hidden;/);

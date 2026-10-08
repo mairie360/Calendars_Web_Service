@@ -214,6 +214,81 @@ test('a BFF error on load is shown to the user', async () => {
   assert.deepEqual(state.events, []);
 });
 
+test('opening and closing a form does not clear a failed calendar read without another GET', async () => {
+  front.calendarBff.on('get', '/calendar/bootstrap', { status: 502, body: apiError('UNAVAILABLE', 'Read unavailable') });
+  page = renderHook(useCalendarPage);
+  const failed = await page.waitFor(current => !current.loading);
+  failed.openCreateModal();
+  const opened = await page.waitFor(current => current.createModalOpen);
+  assert.equal(opened.error, 'Read unavailable');
+  assert.equal(opened.readError, 'Read unavailable');
+  assert.equal(opened.mutationError, null);
+  opened.setCreateModalOpen(false);
+  const closed = await page.waitFor(current => !current.createModalOpen);
+  assert.equal(closed.readError, 'Read unavailable');
+  assert.equal(front.calendarBff.requests.length, 1);
+});
+
+for (const operation of ['create', 'edit', 'delete', 'approve']) {
+  for (const readFails of [false, true]) {
+    test(`a late ${readFails ? 'failed' : 'successful'} read preserves a refused ${operation}`, async () => {
+      const state = await renderLoadedPage();
+      state.handleEventClick(state.events[0]);
+      await page.waitFor(current => Boolean(current.selectedEvent));
+      let reply;
+      front.calendarBff.on('get', '/calendar/bootstrap', () => new Promise(resolve => { reply = resolve; }));
+      const read = page.result.current.refreshData();
+      await page.waitFor(() => Boolean(reply));
+      const refused = { status: 403, body: apiError('FORBIDDEN', `${operation} refused`) };
+      if (operation === 'create') {
+        front.calendarBff.on('post', '/calendar/events', refused);
+        await page.result.current.handleCreateEvent({ title: 'Draft', description: '', date: formatDateForQuery(state.currentDate), endDate: '', category: 'meeting', startTime: '09:00', endTime: '10:00', location: '', assigneeIds: [], recurrence: { frequency: 'none' } });
+      } else if (operation === 'edit') {
+        front.calendarBff.on('patch', '/calendar/events/{id}', refused);
+        await page.result.current.handleSaveEvent({ ...state.events[0], title: 'Unsaved draft' });
+      } else if (operation === 'delete') {
+        front.calendarBff.on('delete', '/calendar/events/{id}', refused);
+        await page.result.current.handleDeleteEvent(state.events[0]);
+      } else {
+        front.calendarBff.on('patch', '/calendar/events/{id}/approval', refused);
+        await page.result.current.handleValidateEvent(state.events[0], 'approved');
+      }
+      assert.equal((await page.waitFor(current => !current.saving)).error, `${operation} refused`);
+      reply(readFails ? { status: 502, body: apiError('UNAVAILABLE', 'Read unavailable') } : { body: bootstrap() });
+      await read;
+      const after = await page.waitFor(current => !current.loading);
+      assert.equal(after.error, `${operation} refused`);
+      assert.equal(after.mutationError, `${operation} refused`);
+      assert.equal(after.readError, readFails ? 'Read unavailable' : null);
+      assert.equal(after.selectedEvent.id, 5);
+      assert.deepEqual(after.events.map(event => event.id), [5, 6]);
+      assert.equal(front.calendarBff.requests.filter(call => call.method !== 'GET').length, 1);
+    });
+  }
+}
+
+test('read retry clears only its error, and an explicit new form clears only the previous mutation error', async () => {
+  const state = await renderLoadedPage();
+  front.calendarBff.on('get', '/calendar/bootstrap', { status: 502, body: apiError('UNAVAILABLE', 'Read unavailable') });
+  await state.refreshData();
+  state.handleEventClick(state.events[0]);
+  front.calendarBff.on('patch', '/calendar/events/{id}', { status: 403, body: apiError('FORBIDDEN', 'Edit refused') });
+  await page.result.current.handleSaveEvent({ ...state.events[0], title: 'Unsaved draft' });
+  let failed = await page.waitFor(current => !current.saving);
+  assert.equal(failed.readError, 'Read unavailable');
+  assert.equal(failed.mutationError, 'Edit refused');
+  front.calendarBff.on('get', '/calendar/bootstrap', { body: bootstrap() });
+  await failed.refreshData();
+  failed = await page.waitFor(current => !current.loading);
+  assert.equal(failed.readError, null);
+  assert.equal(failed.mutationError, 'Edit refused');
+  assert.equal(front.calendarBff.calls('/calendar/events/{id}', 'PATCH').length, 1);
+  failed.openCreateModal();
+  const opened = await page.waitFor(current => current.createModalOpen);
+  assert.equal(opened.mutationError, null);
+  assert.equal(opened.error, null);
+});
+
 test('a session refused by the BFF logs out and reloads the page', async () => {
   const window = installWindow();
   front.calendarBff.on('get', '/calendar/bootstrap', { status: 401, body: apiError('UNAUTHORIZED', 'Session invalide.') });

@@ -9,6 +9,11 @@ AppShell with the existing BFF-backed user session. Its main viewport scrolls
 without moving the header or footer. Attachments and business documents inside
 active modules are not removed.
 
+Calendar-scoped styles preserve the reference sidebar's 44px navigation targets
+and separating shadow. The mobile sidebar stays below the published Close
+control; keyboard dismissal and focus management remain owned by the shared
+component. No prototype identity, notifications or appearance data are copied.
+
 ## One account destination
 
 Profile access now opens **Settings**. Existing `/profile` bookmarks and subpaths
@@ -55,6 +60,20 @@ reopening starts from official event data. Chronology/recurrence validation and
 published permissions are unchanged. This corrects a defect inherited from the
 preserved prototype, without changing the shared package, API/BFF or data.
 
+Read failures and refused writes keep separate feedback. A late or retried
+bootstrap cannot clear a refused save or its in-form message; opening a form
+cannot clear a failed read. The calendar's **Retry** only reloads data, never
+replays an event write. Both failures remain visible when they coexist; only
+the corresponding successful read, a new write attempt or an explicit new
+form resets its own feedback. Existing draft and latest-read guards are preserved.
+
+Delete and approve/reject outcomes are also announced **inside the event details
+dialog**, through the shared component's public title slot. Pending controls stay
+locked; a refused operation keeps the official event and authorized actions
+available for an explicit retry. A successful read cannot erase that refusal.
+Only the existing mutation response confirms removal or a changed approval status.
+The shared component, permissions and details content remain unchanged.
+
 ## Confirmed results and delayed reads (MAIR-447)
 
 A calendar read started before a confirmed create, edit, delete or approval
@@ -85,6 +104,15 @@ Business domain: Calendar.
 - Select people, categories and services; display approval and recurrence.
 
 ## Typical workflow
+
+Event dialogs own their draft until the existing operation
+confirms the write or the user cancels. A concurrent category read cannot reset
+entered fields or clear a refused-write message. Pending controls stay disabled;
+after refusal, only an explicit retry submits again. The dedicated dialog-focus
+correction (MAIR-318/#208) is postponed with RGAA and is not included in this
+functional-only composition. Historical focus evidence does not certify it.
+These frontend behaviors do not imply deployed permission/persistence or full
+accessibility certification; those require their own acceptance evidence.
 
 1. Load a date range through `/calendar/bootstrap`, including the month in a valid event link.
 2. Create or update an event and choose authorized assignees.
