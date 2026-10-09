@@ -195,11 +195,12 @@ button {
   }
 
   .calendar-sidebar > .calendar-upcoming-panel {
-    max-height: none;
+    align-self: start;
+    max-height: min(100%, clamp(320px, calc(100dvh - 440px), 560px));
   }
 
   .calendar-sidebar > .calendar-upcoming-panel > div {
-    flex: 1 1 0;
+    flex: 0 1 auto;
   }
 }
 
