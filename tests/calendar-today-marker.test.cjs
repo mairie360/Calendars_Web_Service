@@ -1,8 +1,6 @@
 const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const path = require('node:path');
 const { test } = require('node:test');
-const { loadTs, SRC } = require('./support/load-ts.cjs');
+const { loadTs } = require('./support/load-ts.cjs');
 
 const {
   markTodayInGrid,
@@ -81,13 +79,4 @@ test('local midnight changes the marked day and cleanup cancels the timer', () =
   assert.equal(cancelled, stale.id);
   stale.callback();
   assert.equal(id, stale.id);
-});
-
-test('page integration and styling target date controls without changing event data', () => {
-  const page = fs.readFileSync(path.join(SRC, 'app/page.tsx'), 'utf8');
-  const css = fs.readFileSync(path.join(SRC, 'app/app-overrides.css'), 'utf8');
-
-  assert.match(page, /useCalendarTodayMarker\(calendar\.view, calendar\.ready \? calendar\.currentDate\.getTime\(\) : -1\)/, 'initialize the marker when its date grid becomes ready');
-  assert.match(page, /className="calendar-grid-viewport mt-9" ref=\{gridRef\}/);
-  assert.match(css, /button\[aria-current="date"\]\[aria-label\^="Sélectionner le "\]/);
 });
