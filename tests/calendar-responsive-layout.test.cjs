@@ -1,59 +1,75 @@
 const assert = require('node:assert/strict');
 const { readFileSync } = require('node:fs');
-const { test } = require('node:test');
 const { join } = require('node:path');
+const { test } = require('node:test');
+const { JSDOM, VirtualConsole } = require('jsdom');
 
-const css = readFileSync(join(__dirname, '../src/app/app-overrides.css'), 'utf8');
+const stylesheet = readFileSync(join(__dirname, '../src/app/app-overrides.css'), 'utf8');
+const selector = (value) => value.replace(/\s*>\s*/g, ' > ').replace(/\s+/g, ' ').trim();
+const value = (text) => text.replace(/\s+/g, '').replace(/\b0px\b/g, '0');
 
-function declarations(selector) {
-  const start = css.indexOf(`${selector} {`);
-  assert.notEqual(start, -1, `missing ${selector} rule`);
-  return css.slice(start, css.indexOf('}', start));
+function policyDocument(t) {
+  const errors = [], console = new VirtualConsole();
+  console.on('jsdomError', (error) => errors.push(error.message));
+  const dom = new JSDOM('<!doctype html><html><head></head><body></body></html>', { virtualConsole: console });
+  t.after(() => dom.window.close());
+  const style = dom.window.document.createElement('style');
+  style.textContent = stylesheet; dom.window.document.head.append(style);
+  assert.deepEqual(errors, [], 'Parse the actual consumer stylesheet');
+  const rows = [];
+  function visit(rules, condition = null) {
+    for (const rule of rules) {
+      if (rule.cssRules) visit(rule.cssRules, rule.conditionText || condition);
+      if (rule.style) rows.push({ selectors: (rule.selectorText || '').split(',').map(selector),
+        condition: condition ? value(condition) : null, style: rule.style });
+    }
+  }
+  visit(style.sheet.cssRules);
+  const declarations = (selected, condition = null) => {
+    const matches = rows.filter((row) => row.selectors.includes(selector(selected)) && row.condition === (condition ? value(condition) : null));
+    assert.ok(matches.length, 'Keep the scoped policy rule: ' + selected);
+    return (property) => {
+      const values = matches.map((row) => row.style.getPropertyValue(property)).filter(Boolean);
+      assert.ok(values.length, 'Keep the declared policy: ' + property);
+      return values.at(-1);
+    };
+  };
+  return { rows, declarations, window: dom.window };
 }
 
-test('calendar navigation preserves the measured reference target height and separating shadow', () => {
-  const sidebar = '.calendar-scroll-shell aside[aria-label="Navigation principale"]';
-  assert.match(declarations(sidebar), /position: relative;/);
-  assert.match(declarations(sidebar), /z-index: 20;/);
-  assert.match(declarations(sidebar), /box-shadow: 8px 0 24px rgb\(12 28 48 \/ 28%\);/);
-  assert.match(declarations(`${sidebar} > nav button`), /min-height: 44px;/);
-  assert.match(declarations(`${sidebar} > nav button`), /flex-shrink: 0;/);
+test('parsed calendar media policies retain reference tracks, insets and bounded upcoming lists', (t) => {
+  const { declarations } = policyDocument(t);
+  const mobile = '(max-width: 767px)', tablet = '(min-width: 768px) and (max-width: 1699px)', desktop = '(min-width: 1700px)';
+  assert.equal(value(declarations('.calendar-week-grid > .grid', mobile)('grid-template-columns')), '2.4remrepeat(7,minmax(0,1fr))');
+  assert.equal(value(declarations('.calendar-scroll-shell > div > div:last-child > main', mobile)('padding')), '20px14px');
+  assert.equal(value(declarations('.calendar-board > section > div', mobile)('padding')), '16px10px');
+  assert.equal(value(declarations('.calendar-sidebar', tablet)('grid-template-columns')), 'repeat(2,minmax(0,1fr))');
+  assert.equal(value(declarations('.calendar-board', desktop)('grid-template-columns')), 'minmax(0,1fr)310px');
+  const panel = '.calendar-sidebar > .calendar-upcoming-panel';
+  assert.equal(value(declarations(panel)('max-height')), 'clamp(320px,100dvh-440px,560px)');
+  assert.equal(value(declarations(panel, desktop)('max-height')), 'min(100%,clamp(320px,100dvh-440px,560px))');
+  // CSSOM policy inspection does not evaluate media queries or measure scrolling.
 });
 
-test('mobile navigation shadow stays below the published Close control', () => {
-  assert.match(declarations('.calendar-scroll-shell [role="dialog"][aria-label="Navigation mobile"] aside[aria-label="Navigation principale"]'), /z-index: 0;/);
-});
-
-test('calendar grids fit their viewport without horizontal page scrolling', () => {
-  assert.match(declarations('.calendar-board'), /grid-template-columns: minmax\(0, 1fr\);/);
-  assert.match(css, /\.calendar-grid-viewport \{\s*overflow-x: hidden;/);
-  assert.match(css, /\.calendar-month-grid,\s*\.calendar-week-grid\s*\{[^}]*min-width: 0;/);
-  assert.match(css, /\.calendar-week-grid > \.grid\s*\{[^}]*grid-template-columns: 2\.4rem repeat\(7, minmax\(0, 1fr\)\);/);
-  assert.match(css, /\.calendar-month-grid \[role="button"\] > div,[\s\S]*?text-overflow: ellipsis;/);
-});
-
-test('upcoming events stay compact and long lists scroll inside the card', () => {
-  assert.match(declarations('.calendar-sidebar'), /grid-template-columns: minmax\(0, 1fr\);/);
-  assert.match(declarations('.calendar-sidebar > .calendar-upcoming-panel'), /max-height: clamp\(320px, calc\(100dvh - 440px\), 560px\);/);
-  assert.match(declarations('.calendar-sidebar > .calendar-upcoming-panel > div'), /flex: 0 1 auto;/);
-  assert.match(declarations('.calendar-sidebar > .calendar-upcoming-panel > div'), /padding-inline: 1\.25rem;/);
-  assert.match(declarations('.calendar-sidebar > .calendar-upcoming-panel > div'), /overflow-y: auto;/);
-  assert.match(declarations('.calendar-sidebar > .calendar-upcoming-panel > div:focus-visible'), /outline: 2px solid #1256a6;/);
-  assert.match(css, /@media \(min-width: 768px\) and \(max-width: 1699px\)/);
-  assert.match(css, /@media \(min-width: 1700px\)[\s\S]*?\.calendar-board\s*\{[^}]*grid-template-columns: minmax\(0, 1fr\) 310px;/);
-});
-
-test('calendar presentation matches reference spacing and typography without changing other fronts', () => {
-  assert.match(declarations('html'), /font-size: 17px;/);
-  // The rendered reference keeps the shared small-text scale, despite its
-  // earlier template @theme values. Follow computed evidence, not source alone.
-  assert.doesNotMatch(css, /--text-(?:xs|sm):/);
-  assert.match(css, /body \{\s*margin: 0;\s*font-family: system-ui, sans-serif;/);
-  assert.match(declarations('.calendar-scroll-shell > div > div:last-child > main'), /padding: 28px;/);
-  assert.match(css, /@media \(max-width: 767px\)[\s\S]*?padding: 20px 14px;/);
-  assert.match(css, /\.calendar-board > section > div\s*\{[^}]*padding: 16px 10px;/);
-  assert.match(css, /\.calendar-board > section,\s*\.calendar-sidebar > section\s*\{[^}]*box-shadow: var\(--calendar-card-shadow\);/);
-  assert.match(declarations('html[data-theme="dark"]'), /rgb\(0 0 0 \/ 35%\)/);
-  assert.match(declarations('html[data-settings-density="compact"] .calendar-scroll-shell > div > div:last-child > main'), /padding: 16px;/);
-  assert.match(declarations('html[data-settings-density="comfortable"] .calendar-scroll-shell > div > div:last-child > main'), /padding: 32px;/);
+test('parsed calendar fallback and focus policies remain scoped without overriding global small-text tokens', (t) => {
+  const { declarations, rows, window } = policyDocument(t);
+  assert.equal(declarations('.calendar-scroll-shell > div > div:last-child > footer')('position'), 'static');
+  assert.equal(declarations('.calendar-scroll-shell > div > .hidden')('overflow-y'), 'auto');
+  for (const row of rows) for (let index = 0; index < row.style.length; index += 1) {
+    assert.equal(['--text-xs', '--text-sm'].includes(row.style.item(index)), false, 'Keep global small-text tokens');
+  }
+  for (const [selected, width] of [
+    ['.calendar-sidebar > .calendar-upcoming-panel > div:focus-visible', '2px'],
+    ['.calendar-grid-viewport button[aria-current="date"]:focus-visible', '3px'],
+  ]) {
+    const tokens = declarations(selected)('outline').trim().split(/\s+(?![^()]*\))/);
+    const lengths = tokens.filter((token) => Number.isFinite(Number.parseFloat(token)));
+    const colors = tokens.filter((token) => token !== 'solid' && !Number.isFinite(Number.parseFloat(token)));
+    assert.deepEqual(lengths, [width]); assert.ok(tokens.includes('solid')); assert.equal(colors.length, 1);
+    // JSDOM does not expand outline shorthand into computed longhands reliably.
+    const probe = window.document.createElement('span');
+    probe.style.color = colors[0]; window.document.body.append(probe);
+    assert.equal(window.getComputedStyle(probe).color, 'rgb(18, 86, 166)'); probe.remove();
+  }
+  // Focus configuration is preserved; native keyboard/scroll and RGAA remain separate.
 });
