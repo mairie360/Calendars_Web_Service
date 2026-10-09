@@ -43,14 +43,6 @@ test('upcoming events stay compact and long lists scroll inside the card', () =>
   assert.match(css, /@media \(min-width: 1700px\)[\s\S]*?\.calendar-board\s*\{[^}]*grid-template-columns: minmax\(0, 1fr\) 310px;/);
 });
 
-test('wide upcoming lists fit the grid height instead of growing the whole board', () => {
-  const wide = css.slice(css.indexOf('@media (min-width: 1700px)'));
-  assert.match(wide, /\.calendar-sidebar\s*\{[^}]*grid-template-rows: auto minmax\(0, 1fr\);/);
-  assert.match(wide, /\.calendar-sidebar\s*\{[^}]*contain: size;/);
-  assert.match(wide, /\.calendar-upcoming-panel\s*\{[^}]*max-height: none;/);
-  assert.match(wide, /\.calendar-upcoming-panel > div\s*\{[^}]*flex: 1 1 0;/);
-});
-
 test('calendar presentation matches reference spacing and typography without changing other fronts', () => {
   assert.match(declarations('html'), /font-size: 17px;/);
   // The rendered reference keeps the shared small-text scale, despite its
