@@ -3,7 +3,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { test, before, after, beforeEach, afterEach } = require('node:test');
 const { APP_ROUTES, FrontHarness, jwtFor } = require('./support/front-harness.cjs');
-const { SRC } = require('./support/load-ts.cjs');
+const { SRC, loadTs } = require('./support/load-ts.cjs');
+const policy = require('./support/source-policy.cjs');
 const { admin, alice, apiError, bootstrap, calendarEvent } = require('./support/calendar-fixtures.cjs');
 
 // Périmètre réseau du front : le code n'émet des requêtes que depuis les fichiers prévus, uniquement vers
@@ -29,45 +30,40 @@ function sourceFiles(dir = SRC) {
   });
 }
 const relative = (file) => path.relative(SRC, file).split(path.sep).join('/');
-const read = (file) => fs.readFileSync(path.join(SRC, file), 'utf8');
 
 test('only the BFF client, the session hook, the logout helper and the server proxy emit network requests', () => {
-  const primitives = /\bfetch\s*\(|XMLHttpRequest|new\s+WebSocket|EventSource|sendBeacon|\baxios\b|from\s+['"](?:node:)?https?['"]|require\(['"](?:node:)?https?['"]\)/;
-  const emitters = sourceFiles().filter((file) => primitives.test(fs.readFileSync(file, 'utf8'))).map(relative).sort();
+  const emitters = sourceFiles().filter(file => { const ast = policy.parse('src/' + relative(file)); return policy.calls(ast, 'fetch').length || policy.networkReferences(ast).length; }).map(relative).sort();
 
   assert.deepEqual(emitters, ['lib/auth-session.ts', 'lib/bff-client.ts', 'lib/bff-proxy.ts', 'lib/logout.ts']);
 });
 
 test('no absolute BFF destination is hard-coded in frontend source', () => {
-  const absolute = sourceFiles().flatMap((file) => [...fs.readFileSync(file, 'utf8').matchAll(/['"`](https?:\/\/[^'"`]+)['"`]/g)].map((match) => `${relative(file)} ${match[1]}`));
+  const absolute = sourceFiles().flatMap(file => policy.absoluteUrls(policy.parse('src/' + relative(file))).map(url => `${relative(file)} ${url}`));
 
   assert.deepEqual(absolute.sort(), []);
 });
 
-test('requestBff is only used by the calendar client, whose endpoints are all declared in the contract', () => {
-  const callers = sourceFiles().filter((file) => /requestBff\s*[<(]/.test(fs.readFileSync(file, 'utf8'))).map(relative).sort();
+test('requestBff is only used by the calendar client, whose endpoints are all declared in the contract', async () => {
+  const callers = sourceFiles().filter(file => policy.requestOwners(policy.parse('src/' + relative(file)))).map(relative).sort();
   assert.deepEqual(callers, ['app/calendar/api.ts', 'lib/bff-client.ts']);
-
-  const client = read('app/calendar/api.ts');
-  const constants = Object.fromEntries([...client.matchAll(/const (\w+_ENDPOINT) = "([^"]+)"/g)].map((match) => [match[1], match[2]]));
-  const eventPath = [...client.matchAll(/function eventPath\([^)]*\) \{\s*return `([^`]*)`/g)][0]?.[1];
-  assert.ok(eventPath, 'helper eventPath introuvable dans api.ts');
-  const endpoints = [...client.matchAll(/requestBff<[^>]*>\(\s*(eventPath\([^)]*\)|`[^`]*`|"[^"]*"|\w+)/g)].map((match) => match[1]
-    .replace(/^eventPath\([^,)]+(?:,\s*"([^"]*)")?\)$/, (_all, suffix = '') => eventPath.replace('${suffix}', suffix))
-    .replace(/^[`"]|[`"]$/g, '')
-    .replace(/^(\w+_ENDPOINT)$/, (name) => constants[name])
-    .replace(/\$\{(\w+_ENDPOINT)\}/g, (_all, name) => constants[name])
-    .replace(/\?.*$/, '')
-    .replace(/\$\{[^}]+\}/g, '1'));
-
-  assert.deepEqual(endpoints.sort(), ['/calendar/bootstrap', '/calendar/events', '/calendar/events/1', '/calendar/events/1', '/calendar/events/1/approval']);
-  for (const endpoint of endpoints) {
-    assert.ok(['get', 'post', 'patch', 'delete'].some((method) => contract.match(method, endpoint)), `${endpoint} (src/app/calendar/api.ts) est absent de contracts/openapi.json`);
-  }
+  assert.equal(policy.calls(policy.parse('src/app/calendar/api.ts'), 'requestBff').length, 5);
+  // Exercise the actual five client operations through the existing contract-gated HTTP harness.
+  const api = loadTs('app/calendar/api');
+  front.calendarBff.on('get', '/calendar/bootstrap', { body: bootstrap() });
+  front.calendarBff.on('post', '/calendar/events', { status: 201, body: calendarEvent(12) });
+  front.calendarBff.on('patch', '/calendar/events/{id}', { body: calendarEvent(12) });
+  front.calendarBff.on('delete', '/calendar/events/{id}', { status: 204 });
+  front.calendarBff.on('patch', '/calendar/events/{id}/approval', { body: calendarEvent(12, { approvalStatus: 'approved' }) });
+  await api.loadCalendarData({ from: '2026-09-01', to: '2026-09-30' });
+  await api.createCalendarEvent(calendarEvent(12), [admin, alice]);
+  await api.updateCalendarEvent(calendarEvent(12), [admin, alice]);
+  await api.deleteCalendarEvent(12);
+  await api.updateCalendarEventApproval(12, 'approved', [admin, alice]);
+  assert.deepEqual(front.calendarBff.requests.map(call => `${call.method} ${call.template}`), ['GET /calendar/bootstrap', 'POST /calendar/events', 'PATCH /calendar/events/{id}', 'DELETE /calendar/events/{id}', 'PATCH /calendar/events/{id}/approval']);
 });
 
 test('the session hook and logout only call the dedicated /api routes, which exist in src/app/api', () => {
-  const calls = [...(read('lib/auth-session.ts') + read('lib/logout.ts')).matchAll(/fetch\(\s*["'`]([^"'`]+)["'`]/g)].map((match) => match[1]).sort();
+  const calls = ['src/lib/auth-session.ts', 'src/lib/logout.ts'].flatMap(file => policy.calls(policy.parse(file), 'fetch').map(node => { assert.ok(policy.ts.isStringLiteralLike(node.arguments[0])); return node.arguments[0].text; })).sort();
   assert.deepEqual(calls, ['/api/auth/logout', '/api/user/me']);
   calls.forEach((route) => assert.ok(APP_ROUTES[route], `${route} n'a pas de route dédiée`));
 
@@ -76,10 +72,7 @@ test('the session hook and logout only call the dedicated /api routes, which exi
 });
 
 test('no JavaScript-readable credential is used: no token storage and no client-side Authorization header', () => {
-  const offenders = sourceFiles()
-    .filter((file) => /localStorage\.(getItem|setItem)|sessionStorage|document\.cookie|["']Authorization["']/.test(fs.readFileSync(file, 'utf8')))
-    .map(relative)
-    .sort();
+  const offenders = sourceFiles().filter(file => policy.credentialReferences(policy.parse('src/' + relative(file))).length).map(relative).sort();
   // bff-proxy.ts pose l'Authorization côté serveur, à partir du cookie HttpOnly.
   assert.deepEqual(offenders, ['lib/bff-proxy.ts']);
 });
