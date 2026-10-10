@@ -34,7 +34,7 @@ const relative = (file) => path.relative(SRC, file).split(path.sep).join('/');
 test('only the BFF client, the session hook, the logout helper and the server proxy emit network requests', () => {
   const emitters = sourceFiles().filter(file => { const ast = policy.parse('src/' + relative(file)); return policy.calls(ast, 'fetch').length || policy.networkReferences(ast).length; }).map(relative).sort();
 
-  assert.deepEqual(emitters, ['lib/auth-session.ts', 'lib/bff-client.ts', 'lib/bff-proxy.ts', 'lib/logout.ts']);
+  assert.deepEqual(emitters, ['lib/auth-session.ts', 'lib/bff-client.ts', 'lib/logout.ts']);
 });
 
 test('no absolute BFF destination is hard-coded in frontend source', () => {
@@ -68,13 +68,22 @@ test('the session hook and logout only call the dedicated /api routes, which exi
   calls.forEach((route) => assert.ok(APP_ROUTES[route], `${route} n'a pas de route dédiée`));
 
   const routeFiles = sourceFiles(path.join(SRC, 'app', 'api')).map((file) => `/${path.dirname(relative(file))}`.replace('/app', '')).sort();
-  assert.deepEqual(routeFiles, Object.keys(APP_ROUTES).sort());
+  assert.deepEqual(routeFiles, [...Object.keys(APP_ROUTES), '/api/bff/[...path]'].sort());
+  const entry=loadTs('app/api/bff/[...path]/route');
+  const proxy=loadTs('lib/bff-proxy').proxyBffRequest;
+  for(const method of ['GET','POST','PUT','PATCH','DELETE','HEAD'])assert.equal(entry[method],proxy);
 });
 
 test('no JavaScript-readable credential is used: no token storage and no client-side Authorization header', () => {
   const offenders = sourceFiles().filter(file => policy.credentialReferences(policy.parse('src/' + relative(file))).length).map(relative).sort();
-  // bff-proxy.ts pose l'Authorization côté serveur, à partir du cookie HttpOnly.
-  assert.deepEqual(offenders, ['lib/bff-proxy.ts']);
+  // The verified published server entry owns cookie-to-bearer conversion.
+  assert.deepEqual(offenders, []);
+  const proxy=policy.parse('src/lib/bff-proxy.ts');
+  assert.equal(policy.calls(proxy,'proxyPublishedBffRequest').length,1);
+  assert.ok(policy.imports(proxy).includes('@mairie360/lib-components/next'));
+  const owner=policy.parse('src/app/api/auth/logout/route.ts');
+  assert.equal(policy.calls(owner,'createSessionLogoutProxy').length,1);
+  assert.ok(policy.imports(owner).includes('@mairie360/lib-components/next'));
 });
 
 // Réponse conforme pour chaque opération du contrat : le proxy doit toutes les relayer.

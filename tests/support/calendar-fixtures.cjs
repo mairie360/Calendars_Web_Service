@@ -70,9 +70,11 @@ function installWindow() {
       removeItem: (key) => store.delete(key),
       clear: () => store.clear(),
     },
-    location: { reloads: 0, assigned: [], reload() { this.reloads += 1; }, assign(href) { this.assigned.push(href); } },
+    location: { href: new URL(process.env.CALENDAR_FRONT_URL ?? 'http://calendar.mairie.test/').href, reloads: 0, assigned: [], reload() { this.reloads += 1; }, assign(href) { this.assigned.push(href); } },
   };
   global.window = window;
+  const { loadTs } = require('./load-ts.cjs');
+  loadTs('lib/front-urls').setBrowserFrontUrls({ LOGIN_FRONT_URL: process.env.LOGIN_FRONT_URL ?? 'https://login.mairie.test', CALENDAR_FRONT_URL: process.env.CALENDAR_FRONT_URL ?? 'http://calendar.mairie.test/' });
   return window;
 }
 

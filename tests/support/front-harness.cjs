@@ -3,6 +3,7 @@ const http = require('node:http');
 const path = require('node:path');
 const { AsyncLocalStorage } = require('node:async_hooks');
 const { NextRequest } = require('next/server');
+const { createSessionRefreshHandler, createSessionLogoutHandler, forgetUserSession } = require('@mairie360/lib-components/next');
 const { loadTs } = require('./load-ts.cjs');
 const { OpenApiContract } = require('./openapi-contract.cjs');
 const { ContractMockServer } = require('./contract-mock-server.cjs');
@@ -27,26 +28,10 @@ const APP_ROUTES = {
   '/api/auth/logout': 'app/api/auth/logout/route',
 };
 
-/**
- * Contrat de BFF User : celui de la copie locale `BFF_USER_CONTRACT_DIR` (défaut `../../BFFs/BFF_user/contracts`)
- * quand elle existe ; sinon (CI, dépôt seul) une déclaration des seules opérations consommées, sans schéma.
- */
+/** Selected actual published User read and session documents, available in standalone CI. */
 function loadUserContract() {
-  const dir = path.resolve(ROOT, process.env.BFF_USER_CONTRACT_DIR ?? '../../BFFs/BFF_user/contracts');
-  const file = path.join(dir, 'openapi.json');
-  if (fs.existsSync(file)) return { contract: OpenApiContract.load(file), source: file };
-  const response = (status) => ({ [status]: { description: 'Déclaration minimale (contrat BFF User absent)' } });
-  return {
-    source: null,
-    contract: new OpenApiContract({
-      info: { title: 'bff_user (opérations consommées par le front)' },
-      paths: {
-        '/me': { get: { responses: { ...response(200), ...response(401), ...response(502) } } },
-        '/session/me': { get: { responses: { ...response(200), ...response(401), ...response(502) } } },
-        '/auth/logout': { post: { responses: { ...response(200), ...response(500) } } },
-      },
-    }),
-  };
+  const file = path.join(ROOT, 'tests/fixtures/user-session-openapi.json');
+  return { contract: OpenApiContract.load(file), source: file };
 }
 
 class FrontHarness {
@@ -63,6 +48,9 @@ class FrontHarness {
     this.nativeFetch = global.fetch;
     /** Origines serveur autorisées en plus des BFF simulés (ex. port fermé pour simuler une panne). */
     this.extraServerOrigins = new Set();
+    this.ownerOrigin = 'https://login.mairie.test';
+    this.ownerCalls = [];
+    this.ownerOverride = undefined;
   }
 
   get mocks() { return [this.calendarBff, this.userBff]; }
@@ -80,6 +68,10 @@ class FrontHarness {
     });
     await new Promise((resolve) => this.server.listen(0, '127.0.0.1', resolve));
     this.origin = `http://127.0.0.1:${this.server.address().port}`;
+    process.env.CALENDAR_FRONT_URL = this.origin;
+    process.env.LOGIN_FRONT_URL = this.ownerOrigin;
+    const ownerConfig = { userBffUrl: () => this.userBff.url, cookieOptions: () => ({secure:false}), allowedOrigins: () => [this.origin] };
+    this.ownerHandlers = { '/api/auth/refresh': createSessionRefreshHandler(ownerConfig), '/api/auth/logout': createSessionLogoutHandler(ownerConfig) };
     global.fetch = (input, init) => this.guardedFetch(input, init);
   }
 
@@ -91,7 +83,10 @@ class FrontHarness {
   }
 
   reset() {
+    forgetUserSession(this.userBff.url, this.cookies.get('refreshToken'));
     for (const mock of this.mocks) mock.reset();
+    this.ownerCalls.length = 0;
+    this.ownerOverride = undefined;
     this.violations.length = 0;
     this.browserRequests.length = 0;
     this.cookies.clear();
@@ -112,6 +107,12 @@ class FrontHarness {
     const serverSide = this.serverContext.getStore();
     if (serverSide) {
       const target = new URL(raw);
+      if (target.origin === this.ownerOrigin) {
+        const handler = this.ownerHandlers[target.pathname];
+        if (!handler) throw new Error('Undeclared Login owner operation');
+        this.ownerCalls.push({url:target,init});
+        return this.ownerOverride ? this.ownerOverride(target,init) : handler(new NextRequest(target,init));
+      }
       if (!this.extraServerOrigins.has(target.origin) && !this.mocks.some((mock) => target.origin === new URL(mock.url).origin)) {
         this.violations.push(`[FRONT serveur] appel réseau hors BFF simulés : ${target.href} (pendant ${serverSide.request})`);
         throw new TypeError('fetch failed');
@@ -128,9 +129,16 @@ class FrontHarness {
     const headers = new Headers(init?.headers);
     // Le navigateur signale toujours une requête same-origin (voir la protection CSRF du proxy).
     if (!headers.has('sec-fetch-site')) headers.set('sec-fetch-site', 'same-origin');
+    if (!headers.has('origin')) headers.set('origin', this.origin);
     if (this.cookies.size) headers.set('cookie', [...this.cookies].map(([name, value]) => `${name}=${value}`).join('; '));
     this.browserRequests.push({ method: (init?.method ?? 'GET').toUpperCase(), path: `${target.pathname}${target.search}` });
-    return this.nativeFetch(target, { ...init, headers });
+    const response = await this.nativeFetch(target, { ...init, headers });
+    for (const cookie of response.headers.getSetCookie()) {
+      const [pair,...attributes]=cookie.split(';');const [name,...value]=pair.split('=');
+      if(attributes.some(x=>/^\s*max-age=0\s*$/i.test(x))) this.cookies.delete(name.trim());
+      else this.cookies.set(name.trim(),value.join('='));
+    }
+    return response;
   }
 
   async handle(req, res) {
@@ -158,9 +166,10 @@ class FrontHarness {
       const handler = loadTs(routeFile)[request.method];
       return handler ? handler(request) : new Response(null, { status: 405 });
     }
-    const handler = loadTs('app/[...path]/route')[request.method];
+    const apiPrefix = pathname.startsWith('/api/bff/');
+    const handler = loadTs(apiPrefix ? 'app/api/bff/[...path]/route' : 'app/[...path]/route')[request.method];
     if (!handler) return new Response(null, { status: 405 });
-    const segments = pathname.split('/').filter(Boolean).map(decodeURIComponent);
+    const segments = (apiPrefix ? pathname.slice('/api/bff'.length) : pathname).split('/').filter(Boolean).map(decodeURIComponent);
     return handler(request, { params: Promise.resolve({ path: segments }) });
   }
 }

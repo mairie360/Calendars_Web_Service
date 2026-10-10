@@ -1,0 +1,159 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "bff_user",
+    "version": "1.0.0",
+    "x-source-package": "@mairie360/bff-user-openapi@0.5.0"
+  },
+  "paths": {
+    "/me": {
+      "get": {
+        "operationId": "getMe",
+        "parameters": [],
+        "responses": {
+          "2XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionResponse"
+                }
+              }
+            },
+            "description": "Succ\u00e8s (seul statut typ\u00e9 par orval)"
+          }
+        }
+      }
+    },
+    "/session/me": {
+      "get": {
+        "operationId": "getSessionMe",
+        "parameters": [],
+        "responses": {
+          "2XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionResponse"
+                }
+              }
+            },
+            "description": "Succ\u00e8s (seul statut typ\u00e9 par orval)"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "SessionResponse": {
+        "properties": {
+          "groups": {
+            "items": {
+              "$ref": "#/components/schemas/SessionResponseGroupsItem"
+            },
+            "type": "array"
+          },
+          "roles": {
+            "items": {
+              "$ref": "#/components/schemas/SessionResponseRolesItem"
+            },
+            "type": "array"
+          },
+          "user": {
+            "$ref": "#/components/schemas/SessionResponseUser"
+          }
+        },
+        "required": [
+          "user",
+          "groups",
+          "roles"
+        ],
+        "type": "object"
+      },
+      "SessionResponseGroupsItem": {
+        "properties": {
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "type": "number"
+          },
+          "name": {
+            "type": "string"
+          },
+          "owner_id": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "owner_id"
+        ],
+        "type": "object"
+      },
+      "SessionResponseRolesItem": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "properties": {
+              "id": {
+                "type": "number"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "name"
+            ],
+            "type": "object"
+          }
+        ]
+      },
+      "SessionResponseUser": {
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "first_name": {
+            "type": "string"
+          },
+          "id": {
+            "type": [
+              "string",
+              "number"
+            ]
+          },
+          "last_name": {
+            "type": "string"
+          },
+          "phone": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "role": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "first_name",
+          "last_name",
+          "email",
+          "status"
+        ],
+        "type": "object"
+      }
+    }
+  }
+}

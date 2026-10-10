@@ -1,0 +1,12 @@
+{
+  "package": "@mairie360/bff-user-openapi",
+  "version": "0.5.0",
+  "publishedOperationSource": "Verified published SDK contract used by Login main34fedfc",
+  "sourceSha256": "9146d9097446c93c2f688aec1f0701e5bea836b06c2af27fd94cde7348869b34",
+  "selection": [
+    "GET /me",
+    "GET /session/me"
+  ],
+  "selectedSha256": "90702cdfcdaddd3ef1618003910b77f92425771bede6a677367e82e62d53962a",
+  "backendSourceChanged": false
+}

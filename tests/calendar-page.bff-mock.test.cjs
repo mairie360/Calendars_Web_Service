@@ -43,7 +43,7 @@ test('the first render loads the visible month through GET /calendar/bootstrap o
   const state = await renderLoadedPage();
 
   assert.deepEqual(front.calendarBff.sequence(), [`GET /calendar/bootstrap?${rangeQuery('month', initialDate)}`]);
-  assert.deepEqual(front.browserRequests, [{ method: 'GET', path: `/calendar/bootstrap?${rangeQuery('month', initialDate)}` }]);
+  assert.deepEqual(front.browserRequests, [{ method: 'GET', path: `/api/bff/calendar/bootstrap?${rangeQuery('month', initialDate)}` }]);
   assert.equal(state.error, null);
   assert.deepEqual(state.events.map((event) => event.id), [5, 6]);
   assert.equal(state.people.length, 3);
@@ -289,15 +289,18 @@ test('read retry clears only its error, and an explicit new form clears only the
   assert.equal(opened.error, null);
 });
 
-test('a session refused by the BFF logs out and reloads the page', async () => {
+test('a session refused by the BFF navigates to Login without automatic revocation', async () => {
   const window = installWindow();
   front.calendarBff.on('get', '/calendar/bootstrap', { status: 401, body: apiError('UNAUTHORIZED', 'Session invalide.') });
   front.userBff.on('post', '/auth/logout', { body: { message: 'Logged out successfully' } });
   try {
     page = renderHook(useCalendarPage);
-    await page.waitFor(() => window.location.reloads === 1);
+    await page.waitFor(() => window.location.assigned.length === 1);
 
-    assert.deepEqual(front.userBff.sequence(), ['POST /auth/logout']);
+    assert.deepEqual(front.userBff.sequence(), []);
+  assert.equal(front.ownerCalls.length,0);
+  assert.equal(window.location.reloads,0);
+  assert.equal(new URL(window.location.assigned[0]).searchParams.get('returnUrl'),window.location.href);
     assert.deepEqual(page.result.current.events, []);
   } finally {
     delete global.window;

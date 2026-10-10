@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { logoutAndReload } from "./logout";
+import { navigateToLogin } from "./logout";
 
-export { logoutAndReload };
+export { logoutAndReload } from "./logout";
 
 export const APP_ROLES = [
   "Admin",
@@ -153,7 +153,9 @@ export function useAuthSession(initialUser: AuthSessionUser = EMPTY_SESSION_USER
         });
 
         if (response.status === 401) {
-          await logoutAndReload();
+          if (!navigateToLogin()) {
+            setSession((current) => ({ ...current, loading: false, error: "La connexion est temporairement indisponible. Veuillez réessayer." }));
+          }
           return;
         }
 

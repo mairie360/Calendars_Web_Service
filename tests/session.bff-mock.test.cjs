@@ -56,14 +56,18 @@ for (const [route, method, upstream] of [
   });
 }
 
-test('POST /api/auth/logout is forwarded to BFF User and keeps its Set-Cookie', async () => {
-  front.userBff.on('post', '/auth/logout', { body: { message: 'Logged out successfully' }, headers: { 'Set-Cookie': 'accessToken=; Max-Age=0; Path=/; HttpOnly' } });
+test('explicit JSON logout delegates to Login and expires both owner-managed cookies', async () => {
+  front.userBff.on('post', '/auth/logout', { body: { message: 'Logged out successfully', session_revoked:true }, headers: { 'Set-Cookie': 'accessToken=untrusted; Path=/; HttpOnly' } });
 
-  const response = await fetch('/api/auth/logout', { method: 'POST' });
+  const response = await fetch('/api/auth/logout', { method: 'POST',headers:{'Content-Type':'application/json'},body:'{}' });
 
   assert.equal(response.status, 200);
-  assert.match(response.headers.get('set-cookie'), /accessToken=; Max-Age=0/);
+  assert.ok(response.headers.getSetCookie().some(x=>x.startsWith('accessToken=;')&&x.includes('Max-Age=0')));
+  assert.ok(response.headers.getSetCookie().some(x=>x.startsWith('refreshToken=;')&&x.includes('Max-Age=0')&&x.includes('Path=/api')));
   assert.deepEqual(front.userBff.sequence(), ['POST /auth/logout']);
+  assert.equal((await response.json()).session_revoked,true);
+  assert.equal(response.headers.getSetCookie().length,2);
+  assert.equal(front.ownerCalls.length,1);
 });
 
 test('session adapters only accept the methods they declare', async () => {
@@ -102,23 +106,26 @@ test('useAuthSession prefers the explicit user role', async () => {
   assert.equal(state.isAdmin, true);
 });
 
-test('useAuthSession logs out and reloads on 401', async () => {
+test('useAuthSession navigates to Login on final401 without automatic revocation', async () => {
   front.userBff.on('get', '/me', { status: 401 });
   front.userBff.on('post', '/auth/logout', { body: { message: 'Logged out successfully' } });
   window.localStorage.setItem('mairie360.auth.jwt', 'stale');
   window.localStorage.setItem('unrelated.preference', 'keep');
 
   hook = renderHook(() => session.useAuthSession());
-  await hook.waitFor(() => window.location.reloads === 1);
+  await hook.waitFor(() => window.location.assigned.length === 1);
 
-  assert.deepEqual(front.userBff.sequence(), ['GET /me', 'POST /auth/logout']);
+  assert.deepEqual(front.userBff.sequence(), ['GET /me']);
+  assert.equal(front.ownerCalls.length,0);
+  assert.equal(window.location.reloads,0);
+  assert.equal(new URL(window.location.assigned[0]).searchParams.get('returnUrl'),window.location.href);
   assert.equal(window.localStorage.getItem('mairie360.auth.jwt'), null);
   assert.equal(window.localStorage.getItem('unrelated.preference'), 'keep');
   assert.equal(hook.result.current.loading, true);
 });
 
 test('useAuthSession reports an unavailable profile', async () => {
-  front.userBff.on('get', '/me', { status: 502, body: { message: 'Core API indisponible' } });
+  front.userBff.on('get', '/me', { status: 502, body: { error:{code:'BAD_GATEWAY',message:'Core API indisponible',details:[]} } });
 
   hook = renderHook(() => session.useAuthSession());
   const state = await hook.waitFor((current) => !current.loading);
@@ -146,4 +153,11 @@ test('role helpers normalise FR/EN aliases and fall back to Guest', () => {
   assert.equal(session.normalizeAppRole(42), null);
   assert.deepEqual(session.resolveAppRoles(['manager', { name: 'admin' }, 'unknown']), ['Admin', 'Responsable']);
   assert.deepEqual(session.resolveAppRoles([{ name: 7 }]), ['Guest']);
+});
+
+for(const value of [undefined, 'javascript:alert(1)']) test('missing or invalid Login destination leaves a visible profile error instead of an endless loader: '+String(value),async()=>{
+  loadTs('lib/front-urls').setBrowserFrontUrls({CALENDAR_FRONT_URL:front.origin,...(value?{LOGIN_FRONT_URL:value}:{})});
+  front.userBff.on('get','/me',{status:401});hook=renderHook(()=>session.useAuthSession());
+  const state=await hook.waitFor(current=>!current.loading);assert.match(state.error,/connexion est temporairement indisponible/);
+  assert.deepEqual(window.location.assigned,[]);assert.equal(window.location.reloads,0);assert.equal(front.userBff.calls('/auth/logout').length,0);
 });

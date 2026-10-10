@@ -182,17 +182,20 @@ for (const [status, operation, call] of [
   });
 }
 
-test('a 401 from the BFF ends the session: logout through BFF User, then reload towards Login', async () => {
+test('a final401 returns to Login without revoking the shared session', async () => {
   front.calendarBff.on('get', '/calendar/bootstrap', { status: 401, body: apiError('UNAUTHORIZED', 'Session invalide.') });
   front.userBff.on('post', '/auth/logout', { body: { message: 'Logged out successfully' } });
 
   const error = await api.loadCalendarData({ from: '2026-09-01', to: '2026-09-30' }).catch((reason) => reason);
-  while (window.location.reloads === 0) await new Promise((resolve) => setTimeout(resolve, 5));
+  assert.equal(window.location.assigned.length,1);
 
   assert.ok(error instanceof BffRequestError);
   assert.equal(error.status, 401);
-  assert.deepEqual(front.userBff.sequence(), ['POST /auth/logout']);
-  assert.equal(window.location.reloads, 1);
+  assert.deepEqual(front.userBff.sequence(), []);
+  assert.equal(front.ownerCalls.length,0);
+  assert.equal(window.location.reloads,0);
+  assert.equal(new URL(window.location.assigned[0]).searchParams.get('returnUrl'),window.location.href);
+  assert.equal(window.location.reloads, 0);
 });
 
 test('an unreachable BFF surfaces the proxy 502 message', async () => {

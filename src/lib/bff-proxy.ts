@@ -1,4 +1,6 @@
 import { NextRequest } from 'next/server';
+import { proxyPublishedBffRequest, type PublishedPaths } from '@mairie360/lib-components/next';
+import contract from '../../contracts/openapi.json';
 import { allowedMethods, findContractRoute, requestBodyMediaTypes } from './bff-contract';
 
 type RouteContext = { params: Promise<{ path: string[] }> };
@@ -11,7 +13,6 @@ export const MAX_REQUEST_BODY_BYTES = 1024 * 1024;
 const FORWARDED_REQUEST_HEADERS = [
   'accept', 'accept-language', 'content-type', 'if-match', 'if-none-match', 'if-modified-since', 'if-unmodified-since', 'user-agent', 'x-request-id',
 ];
-const HOP_BY_HOP_RESPONSE_HEADERS = ['content-encoding', 'content-length', 'transfer-encoding', 'connection'];
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
 export function configuredBffUrl() {
@@ -82,45 +83,44 @@ async function readBody(request: NextRequest): Promise<ArrayBuffer | null> {
 type ForwardOptions = {
   /** Corps déjà lu et contrôlé par l'appelant ; `null` pour ne rien transmettre. Par défaut, le corps reçu. */
   body?: ArrayBuffer | null;
+  /** Exact published paths for a separately configured User read relay. */
+  paths?: PublishedPaths;
 };
 
 export async function forwardToBff(request: NextRequest, baseUrl: string, path: string, options: ForwardOptions = {}) {
   if (isCrossSiteRequest(request)) return errorResponse(403, 'Requête intersite refusée.');
   const upstreamBaseUrl = validatedBffUrl(baseUrl);
   if (!upstreamBaseUrl) return errorResponse(503, 'Le service n’est pas configuré.');
+  const configuredFront = validatedBffUrl(process.env.CALENDAR_FRONT_URL);
+  const ownOrigin = configuredFront ? new URL(configuredFront).origin : request.nextUrl.origin;
+  const origin = request.headers.get('origin');
+  if (request.headers.get('sec-fetch-site') === 'cross-site' || (origin && origin !== ownOrigin)) {
+    return errorResponse(403, 'Requête intersite refusée.');
+  }
 
+  // Preserve the Calendar header allowlist and its rejection of browser bearer headers.
   const headers = new Headers();
   for (const name of FORWARDED_REQUEST_HEADERS) {
     const value = request.headers.get(name);
     if (value !== null) headers.set(name, value);
   }
-  // Seul le cookie HttpOnly posé par Login authentifie : un Authorization fourni par le navigateur est ignoré.
-  const accessToken = request.cookies.get('accessToken')?.value;
-  if (accessToken) headers.set('Authorization', `Bearer ${accessToken}`);
-
+  const cookies = request.headers.get('cookie');
+  if (cookies) headers.set('cookie', cookies);
   let body: ArrayBuffer | null = null;
   if (!['GET', 'HEAD'].includes(request.method)) {
     body = options.body !== undefined ? options.body : await readBody(request);
     if (options.body === undefined && body === null) return errorResponse(413, 'Corps de requête trop volumineux.');
   }
-
-  const target = new URL(`${upstreamBaseUrl}${path}`);
-  target.search = new URL(request.url).search;
-  try {
-    const upstream = await fetch(target, {
-      method: request.method, headers, cache: 'no-store', redirect: 'manual',
-      signal: AbortSignal.timeout(15_000),
-      ...(body && body.byteLength > 0 ? { body } : {}),
-    });
-    const responseHeaders = new Headers(upstream.headers);
-    for (const name of HOP_BY_HOP_RESPONSE_HEADERS) responseHeaders.delete(name);
-    responseHeaders.set('Cache-Control', 'no-store');
-    return new Response(request.method === 'HEAD' || [204, 205, 304].includes(upstream.status) ? null : upstream.body, {
-      status: upstream.status, statusText: upstream.statusText, headers: responseHeaders,
-    });
-  } catch {
-    return errorResponse(502, 'Le service est indisponible.');
-  }
+  const relay = new NextRequest(request.url, {
+    method: request.method, headers,
+    ...(body && body.byteLength ? { body } : {}),
+  });
+  return proxyPublishedBffRequest(relay, path.split('/').filter(Boolean), {
+    baseUrl: () => upstreamBaseUrl,
+    paths: options.paths ?? contract.paths,
+    loginUrl: () => process.env.LOGIN_FRONT_URL?.trim() ?? '',
+    frontUrl: () => process.env.CALENDAR_FRONT_URL?.trim() ?? '',
+  });
 }
 
 export async function proxyBffRequest(request: NextRequest, context: RouteContext) {
@@ -148,5 +148,5 @@ export async function proxyBffRequest(request: NextRequest, context: RouteContex
     }
   }
 
-  return forwardToBff(request, configuredBffUrl(), `/${path.map(encodeURIComponent).join('/')}`, { body });
+  return forwardToBff(request, configuredBffUrl(), `/${path.map(encodeURIComponent).join('/')}`, { body, paths: { [route.template]: route.operations } });
 }
