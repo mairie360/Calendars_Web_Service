@@ -385,12 +385,14 @@ for (const [label, method, route, approvalStatus] of [
   });
 }
 
-test('a refused session logs out and reloads instead of rendering the calendar', async () => {
+test('a refused session returns to Login without an automatic logout request', async () => {
   front.userBff.on('get', '/me', { status: 401 });
   front.userBff.on('post', '/auth/logout', { body: { message: 'Logged out successfully' } });
   front.calendarBff.on('get', '/calendar/bootstrap', { body: bootstrap() });
   view = mount(React.createElement(Page));
 
-  await view.waitFor(() => window.location.reloads === 1);
-  assert.deepEqual(front.userBff.sequence(), ['GET /me', 'POST /auth/logout']);
+  await view.waitFor(() => window.location.assigned.length === 1);
+  assert.deepEqual(front.userBff.sequence(), ['GET /me']);
+  assert.equal(front.ownerCalls.length,0);
+  assert.equal(window.location.reloads,0);
 });

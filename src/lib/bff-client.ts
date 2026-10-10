@@ -1,4 +1,4 @@
-import { logoutAndReload } from "./logout";
+import { navigateToLogin } from "./logout";
 
 export class BffRequestError extends Error {
   constructor(
@@ -52,7 +52,7 @@ export async function requestBff<T>(path: string, init: RequestInit = {}) {
   headers.set("Accept", "application/json");
   if (init.body !== undefined) headers.set("Content-Type", "application/json");
 
-  const response = await fetch(path, {
+  const response = await fetch('/api/bff' + path, {
     ...init,
     headers,
     cache: "no-store",
@@ -61,7 +61,7 @@ export async function requestBff<T>(path: string, init: RequestInit = {}) {
 
   if (!response.ok) {
     const body = await readResponseBody(response);
-    if (response.status === 401) void logoutAndReload();
+    if (response.status === 401) navigateToLogin();
     throw new BffRequestError(response.status, getErrorMessage(response.status, body), body);
   }
 
