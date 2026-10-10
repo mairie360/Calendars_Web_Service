@@ -300,7 +300,8 @@ test('a session refused by the BFF navigates to Login without automatic revocati
     assert.deepEqual(front.userBff.sequence(), []);
   assert.equal(front.ownerCalls.length,0);
   assert.equal(window.location.reloads,0);
-  assert.equal(new URL(window.location.assigned[0]).searchParams.get('returnUrl'),window.location.href);
+  assert.equal(new URL(window.location.assigned[0]).searchParams.get('redirect'),window.location.href);
+  assert.equal(new URL(window.location.assigned[0]).searchParams.has('returnUrl'),false);
     assert.deepEqual(page.result.current.events, []);
   } finally {
     delete global.window;
