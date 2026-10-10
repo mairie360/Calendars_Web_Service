@@ -118,8 +118,9 @@ test('useAuthSession navigates to Login on final401 without automatic revocation
   assert.deepEqual(front.userBff.sequence(), ['GET /me']);
   assert.equal(front.ownerCalls.length,0);
   assert.equal(window.location.reloads,0);
-  assert.equal(new URL(window.location.assigned[0]).searchParams.get('returnUrl'),window.location.href);
-  assert.equal(window.localStorage.getItem('mairie360.auth.jwt'), null);
+  assert.equal(new URL(window.location.assigned[0]).searchParams.get('redirect'),window.location.href);
+  assert.equal(new URL(window.location.assigned[0]).searchParams.has('returnUrl'),false);
+  assert.equal(window.localStorage.getItem('mairie360.auth.jwt'), 'stale');
   assert.equal(window.localStorage.getItem('unrelated.preference'), 'keep');
   assert.equal(hook.result.current.loading, true);
 });

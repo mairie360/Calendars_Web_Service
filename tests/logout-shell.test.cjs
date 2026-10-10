@@ -19,8 +19,10 @@ test('the actual shell displays failed logout and offers an explicit successful 
  assert.equal(window.location.assigned[0],'https://login.mairie.test/');assert.equal(h.cookies.size,0);assert.equal(h.userBff.calls('/auth/logout').length,1);
 });
 test('unconfirmed revocation stays visible until the user chooses to return to Login',async()=>{
- await render();h.userBff.on('post','/auth/logout',{body:{message:'Server revocation unconfirmed',session_revoked:false}});
- await view.act(()=>view.props('Header').onLogout());await view.waitFor(html=>html.includes('La fermeture de la session serveur n’a pas pu être confirmée'));
+ await render();window.localStorage.setItem('mairie360.auth.jwt','legacy-auth-fixture');h.userBff.on('post','/auth/logout',{body:{message:'Server revocation unconfirmed',session_revoked:false}});
+ await view.act(()=>view.props('Header').onLogout());await view.waitFor(html=>html.includes('La déconnexion n’a pas pu être confirmée'));
  assert.deepEqual(window.location.assigned,[]);assert.equal(h.cookies.size,0);assert.match(view.html,/Retour à la connexion/);
- await command('Retour à la connexion');assert.equal(window.location.assigned.length,1);assert.equal(new URL(window.location.assigned[0]).searchParams.get('returnUrl'),window.location.href);assert.equal(h.userBff.calls('/auth/logout').length,1);
+ assert.equal(window.localStorage.getItem('mairie360.auth.jwt'),'legacy-auth-fixture');
+ await command('Retour à la connexion');assert.equal(window.location.assigned.length,1);assert.equal(new URL(window.location.assigned[0]).searchParams.get('redirect'),window.location.href);assert.equal(new URL(window.location.assigned[0]).searchParams.has('returnUrl'),false);assert.equal(h.userBff.calls('/auth/logout').length,1);
+ assert.equal(window.localStorage.getItem('mairie360.auth.jwt'),'legacy-auth-fixture');
 });
