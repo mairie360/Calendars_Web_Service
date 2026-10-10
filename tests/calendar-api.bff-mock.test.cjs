@@ -194,7 +194,8 @@ test('a final401 returns to Login without revoking the shared session', async ()
   assert.deepEqual(front.userBff.sequence(), []);
   assert.equal(front.ownerCalls.length,0);
   assert.equal(window.location.reloads,0);
-  assert.equal(new URL(window.location.assigned[0]).searchParams.get('returnUrl'),window.location.href);
+  assert.equal(new URL(window.location.assigned[0]).searchParams.get('redirect'),window.location.href);
+  assert.equal(new URL(window.location.assigned[0]).searchParams.has('returnUrl'),false);
   assert.equal(window.location.reloads, 0);
 });
 

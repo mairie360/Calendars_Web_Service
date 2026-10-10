@@ -19,9 +19,8 @@ export function navigateToLogin() {
   if (!login) return false;
   const own = parseFrontUrl(frontUrl('CALENDAR_FRONT_URL'));
   const current = parseFrontUrl(window.location.href);
-  if (own && current?.origin === own.origin) login.searchParams.set('returnUrl', current.href);
+  if (own && current?.origin === own.origin) login.searchParams.set('redirect', current.href);
   navigatingLocations.add(window.location);
-  clearAuthStorage();
   window.location.assign(login.href);
   return true;
 }
@@ -51,8 +50,7 @@ export async function logoutAndReload() {
       throw new Error('La déconnexion n’a pas pu être confirmée. Veuillez réessayer.');
     }
     if (!receipt.session_revoked) {
-      clearAuthStorage();
-      throw new Error('La session locale est fermée. La fermeture de la session serveur n’a pas pu être confirmée.');
+      throw new Error('La déconnexion n’a pas pu être confirmée. Votre session reste à vérifier.');
     }
     let destination = parseFrontUrl(frontUrl('LOGIN_FRONT_URL'));
     if ('logout_url' in receipt) {
