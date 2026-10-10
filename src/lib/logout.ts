@@ -13,15 +13,17 @@ const logoutFlights = new WeakMap<Location, Promise<void>>();
 
 /** A rejected renewal returns to Login without revoking or replaying a write. */
 export function navigateToLogin() {
-  if (typeof window === 'undefined' || navigatingLocations.has(window.location)) return;
+  if (typeof window === 'undefined') return false;
+  if (navigatingLocations.has(window.location)) return true;
   const login = parseFrontUrl(frontUrl('LOGIN_FRONT_URL'));
-  if (!login) return;
+  if (!login) return false;
   const own = parseFrontUrl(frontUrl('CALENDAR_FRONT_URL'));
   const current = parseFrontUrl(window.location.href);
   if (own && current?.origin === own.origin) login.searchParams.set('returnUrl', current.href);
   navigatingLocations.add(window.location);
   clearAuthStorage();
   window.location.assign(login.href);
+  return true;
 }
 
 /** Cookies are expired by Login only after its revocation response is received. */

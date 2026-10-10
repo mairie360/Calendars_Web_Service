@@ -153,7 +153,9 @@ export function useAuthSession(initialUser: AuthSessionUser = EMPTY_SESSION_USER
         });
 
         if (response.status === 401) {
-          navigateToLogin();
+          if (!navigateToLogin()) {
+            setSession((current) => ({ ...current, loading: false, error: "La connexion est temporairement indisponible. Veuillez réessayer." }));
+          }
           return;
         }
 

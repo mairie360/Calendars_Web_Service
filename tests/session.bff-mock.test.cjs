@@ -154,3 +154,10 @@ test('role helpers normalise FR/EN aliases and fall back to Guest', () => {
   assert.deepEqual(session.resolveAppRoles(['manager', { name: 'admin' }, 'unknown']), ['Admin', 'Responsable']);
   assert.deepEqual(session.resolveAppRoles([{ name: 7 }]), ['Guest']);
 });
+
+for(const value of [undefined, 'javascript:alert(1)']) test('missing or invalid Login destination leaves a visible profile error instead of an endless loader: '+String(value),async()=>{
+  loadTs('lib/front-urls').setBrowserFrontUrls({CALENDAR_FRONT_URL:front.origin,...(value?{LOGIN_FRONT_URL:value}:{})});
+  front.userBff.on('get','/me',{status:401});hook=renderHook(()=>session.useAuthSession());
+  const state=await hook.waitFor(current=>!current.loading);assert.match(state.error,/connexion est temporairement indisponible/);
+  assert.deepEqual(window.location.assigned,[]);assert.equal(window.location.reloads,0);assert.equal(front.userBff.calls('/auth/logout').length,0);
+});
