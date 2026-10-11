@@ -6,6 +6,7 @@ import type { ComponentProps, FormEvent, ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 import { formatDateForQuery } from '../date-utils';
 import type { CalendarRecurrence } from '../types';
+import { EventTrainingLink, type EventTrainingSource } from './event-training-link';
 import { validateEventChronology } from './validation';
 
 type CreateProps = ComponentProps<typeof LibraryCreateEventModal>;
@@ -13,6 +14,7 @@ type DetailsProps = ComponentProps<typeof LibraryEventDetailsModal>;
 type SaveEvent = Parameters<NonNullable<DetailsProps['onSave']>>[0];
 type SaveFeedback = { saving?: boolean; error?: string | null };
 type ControlledDetailsProps = Omit<DetailsProps, 'onSave'> & SaveFeedback & {
+  trainingSource?: EventTrainingSource;
   onSave?: (event: SaveEvent) => boolean | Promise<boolean>;
 };
 
@@ -173,7 +175,7 @@ export function CreateEventModal(props: CreateProps & SaveFeedback) {
   return props.isOpen ? <CreateEventSession {...props} /> : null;
 }
 
-function EventDetailsSession(props: ControlledDetailsProps & { event: SaveEvent }) {
+function EventDetailsSession({ trainingSource, ...props }: ControlledDetailsProps & { event: SaveEvent }) {
   // The published details component exits edit mode synchronously on submit.
   // Own the submitted draft here until the existing BFF confirms the write.
   const [draft, setDraft] = useState<CreateProps['initialValues']>();
@@ -208,6 +210,7 @@ function EventDetailsSession(props: ControlledDetailsProps & { event: SaveEvent 
         ) : (
           <LibraryEventDetailsModal
             {...props}
+            extraContent={<EventTrainingLink key={String(props.event.id)} eventId={String(props.event.id)} source={trainingSource} />}
             categories={formCategories(props.categories)}
             title={props.saving || props.error ? (
               <>
