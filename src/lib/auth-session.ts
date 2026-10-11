@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { navigateToLogin } from "./logout";
+import { isSessionRecoveryPending, navigateToLogin } from "./logout";
 
 export { logoutAndReload } from "./logout";
 
@@ -153,6 +153,7 @@ export function useAuthSession(initialUser: AuthSessionUser = EMPTY_SESSION_USER
         });
 
         if (response.status === 401) {
+          if (isSessionRecoveryPending()) return;
           if (!navigateToLogin()) {
             setSession((current) => ({ ...current, loading: false, error: "La connexion est temporairement indisponible. Veuillez réessayer." }));
           }

@@ -110,6 +110,8 @@ test('useAuthSession navigates to Login on final401 without automatic revocation
   front.userBff.on('get', '/me', { status: 401 });
   front.userBff.on('post', '/auth/logout', { body: { message: 'Logged out successfully' } });
   window.localStorage.setItem('mairie360.auth.jwt', 'stale');
+  window.localStorage.setItem('mairie360.projects.jwt', 'old-project-session');
+  window.localStorage.setItem('calendar.draft', 'unfinished event');
   window.localStorage.setItem('unrelated.preference', 'keep');
 
   hook = renderHook(() => session.useAuthSession());
@@ -120,7 +122,9 @@ test('useAuthSession navigates to Login on final401 without automatic revocation
   assert.equal(window.location.reloads,0);
   assert.equal(new URL(window.location.assigned[0]).searchParams.get('redirect'),window.location.href);
   assert.equal(new URL(window.location.assigned[0]).searchParams.has('returnUrl'),false);
-  assert.equal(window.localStorage.getItem('mairie360.auth.jwt'), 'stale');
+  assert.equal(window.localStorage.getItem('mairie360.auth.jwt'), null);
+  assert.equal(window.localStorage.getItem('mairie360.projects.jwt'), null);
+  assert.equal(window.localStorage.getItem('calendar.draft'), 'unfinished event');
   assert.equal(window.localStorage.getItem('unrelated.preference'), 'keep');
   assert.equal(hook.result.current.loading, true);
 });
