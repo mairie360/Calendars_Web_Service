@@ -24,5 +24,13 @@ test('unconfirmed revocation stays visible until the user chooses to return to L
  assert.deepEqual(window.location.assigned,[]);assert.equal(h.cookies.size,0);assert.match(view.html,/Retour à la connexion/);
  assert.equal(window.localStorage.getItem('mairie360.auth.jwt'),'legacy-auth-fixture');
  await command('Retour à la connexion');assert.equal(window.location.assigned.length,1);assert.equal(new URL(window.location.assigned[0]).searchParams.get('redirect'),window.location.href);assert.equal(new URL(window.location.assigned[0]).searchParams.has('returnUrl'),false);assert.equal(h.userBff.calls('/auth/logout').length,1);
- assert.equal(window.localStorage.getItem('mairie360.auth.jwt'),'legacy-auth-fixture');
+ assert.equal(window.localStorage.getItem('mairie360.auth.jwt'),null);
+});
+
+test('an incomplete owner receipt cannot clear local keys or leave the rendered calendar',async()=>{
+ await render();window.localStorage.setItem('mairie360.auth.jwt','legacy-auth-fixture');window.localStorage.setItem('unrelated.preference','keep');
+ h.ownerOverride=()=>Response.json({session_revoked:true});
+ await view.act(()=>view.props('Header').onLogout());await view.waitFor(html=>html.includes('La déconnexion n’a pas pu être confirmée'));
+ assert.deepEqual(window.location.assigned,[]);assert.equal(h.cookies.size,2);assert.match(view.html,/role="alert"/);
+ assert.equal(window.localStorage.getItem('mairie360.auth.jwt'),'legacy-auth-fixture');assert.equal(window.localStorage.getItem('unrelated.preference'),'keep');
 });

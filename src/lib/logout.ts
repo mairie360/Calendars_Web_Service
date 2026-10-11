@@ -10,10 +10,16 @@ function clearAuthStorage() {
 
 const navigatingLocations = new WeakSet<Location>();
 const logoutFlights = new WeakMap<Location, Promise<void>>();
+const recoveryLocations = new WeakSet<Location>();
+
+export function isSessionRecoveryPending() {
+  return typeof window !== 'undefined' && recoveryLocations.has(window.location);
+}
 
 /** A rejected renewal returns to Login without revoking or replaying a write. */
-export function navigateToLogin() {
+export function navigateToLogin(options: { explicit?: boolean } = {}) {
   if (typeof window === 'undefined') return false;
+  if (!options.explicit && isSessionRecoveryPending()) return false;
   if (navigatingLocations.has(window.location)) return true;
   const login = parseFrontUrl(frontUrl('LOGIN_FRONT_URL'));
   if (!login) return false;
@@ -21,7 +27,9 @@ export function navigateToLogin() {
   const current = parseFrontUrl(window.location.href);
   if (own && current?.origin === own.origin) login.searchParams.set('redirect', current.href);
   navigatingLocations.add(window.location);
+  clearAuthStorage();
   window.location.assign(login.href);
+  if (options.explicit) recoveryLocations.delete(window.location);
   return true;
 }
 
@@ -31,6 +39,7 @@ export async function logoutAndReload() {
   const location = window.location;
   const running = logoutFlights.get(location);
   if (running) return running;
+  recoveryLocations.add(location);
   const pending = (async () => {
     let response: Response;
     try {
@@ -46,7 +55,9 @@ export async function logoutAndReload() {
     try { receipt = await response.json(); } catch {
       throw new Error('La déconnexion n’a pas pu être confirmée. Veuillez réessayer.');
     }
-    if (typeof receipt !== 'object' || receipt === null || !('session_revoked' in receipt) || typeof receipt.session_revoked !== 'boolean') {
+    if (typeof receipt !== 'object' || receipt === null ||
+        !('session_revoked' in receipt) || typeof receipt.session_revoked !== 'boolean' ||
+        !('message' in receipt) || typeof receipt.message !== 'string') {
       throw new Error('La déconnexion n’a pas pu être confirmée. Veuillez réessayer.');
     }
     if (!receipt.session_revoked) {
@@ -63,6 +74,7 @@ export async function logoutAndReload() {
     }
     if (!destination) throw new Error('La connexion partagée n’est pas configurée.');
     clearAuthStorage();
+    recoveryLocations.delete(location);
     location.assign(destination.href);
   })();
   logoutFlights.set(location, pending);

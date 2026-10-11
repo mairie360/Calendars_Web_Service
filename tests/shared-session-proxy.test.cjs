@@ -35,9 +35,11 @@ test('the read without an access cookie never forwards a browser bearer',async()
  assert.equal(h.calendarBff.requests[0].headers.authorization,undefined);assert.equal(h.calendarBff.requests[1].headers.authorization,`Bearer ${access}`);
 });
 for(const status of [401,503])test(`owner renewal${status} stops the replay and preserves cookies`,async()=>{
+ window.localStorage.setItem('mairie360.auth.jwt','legacy');window.localStorage.setItem('unrelated.preference','keep');
  business();h.ownerOverride=()=>Response.json({message:'Disposable renewal refusal'},{status});
  await assert.rejects(read(),{status});assert.equal(h.calendarBff.requests.length,1);assert.equal(h.cookies.get('refreshToken'),token);assert.equal(h.userBff.calls('/auth/logout').length,0);
  assert.equal(window.location.assigned.length,status===401?1:0);assert.equal(window.location.reloads,0);
+ assert.equal(window.localStorage.getItem('mairie360.auth.jwt'),status===401?null:'legacy');assert.equal(window.localStorage.getItem('unrelated.preference'),'keep');
  if(status===401){const target=new URL(window.location.assigned[0]);assert.equal(target.searchParams.get('redirect'),window.location.href);assert.equal(target.searchParams.has('returnUrl'),false);}
 });
 test('malformed successful renewal cannot replay a Calendar operation',async()=>{
