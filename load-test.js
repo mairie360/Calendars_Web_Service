@@ -4,33 +4,44 @@ import crypto from 'k6/crypto';
 import encoding from 'k6/encoding';
 
 // ---------------------------------------------------------------------------
-// Test de charge k6 pour le front Calendars (Calendars_Web_Service).
-// Cible les routes réellement servies par le serveur Next.js : les pages (rendu Next.js derrière le middleware d'authentification),
-// l'adaptateur de session /api/user/me (-> BFF User),
-// /health, puis les lectures /calendar/* relayées par le proxy same-origin vers BFF Calendar.
-// L'authentification passe par le cookie accessToken, comme dans le navigateur :
-// le proxy le convertit en Authorization: Bearer vers le BFF.
+// k6 load test of the Calendars front (Calendars_Web_Service).
+// Two scenarios run side by side against the routes the Next.js server really serves:
+//   * `reads`: the page (Next.js render behind the authentication middleware), the session
+//     adapter /api/user/me (-> BFF User), /health, then the /api/bff/calendar/* reads the page
+//     fetches, relayed by the same-origin proxy to BFF Calendar;
+//   * `writes` (MAIR-516): the event creation and deletion a user performs from the page,
+//     POST then DELETE /api/bff/calendar/events (-> BFF Calendar -> Calendar API).
+// Authentication goes through the accessToken cookie, like in the browser: the proxy turns it
+// into Authorization: Bearer for the BFF.
 // ---------------------------------------------------------------------------
 
 const BASE_URL = __ENV.BASE_URL || 'http://localhost:5002';
-// Doit correspondre au JWT_SECRET des services core-api / bff-user / APIs de la stack de test.
+// Must match the JWT_SECRET of the core-api / bff-user / API services of the test stack.
 const JWT_SECRET = __ENV.JWT_SECRET || 'b"secret"';
-// Utilisateur inséré par init-test.sql (sub du token).
+// User inserted by init-test.sql (token `sub`).
 const USER_ID = __ENV.PERF_USER_ID || '2';
 
+const STAGES = [
+  { duration: '30s', target: 20 }, // ramp up
+  { duration: '1m', target: 20 }, // plateau
+  { duration: '10s', target: 0 }, // ramp down
+];
+
 export const options = {
-  stages: [
-    { duration: '30s', target: 20 }, // montée en charge
-    { duration: '1m', target: 20 },  // maintien
-    { duration: '10s', target: 0 },  // descente
-  ],
+  scenarios: {
+    reads: { executor: 'ramping-vus', startVUs: 0, stages: STAGES, exec: 'reads', gracefulRampDown: '5s' },
+    // Few VUs on purpose: every iteration writes twice in the Calendar API database.
+    writes: { executor: 'constant-vus', vus: 3, duration: '1m40s', exec: 'writes' },
+  },
   thresholds: {
-    http_req_failed: ['rate<0.01'],                        // < 1% d'erreurs
-    checks: ['rate>0.99'],                                 // une redirection (307) n'est pas une erreur HTTP : les checks la détectent
-    'http_req_duration{endpoint:page}': ['p(95)<800'],     // rendu page Next.js
-    'http_req_duration{endpoint:health}': ['p(95)<150'],   // proxy same-origin -> BFF /health
+    http_req_failed: ['rate<0.01'], // < 1% of HTTP errors
+    checks: ['rate>0.99'], // a redirect (307) is not an HTTP error: the checks catch it
+    'http_req_duration{endpoint:page}': ['p(95)<800'],     // Next.js page render
+    'http_req_duration{endpoint:health}': ['p(95)<150'],   // same-origin proxy -> BFF /health
     'http_req_duration{endpoint:session}': ['p(95)<500'],  // /api/user/me -> BFF User -> Core
-    'http_req_duration{endpoint:calendar}': ['p(95)<600'], // proxy + agrégation BFF + upstream
+    'http_req_duration{endpoint:calendar}': ['p(95)<600'], // proxy + BFF aggregation + upstream
+    'http_req_duration{endpoint:event-create}': ['p(95)<1000'], // proxy -> BFF Calendar -> Calendar API insert
+    'http_req_duration{endpoint:event-delete}': ['p(95)<1000'], // proxy -> BFF Calendar -> Calendar API delete
   },
 };
 
@@ -59,10 +70,10 @@ export function setup() {
   return { token: mintJwt() };
 }
 
-export default function (data) {
+export function reads(data) {
   const cookie = { Cookie: `accessToken=${data.token}` };
-  // redirects: 0 : une redirection (ex. vers le front Login si le cookie est refusé)
-  // doit faire échouer le check au lieu d'être suivie hors de la stack.
+  // redirects: 0 : a redirect (e.g. to the Login front when the cookie is refused)
+  // must fail the check instead of being followed outside the stack.
   const pageParams = { headers: cookie, redirects: 0, tags: { endpoint: 'page' } };
   const dataParams = { headers: { ...cookie, Accept: 'application/json' }, redirects: 0, tags: { endpoint: 'calendar' } };
   const { from, to } = monthRange();
@@ -83,17 +94,59 @@ export default function (data) {
   });
 
   group('calendar reads', () => {
-    const calendarBootstrap = http.get(`${BASE_URL}/calendar/bootstrap?from=${from}&to=${to}`, dataParams);
-    check(calendarBootstrap, { '/calendar/bootstrap 200': (r) => r.status === 200 });
+    // Browser paths of the page (src/lib/bff-client.ts prefixes /api/bff), not the root catch-all.
+    const calendarBootstrap = http.get(`${BASE_URL}/api/bff/calendar/bootstrap?from=${from}&to=${to}`, dataParams);
+    check(calendarBootstrap, { '/api/bff/calendar/bootstrap 200': (r) => r.status === 200 });
 
-    const calendarEvents = http.get(`${BASE_URL}/calendar/events?from=${from}&to=${to}`, dataParams);
-    check(calendarEvents, { '/calendar/events 200': (r) => r.status === 200 });
+    const calendarEvents = http.get(`${BASE_URL}/api/bff/calendar/events?from=${from}&to=${to}`, dataParams);
+    check(calendarEvents, { '/api/bff/calendar/events 200': (r) => r.status === 200 });
 
-    const calendarCategories = http.get(`${BASE_URL}/calendar/categories`, dataParams);
-    check(calendarCategories, { '/calendar/categories 200': (r) => r.status === 200 });
+    const calendarCategories = http.get(`${BASE_URL}/api/bff/calendar/categories`, dataParams);
+    check(calendarCategories, { '/api/bff/calendar/categories 200': (r) => r.status === 200 });
 
-    const calendarServices = http.get(`${BASE_URL}/calendar/services`, dataParams);
-    check(calendarServices, { '/calendar/services 200': (r) => r.status === 200 });
+    const calendarServices = http.get(`${BASE_URL}/api/bff/calendar/services`, dataParams);
+    check(calendarServices, { '/api/bff/calendar/services 200': (r) => r.status === 200 });
+  });
+
+  sleep(1);
+}
+
+export function writes(data) {
+  const headers = { Cookie: `accessToken=${data.token}`, Accept: 'application/json', 'Content-Type': 'application/json' };
+
+  group('event lifecycle', () => {
+    const date = new Date().toISOString().slice(0, 10);
+    const created = http.post(
+      `${BASE_URL}/api/bff/calendar/events`,
+      JSON.stringify({
+        title: `k6 ${__VU}-${__ITER}-${Date.now()}`,
+        date,
+        startTime: '09:00',
+        endTime: '10:00',
+        category: 'meeting',
+        description: 'Temporary event of the k6 load test',
+      }),
+      { headers, redirects: 0, tags: { endpoint: 'event-create' } },
+    );
+    let id = null;
+    try {
+      const body = created.json();
+      id = body && body.id !== undefined && body.id !== null ? String(body.id) : null;
+    } catch {
+      id = null;
+    }
+    const ok = check(created, {
+      'POST /api/bff/calendar/events 201': (r) => r.status === 201,
+      'POST /api/bff/calendar/events returns the event id': () => id !== null,
+    });
+    if (!ok) return;
+
+    const deleted = http.del(`${BASE_URL}/api/bff/calendar/events/${id}`, null, {
+      headers: { Cookie: headers.Cookie, Accept: 'application/json' },
+      redirects: 0,
+      tags: { endpoint: 'event-delete' },
+    });
+    check(deleted, { 'DELETE /api/bff/calendar/events/{id} 204': (r) => r.status === 204 });
   });
 
   sleep(1);
