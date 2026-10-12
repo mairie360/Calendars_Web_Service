@@ -99,6 +99,7 @@ Domaine fonctionnel: Calendrier.
 - Ouverture de la date et des détails d’un événement depuis le Tableau de bord.
 - Création, modification et suppression des événements selon les permissions.
 - Sélection des personnes, catégories et services; affichage de la validation et de la récurrence.
+- Les textes d’un événement (titre, description, lieu) refusent `<` et `>` avant la requête, avec un message en français par champ (MAIR-514) ; un refus du BFF détaillant les champs est listé champ par champ.
 
 ## Parcours type
 

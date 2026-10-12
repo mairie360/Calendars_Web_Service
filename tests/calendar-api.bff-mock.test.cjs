@@ -235,3 +235,22 @@ test('HTTP failures without an error body use readable messages', async () => {
     global.fetch = fetchWithContractGuard;
   }
 });
+
+// MAIR-514: a BFF 400 with `error.details[]` is explained per refused field.
+test('formatCalendarApiError lists the refused fields of a BFF 400 and keeps other messages', () => {
+  const body = { error: { code: 'BAD_REQUEST', message: 'Validation failed', details: [
+    { path: 'body.title', message: 'Must not contain < or >' },
+    { path: 'body.recurrence.endsOn', message: 'Invalid date' },
+    { path: 'body.assigneeIds.0', message: 'Required' },
+    { path: 'body.description', message: 'String must contain at most 2000 character(s)' },
+    { message: 'Context only' },
+    'junk',
+  ] } };
+  assert.equal(api.formatCalendarApiError(new BffRequestError(400, 'Validation failed', body)),
+    'Vérifiez les champs signalés : Titre : ne doit pas contenir les caractères < ou > ; Récurrence › Fin de récurrence : Invalid date ; Participants : ne doit pas être vide ; Description : 2000 caractères maximum ; Context only.');
+  assert.equal(api.formatCalendarApiError(new BffRequestError(400, 'Validation failed', { error: { details: [] } })), 'Validation failed');
+  assert.equal(api.formatCalendarApiError(new BffRequestError(400, 'Validation failed', 'not json')), 'Validation failed');
+  assert.equal(api.formatCalendarApiError(new BffRequestError(403, 'Accès refusé', body)), 'Accès refusé');
+  assert.equal(api.describeValidationDetail({ path: 'body', message: 'Unrecognized key' }), 'Unrecognized key');
+  assert.equal(api.describeValidationDetail({ path: 'body.title' }), null);
+});

@@ -301,3 +301,44 @@ test('cancel and reopen initialize a fresh creation with the newly loaded defaul
   assert.equal(view.hostElements(props => props.id === 'event-category')[0].props.value, 'other');
   assert.deepEqual(created, []);
 });
+
+// MAIR-514: the texts are checked on the captured submit, before the chronology and before any request.
+test('a title with < or > stays in the modal with an accessible error and is never created', async () => {
+  const created = [];
+  view = mount(React.createElement(CreateEventModal, {
+    isOpen: true,
+    initialValues,
+    onCancel() {},
+    onCreate: (value) => created.push(value),
+  }));
+
+  const event = await submit({
+    'event-title': 'Conseil <municipal>',
+    'event-description': 'Ordre du jour',
+    'event-location': 'Salle A',
+    'event-date': '16-09-2026',
+    'event-end-date': '15-09-2026',
+    'event-start-time': '09:00',
+    'event-end-time': '10:00',
+    'event-recurrence': 'none',
+  });
+
+  assert.equal(event.stopped, true);
+  assert.equal(event.prevented, true);
+  assert.deepEqual(created, []);
+  assert.match(view.html, /role="alert"/);
+  assert.match(view.text(), /Le titre ne doit pas contenir les caractères < ou >\./);
+  assert.doesNotMatch(view.text(), /La date de fin doit être après/);
+
+  const valid = await submit({
+    'event-title': 'Conseil municipal',
+    'event-description': 'Ordre du <jour>',
+    'event-date': '16-09-2026',
+    'event-end-date': '17-09-2026',
+    'event-start-time': '09:00',
+    'event-end-time': '10:00',
+    'event-recurrence': 'none',
+  });
+  assert.equal(valid.stopped, true);
+  assert.match(view.text(), /La description ne doit pas contenir les caractères < ou >\./);
+});
