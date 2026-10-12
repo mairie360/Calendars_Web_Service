@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react';
 import { formatDateForQuery } from '../date-utils';
 import type { CalendarRecurrence } from '../types';
 import { EventTrainingLink, type EventTrainingSource } from './event-training-link';
-import { validateEventChronology } from './validation';
+import { validateEventChronology, validateEventTexts } from './validation';
 
 type CreateProps = ComponentProps<typeof LibraryCreateEventModal>;
 type DetailsProps = ComponentProps<typeof LibraryEventDetailsModal>;
@@ -58,6 +58,14 @@ function readFormValue(form: HTMLFormElement, id: string) {
   return form.querySelector<HTMLInputElement | HTMLSelectElement>(`#${id}`)?.value ?? '';
 }
 
+function textsFromForm(form: HTMLFormElement) {
+  return {
+    title: readFormValue(form, 'event-title'),
+    description: readFormValue(form, 'event-description'),
+    location: readFormValue(form, 'event-location'),
+  };
+}
+
 function chronologyFromForm(form: HTMLFormElement) {
   const frequency = (readFormValue(form, 'event-recurrence') || 'none') as CalendarRecurrence['frequency'];
   return {
@@ -99,7 +107,7 @@ function ValidatedModal({
     const form = event.target as HTMLFormElement;
     if (!form.querySelector<HTMLInputElement>('#event-date')) return;
 
-    const error = validateEventChronology(chronologyFromForm(form));
+    const error = validateEventTexts(textsFromForm(form)) ?? validateEventChronology(chronologyFromForm(form));
     if (!error) {
       setValidationError('');
       return;

@@ -1,3 +1,4 @@
+import { BffRequestError } from "../../lib/bff-client";
 import type { components } from '@/contracts/bff';
 import { requestBff } from "@/lib/bff-client";
 import { getEventColor, resolveAssignees } from "./constants";
@@ -131,7 +132,47 @@ export async function updateCalendarEventApproval(
   return toCalendarEventItem(savedEvent, people);
 }
 
+const FIELD_LABELS: Readonly<Record<string, string>> = {
+  title: "Titre",
+  description: "Description",
+  location: "Lieu",
+  service: "Service",
+  category: "Catégorie",
+  date: "Date de début",
+  endDate: "Date de fin",
+  startTime: "Heure de début",
+  endTime: "Heure de fin",
+  assigneeIds: "Participants",
+  recurrence: "Récurrence",
+  endsOn: "Fin de récurrence",
+};
+
+function translateDetail(message: string) {
+  if (/Must not contain < or >/.test(message)) return "ne doit pas contenir les caractères < ou >";
+  const max = message.match(/at most (\d+) character|<=(\d+) characters/);
+  if (max) return `${max[1] ?? max[2]} caractères maximum`;
+  if (/at least 1 character|^Required$/.test(message)) return "ne doit pas être vide";
+  return message;
+}
+
+/** `body.recurrence.endsOn` → `Récurrence › Fin de récurrence : …` (details of a BFF 400, MAIR-514). */
+export function describeValidationDetail(detail: unknown): string | null {
+  if (!detail || typeof detail !== "object") return null;
+  const { path, message } = detail as { path?: unknown; message?: unknown };
+  if (typeof message !== "string") return null;
+  const fields = typeof path === "string"
+    ? path.split(".").filter((part) => part && part !== "body" && !/^\d+$/.test(part)).map((part) => FIELD_LABELS[part] ?? part)
+    : [];
+  const text = translateDetail(message);
+  return fields.length ? `${fields.join(" › ")} : ${text}` : text;
+}
+
 export function formatCalendarApiError(error: unknown) {
+  if (error instanceof BffRequestError && error.status === 400) {
+    const details = (error.details as { error?: { details?: unknown } } | undefined)?.error?.details;
+    const lines = Array.isArray(details) ? [...new Set(details.map(describeValidationDetail).filter((line): line is string => Boolean(line)))] : [];
+    if (lines.length) return `Vérifiez les champs signalés : ${lines.join(" ; ")}.`;
+  }
   if (error instanceof Error && error.message.trim()) return error.message;
   return "Le service calendrier est injoignable.";
 }

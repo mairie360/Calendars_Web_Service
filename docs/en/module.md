@@ -102,6 +102,7 @@ Business domain: Calendar.
 - Follow a Dashboard event link to its date and details.
 - Create, edit and delete events according to permissions.
 - Select people, categories and services; display approval and recurrence.
+- Event texts (title, description, location) refuse `<` and `>` before the request, with a French message per field (MAIR-514); a BFF refusal with field details is listed per field.
 
 ## Typical workflow
 

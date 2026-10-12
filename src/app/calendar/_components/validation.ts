@@ -56,3 +56,23 @@ export function validateEventChronology(values: EventChronology): string | null 
 
   return null;
 }
+
+// Free texts of an event: the published BFF_Calendar contract refuses `<` and `>` in every one of them
+// (`^[^<>]*$`, MAIR-514). The fields live in the shared lib-components modal, so the rule is applied here,
+// on the captured submit, before the request.
+export type EventTexts = Partial<Pick<CreateCalendarEventValues, 'title' | 'description' | 'location' | 'service'>>;
+
+const TEXT_LABELS: ReadonlyArray<[keyof EventTexts, string]> = [
+  ['title', 'Le titre'],
+  ['description', 'La description'],
+  ['location', 'Le lieu'],
+  ['service', 'Le service'],
+];
+
+export function validateEventTexts(values: EventTexts): string | null {
+  for (const [field, label] of TEXT_LABELS) {
+    const value = values[field];
+    if (typeof value === 'string' && /[<>]/.test(value)) return `${label} ne doit pas contenir les caractères < ou >.`;
+  }
+  return null;
+}

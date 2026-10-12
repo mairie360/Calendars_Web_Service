@@ -2,7 +2,7 @@ const assert = require('node:assert/strict');
 const { test } = require('node:test');
 const { loadTs } = require('./support/load-ts.cjs');
 
-const { validateEventChronology } = loadTs('app/calendar/_components/validation');
+const { validateEventChronology, validateEventTexts } = loadTs('app/calendar/_components/validation');
 
 const valid = {
   date: '16-09-2026',
@@ -40,4 +40,14 @@ test('recurrence ignores a stale multi-day end date when checking chronology', (
     endDate: '15-09-2026',
     recurrence: { frequency: 'monthly', endsOn: '16-12-2026' },
   }), null);
+});
+
+// MAIR-514: the published contract refuses `<` and `>` in every text of an event.
+test('calendar form refuses < and > in the event texts with a French message per field', () => {
+  assert.equal(validateEventTexts({ title: 'Conseil municipal', description: 'Ordre du jour', location: 'Salle A', service: 'direction' }), null);
+  assert.equal(validateEventTexts({}), null);
+  assert.equal(validateEventTexts({ title: 'Conseil <municipal>' }), 'Le titre ne doit pas contenir les caractères < ou >.');
+  assert.equal(validateEventTexts({ title: 'ok', description: 'a > b' }), 'La description ne doit pas contenir les caractères < ou >.');
+  assert.equal(validateEventTexts({ title: 'ok', description: 'ok', location: '<Salle>' }), 'Le lieu ne doit pas contenir les caractères < ou >.');
+  assert.equal(validateEventTexts({ service: 'dir<ection' }), 'Le service ne doit pas contenir les caractères < ou >.');
 });
