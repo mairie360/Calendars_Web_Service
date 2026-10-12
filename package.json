@@ -14,7 +14,7 @@
     "test": "mkdir -p coverage && node --test --enable-source-maps --experimental-test-coverage --test-coverage-branches=60 --test-coverage-functions=60 --test-coverage-lines=60 --test-coverage-include='src/**' --test-reporter=spec --test-reporter-destination=stdout --test-reporter=lcov --test-reporter-destination=coverage/lcov.info tests/*.test.cjs"
   },
   "dependencies": {
-    "@mairie360/bff-calendar-openapi": "0.0.0-dev.44cb9ad55410f0f5f07794c4f4a40d79c1096719",
+    "@mairie360/bff-calendar-openapi": "0.0.0-dev.9b2bbc25ad509ef5b5285ea0fe9ec98d4783347e",
     "@mairie360/lib-components": "0.8.0",
     "daisyui": "^5.0.0",
     "lucide-react": "^1.0.0",
