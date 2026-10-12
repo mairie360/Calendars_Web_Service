@@ -37,7 +37,7 @@ x-service: &service-template
 
 services:
   postgres:
-    image: ghcr.io/mairie360/database:dev-latest
+    image: ghcr.io/mairie360/database:dev-99f6127
     restart: always
     container_name: mairie360-db-calendar-front #change front name
     environment:
@@ -57,7 +57,7 @@ services:
       retries: 5
 
   liquibase:
-    image: ghcr.io/mairie360/liquibase-migrations:dev-latest
+    image: ghcr.io/mairie360/liquibase-migrations:dev-99f6127
     container_name: mairie360-liquibase-calendar-front #change front name
     depends_on:
       postgres:
@@ -68,9 +68,12 @@ services:
       LIQUIBASE_COMMAND_USERNAME: ${DB_USER:-postgres}
       LIQUIBASE_COMMAND_PASSWORD: ${DB_PASSWORD:-password}
       LIQUIBASE_SEARCH_PATH: /liquibase/changelog
+    # Database >= MAIR-413 only seeds the template admin (users.id = 1) with -Dallow_template_admin=true;
+    # without it the migration fails on a fresh database. Test / dev stacks only.
     command: >
       --changelog-file=changelog.xml
       update
+      -Dallow_template_admin=true
     networks:
       - backend
 
@@ -107,7 +110,7 @@ services:
 
   core:
     container_name: core-calendar-front-developpement
-    image: ghcr.io/mairie360/core-api:dev-latest
+    image: ghcr.io/mairie360/core-api:dev-2529974
     ports:
       - "3000:3000"
     networks:
@@ -126,6 +129,10 @@ services:
       DB_PASSWORD: password
       DB_PORT: 5432
       PUBLIC_URL: http://core.development.mairie360.fr
+      # API >= api_lib 3.0 refuses the weak shared test secret unless this flag is set (MAIR-428),
+      # and rate-limits each account (MAIR-425): the scan / load test hammer it as one user.
+      JWT_ALLOW_WEAK_SECRET: "true"
+      RATE_LIMIT_ENABLED: "false"
       JWT_SECRET: b"secret"
       JWT_TIMEOUT: 3600
     depends_on:
@@ -150,7 +157,7 @@ services:
 
   calendar-api:
     container_name: calendar-api-front-calendar-developpement
-    image: ghcr.io/mairie360/calendar-api:dev-latest
+    image: ghcr.io/mairie360/calendar-api:dev-a7252e8
     ports:
       - "3002:3002"
     networks:
@@ -169,6 +176,13 @@ services:
       DB_PASSWORD: password
       DB_PORT: 5432
       PUBLIC_URL: http://core.development.mairie360.fr
+      # API >= api_lib 3.0 refuses the weak shared test secret unless this flag is set (MAIR-428),
+      # and rate-limits each account (MAIR-425): the scan / load test hammer it as one user.
+      JWT_ALLOW_WEAK_SECRET: "true"
+      RATE_LIMIT_ENABLED: "false"
+      # Calendar API also throttles each client IP with a token bucket (actix-governor, 10 req/s, burst 50):
+      # "0" disables it, otherwise the k6 load test turns into 429s relayed as 502 by the BFF.
+      RATE_LIMIT_PER_SECOND: "0"
       JWT_SECRET: b"secret"
       JWT_TIMEOUT: 3600
     depends_on:
@@ -193,7 +207,7 @@ services:
 
   bff-user:
     container_name: bff-user-calendar-front
-    image: ghcr.io/mairie360/bff-user:dev-latest
+    image: ghcr.io/mairie360/bff-user:dev-0d80ef4
     ports:
       - "4000:4000"
     networks:
@@ -216,6 +230,9 @@ services:
       REDIS_URL: redis://redis:6379
       JWT_SECRET: 'b"secret"'
       CORE_API_URL: http://core:3000
+      # The scanners replay the auth routes from one IP with invalid credentials on purpose: the
+      # auth rate limits of BFF User (MAIR-226) would answer 429 and hide the real responses.
+      AUTH_RATE_LIMIT_ENABLED: "false"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:4000/health"]
       interval: 10s
@@ -224,7 +241,7 @@ services:
 
   bff-calendar:
     container_name: bff-calendar-calendar-front
-    image: ghcr.io/mairie360/bff-calendar:dev-latest
+    image: ghcr.io/mairie360/bff-calendar:dev-44cb9ad
     ports:
       - "4002:4002"
     networks:
@@ -241,6 +258,8 @@ services:
       CORE_API_URL: "core"
       CORE_API_PORT: 3000
       CALENDAR_API_URL: "calendar-api"
+      # Same secret as the APIs: BFF_Calendar verifies the session tokens with it and refuses to start without it.
+      JWT_SECRET: 'b"secret"'
       CALENDAR_API_PORT: 3002
       # Racine du service : le client Orval (@mairie360/calendar-api-openapi) préfixe
       # déjà ses routes par /api/v1, un CALENDAR_API_BASE_PATH se terminant par /api

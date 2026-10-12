@@ -45,7 +45,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Vérifie la connexion avec l'API Core et Calendar (Rust) */
+        /** Checks that Core API and Calendar API are reachable */
         get: {
             parameters: {
                 query?: never;
@@ -55,22 +55,22 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Connexion réussie */
+                /** @description Every upstream API is reachable */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["CheckApiResponse"];
+                        "application/json": components["schemas"]["CheckApisResponse"];
                     };
                 };
-                /** @description API Core ou Calendar injoignable */
+                /** @description Core API or Calendar API is unreachable */
                 502: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["CheckApiResponse"];
+                        "application/json": components["schemas"]["CheckApisResponse"];
                     };
                 };
             };
@@ -117,40 +117,49 @@ export interface paths {
                         "application/json": components["schemas"]["CalendarBootstrapResponse"];
                     };
                 };
-                /** @description Paramètres invalides */
+                /** @description Invalid parameters: dates not in the YYYY-MM-DD format, from after to, or more than 1096 days apart */
                 400: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ApiError"];
+                        "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description Session invalide */
+                /** @description Missing or invalid session */
                 401: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ApiError"];
+                        "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description Erreur serveur */
+                /** @description Unexpected server error */
                 500: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ApiError"];
+                        "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description Calendar API indisponible */
+                /** @description Calendar API or Core API is unavailable or failed */
                 502: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ApiError"];
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Calendar API, Core API or JWT_SECRET is not configured */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
             };
@@ -197,40 +206,49 @@ export interface paths {
                         "application/json": components["schemas"]["CalendarEvent"][];
                     };
                 };
-                /** @description Paramètres invalides */
+                /** @description Invalid parameters: dates not in the YYYY-MM-DD format, from after to, or more than 1096 days apart */
                 400: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ApiError"];
+                        "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description Session invalide */
+                /** @description Missing or invalid session */
                 401: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ApiError"];
+                        "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description Erreur serveur */
+                /** @description Unexpected server error */
                 500: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ApiError"];
+                        "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description Calendar API indisponible */
+                /** @description Calendar API or Core API is unavailable or failed */
                 502: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ApiError"];
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Calendar API, Core API or JWT_SECRET is not configured */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
             };
@@ -262,49 +280,58 @@ export interface paths {
                         "application/json": components["schemas"]["CalendarEvent"];
                     };
                 };
-                /** @description Données invalides */
+                /** @description Invalid data */
                 400: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ApiError"];
+                        "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description Session invalide */
+                /** @description Missing or invalid session */
                 401: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ApiError"];
+                        "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description Personne assignée hors du périmètre autorisé */
+                /** @description Assignee outside the authorized scope, or refused by Calendar API */
                 403: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ApiError"];
+                        "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description Erreur serveur */
+                /** @description Unexpected server error */
                 500: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ApiError"];
+                        "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description Calendar API indisponible */
+                /** @description Calendar API or Core API is unavailable or failed */
                 502: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ApiError"];
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Calendar API, Core API or JWT_SECRET is not configured */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
             };
@@ -348,58 +375,67 @@ export interface paths {
                     };
                     content?: never;
                 };
-                /** @description Identifiant invalide */
+                /** @description Invalid id */
                 400: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ApiError"];
+                        "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description Session invalide */
+                /** @description Missing or invalid session */
                 401: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ApiError"];
+                        "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description Seul le créateur peut supprimer l’événement */
+                /** @description Only the creator can delete the event */
                 403: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ApiError"];
+                        "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description Événement non trouvé */
+                /** @description Event not found */
                 404: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ApiError"];
+                        "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description Erreur serveur */
+                /** @description Unexpected server error */
                 500: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ApiError"];
+                        "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description Calendar API indisponible */
+                /** @description Calendar API or Core API is unavailable or failed */
                 502: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ApiError"];
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Calendar API, Core API or JWT_SECRET is not configured */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
             };
@@ -435,58 +471,67 @@ export interface paths {
                         "application/json": components["schemas"]["CalendarEvent"];
                     };
                 };
-                /** @description Données invalides */
+                /** @description Invalid data */
                 400: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ApiError"];
+                        "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description Session invalide */
+                /** @description Missing or invalid session */
                 401: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ApiError"];
+                        "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description Action non autorisée sur cet événement */
+                /** @description Action not allowed on this event */
                 403: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ApiError"];
+                        "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description Événement non trouvé */
+                /** @description Event not found */
                 404: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ApiError"];
+                        "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description Erreur serveur */
+                /** @description Unexpected server error */
                 500: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ApiError"];
+                        "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description Calendar API indisponible */
+                /** @description Calendar API or Core API is unavailable or failed */
                 502: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ApiError"];
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Calendar API, Core API or JWT_SECRET is not configured */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
             };
@@ -535,58 +580,67 @@ export interface paths {
                         "application/json": components["schemas"]["CalendarEvent"];
                     };
                 };
-                /** @description Données invalides */
+                /** @description Invalid data */
                 400: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ApiError"];
+                        "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description Session invalide */
+                /** @description Missing or invalid session */
                 401: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ApiError"];
+                        "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description Action non autorisée sur cet événement */
+                /** @description Action not allowed on this event */
                 403: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ApiError"];
+                        "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description Événement non trouvé */
+                /** @description Event not found */
                 404: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ApiError"];
+                        "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description Erreur serveur */
+                /** @description Unexpected server error */
                 500: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ApiError"];
+                        "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description Calendar API indisponible */
+                /** @description Calendar API or Core API is unavailable or failed */
                 502: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ApiError"];
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Calendar API, Core API or JWT_SECRET is not configured */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
             };
@@ -627,40 +681,49 @@ export interface paths {
                         "application/json": components["schemas"]["CalendarAssignee"][];
                     };
                 };
-                /** @description Paramètres invalides */
+                /** @description Invalid parameters: dates not in the YYYY-MM-DD format, from after to, or more than 1096 days apart */
                 400: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ApiError"];
+                        "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description Session invalide */
+                /** @description Missing or invalid session */
                 401: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ApiError"];
+                        "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description Erreur serveur */
+                /** @description Unexpected server error */
                 500: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ApiError"];
+                        "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description Calendar API indisponible */
+                /** @description Calendar API or Core API is unavailable or failed */
                 502: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ApiError"];
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Calendar API, Core API or JWT_SECRET is not configured */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
             };
@@ -702,12 +765,14 @@ export interface paths {
                         "application/json": components["schemas"]["CalendarCategory"][];
                     };
                 };
-                /** @description Erreur serveur */
+                /** @description Unexpected server error */
                 500: {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
                 };
             };
         };
@@ -748,12 +813,14 @@ export interface paths {
                         "application/json": components["schemas"]["CalendarService"][];
                     };
                 };
-                /** @description Erreur serveur */
+                /** @description Unexpected server error */
                 500: {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
                 };
             };
         };
@@ -769,58 +836,97 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @description Recurrence rule of the event */
         CalendarRecurrence: {
             /**
              * @description Fréquence de récurrence
              * @enum {string}
              */
             frequency: "none" | "daily" | "weekly" | "monthly";
-            /** @description Intervalle de récurrence (par défaut 1) */
+            /**
+             * @description Intervalle de récurrence (par défaut 1)
+             * @example 1
+             */
             interval?: number;
             /** @description Jours de la semaine (0=dimanche, 6=samedi). Utilisé pour les récurrences hebdomadaires */
             daysOfWeek?: number[];
-            /** @description Date de fin inclusive (format YYYY-MM-DD) */
+            /**
+             * @description Date de fin inclusive (format YYYY-MM-DD)
+             * @example 2030-12-31
+             */
             endsOn?: string;
         };
         CalendarAssignee: {
-            /** @description Identifiant unique de la personne */
+            /**
+             * @description Identifiant unique de la personne
+             * @example 1
+             */
             id: string | number;
-            /** @description Nom complet affichable */
+            /**
+             * @description Nom complet affichable
+             * @example Security Admin
+             */
             name: string;
             /**
              * Format: email
              * @description Adresse email
+             * @example security-admin@mairie360.fr
              */
             email?: string;
-            /** @description Fonction ou rôle métier */
+            /**
+             * @description Fonction ou rôle métier
+             * @example Admin
+             */
             role?: string;
             /**
              * Format: uri
              * @description URL de l'image de profil
+             * @example https://mairie360.fr/avatar.png
              */
             avatarUrl?: string;
         };
         CalendarEvent: {
             /** @description Identifiant stable. Optionnel en création, obligatoire en lecture. */
             id?: string | number;
-            /** @description Titre de l'événement */
+            /**
+             * @description Titre de l'événement
+             * @example Scan event
+             */
             title: string;
-            /** @description Date de début (format YYYY-MM-DD ou DD-MM-YYYY) */
+            /**
+             * @description Date de début (format YYYY-MM-DD ou DD-MM-YYYY)
+             * @example 2030-06-15
+             */
             date: string;
-            /** @description Date de fin pour les événements multi-jours (format YYYY-MM-DD ou DD-MM-YYYY) */
+            /**
+             * @description Date de fin pour les événements multi-jours (format YYYY-MM-DD ou DD-MM-YYYY)
+             * @example 2030-06-15
+             */
             endDate?: string;
             /**
              * @description Catégorie: meeting (Réunion), activity (Animation), ceremony (Cérémonie), other (Autre)
              * @enum {string}
              */
             category?: "meeting" | "activity" | "ceremony" | "other";
-            /** @description Service ou département organisateur */
+            /**
+             * @description Service ou département organisateur
+             * @example direction
+             */
             service?: string;
-            /** @description Heure de début au format HH:mm */
+            /**
+             * @description Heure de début au format HH:mm
+             * @example 09:00
+             */
             startTime?: string;
-            /** @description Heure de fin au format HH:mm */
+            /**
+             * @description Heure de fin au format HH:mm
+             * @example 10:00
+             */
             endTime?: string;
-            /** @description Lieu de l'événement */
+            /**
+             * @description Lieu de l'événement
+             * @example Town hall
+             */
             location?: string;
             /** @description Description détaillée */
             description?: string;
@@ -828,13 +934,16 @@ export interface components {
             assigneeIds?: (string | number)[];
             /** @description Objets complets des personnes assignées (optionnel, peut être reconstruit côté front) */
             assignees?: components["schemas"]["CalendarAssignee"][];
-            recurrence?: components["schemas"]["CalendarRecurrence"] & unknown;
+            recurrence?: components["schemas"]["CalendarRecurrence"];
             /**
              * @description Statut d'approbation de l'événement
              * @enum {string}
              */
             approvalStatus?: "pending" | "approved" | "rejected";
-            /** @description Identifiant de l'utilisateur ayant créé l'événement */
+            /**
+             * @description Identifiant de l'utilisateur ayant créé l'événement
+             * @example 1
+             */
             createdById?: string | number;
             /** @description Indique si l’utilisateur courant peut valider ou refuser cet événement */
             canValidate?: boolean;
@@ -907,24 +1016,45 @@ export interface components {
             category?: string;
         };
         CreateCalendarEventBody: {
-            /** @description Titre de l'événement */
+            /**
+             * @description Titre de l'événement
+             * @example Scan event
+             */
             title: string;
-            /** @description Date de début (format YYYY-MM-DD ou DD-MM-YYYY) */
+            /**
+             * @description Date de début (format YYYY-MM-DD ou DD-MM-YYYY)
+             * @example 2030-06-15
+             */
             date: string;
-            /** @description Date de fin pour les événements multi-jours (format YYYY-MM-DD ou DD-MM-YYYY) */
+            /**
+             * @description Date de fin pour les événements multi-jours (format YYYY-MM-DD ou DD-MM-YYYY)
+             * @example 2030-06-15
+             */
             endDate?: string;
             /**
              * @description Catégorie: meeting (Réunion), activity (Animation), ceremony (Cérémonie), other (Autre)
              * @enum {string}
              */
             category?: "meeting" | "activity" | "ceremony" | "other";
-            /** @description Service ou département organisateur */
+            /**
+             * @description Service ou département organisateur
+             * @example direction
+             */
             service?: string;
-            /** @description Heure de début au format HH:mm */
+            /**
+             * @description Heure de début au format HH:mm
+             * @example 09:00
+             */
             startTime?: string;
-            /** @description Heure de fin au format HH:mm */
+            /**
+             * @description Heure de fin au format HH:mm
+             * @example 10:00
+             */
             endTime?: string;
-            /** @description Lieu de l'événement */
+            /**
+             * @description Lieu de l'événement
+             * @example Town hall
+             */
             location?: string;
             /** @description Description détaillée */
             description?: string;
@@ -932,13 +1062,16 @@ export interface components {
             assigneeIds?: (string | number)[];
             /** @description Objets complets des personnes assignées (optionnel, peut être reconstruit côté front) */
             assignees?: components["schemas"]["CalendarAssignee"][];
-            recurrence?: components["schemas"]["CalendarRecurrence"] & unknown;
+            recurrence?: components["schemas"]["CalendarRecurrence"];
             /**
              * @description Statut d'approbation de l'événement
              * @enum {string}
              */
             approvalStatus?: "pending" | "approved" | "rejected";
-            /** @description Identifiant de l'utilisateur ayant créé l'événement */
+            /**
+             * @description Identifiant de l'utilisateur ayant créé l'événement
+             * @example 1
+             */
             createdById?: string | number;
             /** @description Indique si l’utilisateur courant peut valider ou refuser cet événement */
             canValidate?: boolean;
@@ -950,24 +1083,45 @@ export interface components {
             visibleToRoles?: ("user" | "responsable" | "mayor")[];
         };
         UpdateCalendarEventBody: {
-            /** @description Titre de l'événement */
+            /**
+             * @description Titre de l'événement
+             * @example Scan event
+             */
             title?: string;
-            /** @description Date de début (format YYYY-MM-DD ou DD-MM-YYYY) */
+            /**
+             * @description Date de début (format YYYY-MM-DD ou DD-MM-YYYY)
+             * @example 2030-06-15
+             */
             date?: string;
-            /** @description Date de fin pour les événements multi-jours (format YYYY-MM-DD ou DD-MM-YYYY) */
+            /**
+             * @description Date de fin pour les événements multi-jours (format YYYY-MM-DD ou DD-MM-YYYY)
+             * @example 2030-06-15
+             */
             endDate?: string;
             /**
              * @description Catégorie: meeting (Réunion), activity (Animation), ceremony (Cérémonie), other (Autre)
              * @enum {string}
              */
             category?: "meeting" | "activity" | "ceremony" | "other";
-            /** @description Service ou département organisateur */
+            /**
+             * @description Service ou département organisateur
+             * @example direction
+             */
             service?: string;
-            /** @description Heure de début au format HH:mm */
+            /**
+             * @description Heure de début au format HH:mm
+             * @example 09:00
+             */
             startTime?: string;
-            /** @description Heure de fin au format HH:mm */
+            /**
+             * @description Heure de fin au format HH:mm
+             * @example 10:00
+             */
             endTime?: string;
-            /** @description Lieu de l'événement */
+            /**
+             * @description Lieu de l'événement
+             * @example Town hall
+             */
             location?: string;
             /** @description Description détaillée */
             description?: string;
@@ -975,13 +1129,16 @@ export interface components {
             assigneeIds?: (string | number)[];
             /** @description Objets complets des personnes assignées (optionnel, peut être reconstruit côté front) */
             assignees?: components["schemas"]["CalendarAssignee"][];
-            recurrence?: components["schemas"]["CalendarRecurrence"] & unknown;
+            recurrence?: components["schemas"]["CalendarRecurrence"];
             /**
              * @description Statut d'approbation de l'événement
              * @enum {string}
              */
             approvalStatus?: "pending" | "approved" | "rejected";
-            /** @description Identifiant de l'utilisateur ayant créé l'événement */
+            /**
+             * @description Identifiant de l'utilisateur ayant créé l'événement
+             * @example 1
+             */
             createdById?: string | number;
             /** @description Indique si l’utilisateur courant peut valider ou refuser cet événement */
             canValidate?: boolean;
@@ -999,18 +1156,24 @@ export interface components {
              */
             approvalStatus: "pending" | "approved" | "rejected";
         };
-        ApiError: {
-            code: string;
-            message: string;
-            details?: unknown;
+        ErrorResponse: {
+            error: {
+                /** @enum {string} */
+                code: "BAD_REQUEST" | "UNAUTHORIZED" | "FORBIDDEN" | "NOT_FOUND" | "CONFLICT" | "PAYLOAD_TOO_LARGE" | "UNPROCESSABLE_ENTITY" | "TOO_MANY_REQUESTS" | "INTERNAL_ERROR" | "BAD_GATEWAY" | "SERVICE_UNAVAILABLE" | "GATEWAY_TIMEOUT";
+                message: string;
+                details: {
+                    path?: string;
+                    message: string;
+                }[];
+            };
         };
-        CheckApiResponse: {
-            /** @example OK */
-            status: string;
-            /** @example Connected */
-            core_api: string;
-            /** @example Connected */
-            calendar_api: string;
+        CheckApisResponse: {
+            /** @enum {string} */
+            status: "OK" | "Error";
+            /** @enum {string} */
+            core_api: "Connected" | "Unreachable";
+            /** @enum {string} */
+            calendar_api: "Connected" | "Unreachable";
         };
     };
     responses: never;

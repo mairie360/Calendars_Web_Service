@@ -177,7 +177,7 @@ for (const [status, operation, call] of [
     assert.ok(error instanceof BffRequestError);
     assert.equal(error.status, status);
     assert.equal(error.message, `Refus ${status}`);
-    assert.deepEqual(error.details, { code: 'ERROR', message: `Refus ${status}` });
+    assert.deepEqual(error.details, apiError('ERROR', `Refus ${status}`));
     assert.equal(api.formatCalendarApiError(error), `Refus ${status}`);
   });
 }

@@ -175,7 +175,7 @@ Every response carries `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff
 
 ## Synchronization and verification
 
-After changing routes or schemas, export the contract in **BFF_Calendar** using `npm run contracts:generate`, then run in this repository:
+The committed contract is the one of the BFF_Calendar `main` commit whose dev package `@mairie360/bff-calendar-openapi@0.0.0-dev.<sha>` is pinned in `package.json` (MAIR-509), or of a release `X.Y.Z` when one exists; the test stacks run the `bff-calendar` image built from that same commit (`dev-<sha7>` or `X.Y.Z`). To adopt a new commit, copy its contract (checkout of BFF_Calendar at that commit, `BFF_CONTRACT_DIR` pointing to its `contracts/`), then run in this repository:
 
 ```bash
 npm run contracts:sync

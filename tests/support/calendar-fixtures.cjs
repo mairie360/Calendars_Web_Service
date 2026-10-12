@@ -49,7 +49,11 @@ function bootstrap(overrides = {}) {
   };
 }
 
-const apiError = (code, message) => ({ code, message });
+/** Codes publiés par ErrorResponseErrorCode (enveloppe d'erreur commune des BFFs, MAIR-234). */
+const ERROR_CODES = new Set(['BAD_REQUEST', 'UNAUTHORIZED', 'FORBIDDEN', 'NOT_FOUND', 'CONFLICT', 'PAYLOAD_TOO_LARGE', 'UNPROCESSABLE_ENTITY', 'TOO_MANY_REQUESTS', 'INTERNAL_ERROR', 'BAD_GATEWAY', 'SERVICE_UNAVAILABLE', 'GATEWAY_TIMEOUT']);
+const LEGACY_CODES = { UNAVAILABLE: 'SERVICE_UNAVAILABLE', BFF_UNAVAILABLE: 'SERVICE_UNAVAILABLE', ERROR: 'INTERNAL_ERROR', BFF_ERROR: 'BAD_GATEWAY' };
+/** Erreur BFF_Calendar (schéma ErrorResponse : { error: { code, message, details } }), le code dans l'enum publié. */
+const apiError = (code, message, details = []) => ({ error: { code: ERROR_CODES.has(code) ? code : (LEGACY_CODES[code] ?? 'INTERNAL_ERROR'), message, details } });
 
 /** Session BFF User conforme à `SessionResponse`. */
 function sessionResponse(overrides = {}) {
