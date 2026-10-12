@@ -241,7 +241,7 @@ services:
 
   bff-calendar:
     container_name: bff-calendar-calendar-front
-    image: ghcr.io/mairie360/bff-calendar:dev-44cb9ad
+    image: ghcr.io/mairie360/bff-calendar:dev-9b2bbc2
     ports:
       - "4002:4002"
     networks:
