@@ -191,7 +191,7 @@ Toutes les réponses portent `X-Frame-Options: DENY`, `X-Content-Type-Options: n
 
 ## Synchronisation et vérifications
 
-Après une modification de routes ou de schémas, exporter le contrat dans **BFF_Calendar** avec `npm run contracts:generate`, puis exécuter dans ce dépôt:
+Le contrat versionné est celui du commit du `main` de BFF_Calendar dont le paquet dev `@mairie360/bff-calendar-openapi@0.0.0-dev.<sha>` est épinglé dans `package.json` (MAIR-509), ou d’une release `X.Y.Z` quand elle existe ; les stacks de test démarrent l’image `bff-calendar` construite depuis ce même commit (`dev-<sha7>` ou `X.Y.Z`). Pour adopter un nouveau commit, copier son contrat (checkout de BFF_Calendar positionné dessus, `BFF_CONTRACT_DIR` vers son `contracts/`), puis exécuter dans ce dépôt:
 
 ```bash
 npm run contracts:sync

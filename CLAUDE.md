@@ -33,7 +33,7 @@ Tests are plain CommonJS `node:test` files (`tests/*.test.cjs`, one process per 
 
 ### OpenAPI contract
 
-`contracts/openapi.json` is a committed copy of BFF_Calendar's contract and `src/contracts/bff.d.ts` is generated from it (`openapi-typescript@7.10.1`, pinned in `scripts/contracts.mjs`). Never hand-edit either file.
+`contracts/openapi.json` is a committed copy of BFF_Calendar's contract and `src/contracts/bff.d.ts` is generated from it (`openapi-typescript@7.10.1`, pinned in `scripts/contracts.mjs`). Never hand-edit either file. Since MAIR-509 the copy is the contract of the BFF_Calendar `main` commit whose dev package is pinned in `package.json` (`@mairie360/bff-calendar-openapi@0.0.0-dev.<sha40>`, informative pin: the code imports no type from it): copy it from that commit (`git -C ../../BFFs/BFF_Calendar show <sha>:contracts/openapi.json > contracts/openapi.json`, or `contracts:sync` from a checkout at that commit), and run the stacks with `bff-calendar:dev-<sha7>`. A release `X.Y.Z` of BFF_Calendar replaces both with the release version. BFF errors use the shared `ErrorResponse` envelope (`{ error: { code, message, details } }`).
 
 ```bash
 BFF_CONTRACT_DIR=../../BFFs/BFF_Calendar/contracts npm run contracts:sync   # copy the BFF contract and regenerate types
@@ -41,7 +41,7 @@ npm run contracts:generate  # regenerate types from the local snapshot
 npm run contracts:check     # fail if types are stale, or if the BFF checkout at $BFF_CONTRACT_DIR has a different contract
 ```
 
-The script's default source `../BFF_Calendar/contracts` resolves to `Fronts/BFF_Calendar`, which does not exist in the EIP checkout, so always set `BFF_CONTRACT_DIR` (without it, `check` silently skips the BFF comparison). All three commands `npm exec` `openapi-typescript`, so they need network access. The `@mairie360/bff-calendar-openapi` dependency is not imported anywhere; the code uses the committed snapshot and generated types.
+The script's default source `../BFF_Calendar/contracts` resolves to `Fronts/BFF_Calendar`, which does not exist in the EIP checkout, so always set `BFF_CONTRACT_DIR` (without it, `check` silently skips the BFF comparison), and make sure that checkout is at the pinned commit, not on a feature branch. The stacks pin dev images of BFF User, Core API, Calendar API and the database: the dev Liquibase needs `-Dallow_template_admin=true`, the database enforces argon2id hashes in `init-test.sql`, the dev APIs need `JWT_ALLOW_WEAK_SECRET` for the shared test secret and `RATE_LIMIT_ENABLED=false` (plus `RATE_LIMIT_PER_SECOND=0` on Calendar API, whose per-IP token bucket otherwise answers 429 under the k6 load), BFF_Calendar needs `JWT_SECRET` at startup and BFF User `AUTH_RATE_LIMIT_ENABLED=false` for the ZAP scan. All three commands `npm exec` `openapi-typescript`, so they need network access. The `@mairie360/bff-calendar-openapi` dependency is not imported anywhere; the code uses the committed snapshot and generated types.
 
 ## Architecture
 

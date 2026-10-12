@@ -23,7 +23,8 @@ async function readResponseBody(response: Response) {
   }
 }
 
-// Erreurs du BFF (`ApiError` : { code, message }) ou du proxy du front ({ error: { message } }).
+// Erreurs du BFF (`ErrorResponse` : { error: { code, message, details } }, enveloppe commune des BFFs) ou du proxy du
+// front ({ error: { message } }) ; l'ancien format plat { code, message } reste lu en repli.
 function getErrorMessage(status: number, body: unknown) {
   if (body && typeof body === "object") {
     const record = body as Record<string, unknown>;

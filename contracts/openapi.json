@@ -4,7 +4,19 @@
     "title": "bff_calendar",
     "version": "1.0.0"
   },
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
   "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
     "schemas": {
       "CalendarRecurrence": {
         "type": "object",
@@ -22,25 +34,30 @@
           "interval": {
             "type": "integer",
             "minimum": 1,
-            "description": "Intervalle de récurrence (par défaut 1)"
+            "description": "Intervalle de récurrence (par défaut 1)",
+            "example": 1
           },
           "daysOfWeek": {
             "type": "array",
             "items": {
               "type": "integer",
               "minimum": 0,
-              "maximum": 6
+              "maximum": 6,
+              "example": 1
             },
             "description": "Jours de la semaine (0=dimanche, 6=samedi). Utilisé pour les récurrences hebdomadaires"
           },
           "endsOn": {
             "type": "string",
-            "description": "Date de fin inclusive (format YYYY-MM-DD)"
+            "pattern": "^(?:(\\d{4})-(\\d{2})-(\\d{2})|(\\d{2})[-/](\\d{2})[-/](\\d{4}))$",
+            "description": "Date de fin inclusive (format YYYY-MM-DD)",
+            "example": "2030-12-31"
           }
         },
         "required": [
           "frequency"
-        ]
+        ],
+        "description": "Recurrence rule of the event"
       },
       "CalendarAssignee": {
         "type": "object",
@@ -54,25 +71,30 @@
                 "type": "number"
               }
             ],
-            "description": "Identifiant unique de la personne"
+            "description": "Identifiant unique de la personne",
+            "example": 1
           },
           "name": {
             "type": "string",
-            "description": "Nom complet affichable"
+            "description": "Nom complet affichable",
+            "example": "Security Admin"
           },
           "email": {
             "type": "string",
             "format": "email",
-            "description": "Adresse email"
+            "description": "Adresse email",
+            "example": "security-admin@mairie360.fr"
           },
           "role": {
             "type": "string",
-            "description": "Fonction ou rôle métier"
+            "description": "Fonction ou rôle métier",
+            "example": "Admin"
           },
           "avatarUrl": {
             "type": "string",
             "format": "uri",
-            "description": "URL de l'image de profil"
+            "description": "URL de l'image de profil",
+            "example": "https://mairie360.fr/avatar.png"
           }
         },
         "required": [
@@ -96,15 +118,21 @@
           },
           "title": {
             "type": "string",
-            "description": "Titre de l'événement"
+            "pattern": "^[^<>]*$",
+            "description": "Titre de l'événement",
+            "example": "Scan event"
           },
           "date": {
             "type": "string",
-            "description": "Date de début (format YYYY-MM-DD ou DD-MM-YYYY)"
+            "pattern": "^(?:(\\d{4})-(\\d{2})-(\\d{2})|(\\d{2})[-/](\\d{2})[-/](\\d{4}))$",
+            "description": "Date de début (format YYYY-MM-DD ou DD-MM-YYYY)",
+            "example": "2030-06-15"
           },
           "endDate": {
             "type": "string",
-            "description": "Date de fin pour les événements multi-jours (format YYYY-MM-DD ou DD-MM-YYYY)"
+            "pattern": "^(?:(\\d{4})-(\\d{2})-(\\d{2})|(\\d{2})[-/](\\d{2})[-/](\\d{4}))$",
+            "description": "Date de fin pour les événements multi-jours (format YYYY-MM-DD ou DD-MM-YYYY)",
+            "example": "2030-06-15"
           },
           "category": {
             "type": "string",
@@ -118,24 +146,31 @@
           },
           "service": {
             "type": "string",
-            "description": "Service ou département organisateur"
+            "pattern": "^[^<>]*$",
+            "description": "Service ou département organisateur",
+            "example": "direction"
           },
           "startTime": {
             "type": "string",
-            "pattern": "^\\d{2}:\\d{2}$",
-            "description": "Heure de début au format HH:mm"
+            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+            "description": "Heure de début au format HH:mm",
+            "example": "09:00"
           },
           "endTime": {
             "type": "string",
-            "pattern": "^\\d{2}:\\d{2}$",
-            "description": "Heure de fin au format HH:mm"
+            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+            "description": "Heure de fin au format HH:mm",
+            "example": "10:00"
           },
           "location": {
             "type": "string",
-            "description": "Lieu de l'événement"
+            "pattern": "^[^<>]*$",
+            "description": "Lieu de l'événement",
+            "example": "Town hall"
           },
           "description": {
             "type": "string",
+            "pattern": "^[^<>]*$",
             "description": "Description détaillée"
           },
           "assigneeIds": {
@@ -148,7 +183,8 @@
                 {
                   "type": "number"
                 }
-              ]
+              ],
+              "example": 1
             },
             "description": "Liste des identifiants des personnes assignées"
           },
@@ -160,14 +196,7 @@
             "description": "Objets complets des personnes assignées (optionnel, peut être reconstruit côté front)"
           },
           "recurrence": {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/CalendarRecurrence"
-              },
-              {
-                "description": "Règle de récurrence de l'événement"
-              }
-            ]
+            "$ref": "#/components/schemas/CalendarRecurrence"
           },
           "approvalStatus": {
             "type": "string",
@@ -187,7 +216,8 @@
                 "type": "number"
               }
             ],
-            "description": "Identifiant de l'utilisateur ayant créé l'événement"
+            "description": "Identifiant de l'utilisateur ayant créé l'événement",
+            "example": 1
           },
           "canValidate": {
             "type": "boolean",
@@ -410,15 +440,21 @@
         "properties": {
           "title": {
             "type": "string",
-            "description": "Titre de l'événement"
+            "pattern": "^[^<>]*$",
+            "description": "Titre de l'événement",
+            "example": "Scan event"
           },
           "date": {
             "type": "string",
-            "description": "Date de début (format YYYY-MM-DD ou DD-MM-YYYY)"
+            "pattern": "^(?:(\\d{4})-(\\d{2})-(\\d{2})|(\\d{2})[-/](\\d{2})[-/](\\d{4}))$",
+            "description": "Date de début (format YYYY-MM-DD ou DD-MM-YYYY)",
+            "example": "2030-06-15"
           },
           "endDate": {
             "type": "string",
-            "description": "Date de fin pour les événements multi-jours (format YYYY-MM-DD ou DD-MM-YYYY)"
+            "pattern": "^(?:(\\d{4})-(\\d{2})-(\\d{2})|(\\d{2})[-/](\\d{2})[-/](\\d{4}))$",
+            "description": "Date de fin pour les événements multi-jours (format YYYY-MM-DD ou DD-MM-YYYY)",
+            "example": "2030-06-15"
           },
           "category": {
             "type": "string",
@@ -432,24 +468,31 @@
           },
           "service": {
             "type": "string",
-            "description": "Service ou département organisateur"
+            "pattern": "^[^<>]*$",
+            "description": "Service ou département organisateur",
+            "example": "direction"
           },
           "startTime": {
             "type": "string",
-            "pattern": "^\\d{2}:\\d{2}$",
-            "description": "Heure de début au format HH:mm"
+            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+            "description": "Heure de début au format HH:mm",
+            "example": "09:00"
           },
           "endTime": {
             "type": "string",
-            "pattern": "^\\d{2}:\\d{2}$",
-            "description": "Heure de fin au format HH:mm"
+            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+            "description": "Heure de fin au format HH:mm",
+            "example": "10:00"
           },
           "location": {
             "type": "string",
-            "description": "Lieu de l'événement"
+            "pattern": "^[^<>]*$",
+            "description": "Lieu de l'événement",
+            "example": "Town hall"
           },
           "description": {
             "type": "string",
+            "pattern": "^[^<>]*$",
             "description": "Description détaillée"
           },
           "assigneeIds": {
@@ -462,7 +505,8 @@
                 {
                   "type": "number"
                 }
-              ]
+              ],
+              "example": 1
             },
             "description": "Liste des identifiants des personnes assignées"
           },
@@ -474,14 +518,7 @@
             "description": "Objets complets des personnes assignées (optionnel, peut être reconstruit côté front)"
           },
           "recurrence": {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/CalendarRecurrence"
-              },
-              {
-                "description": "Règle de récurrence de l'événement"
-              }
-            ]
+            "$ref": "#/components/schemas/CalendarRecurrence"
           },
           "approvalStatus": {
             "type": "string",
@@ -501,7 +538,8 @@
                 "type": "number"
               }
             ],
-            "description": "Identifiant de l'utilisateur ayant créé l'événement"
+            "description": "Identifiant de l'utilisateur ayant créé l'événement",
+            "example": 1
           },
           "canValidate": {
             "type": "boolean",
@@ -538,15 +576,21 @@
         "properties": {
           "title": {
             "type": "string",
-            "description": "Titre de l'événement"
+            "pattern": "^[^<>]*$",
+            "description": "Titre de l'événement",
+            "example": "Scan event"
           },
           "date": {
             "type": "string",
-            "description": "Date de début (format YYYY-MM-DD ou DD-MM-YYYY)"
+            "pattern": "^(?:(\\d{4})-(\\d{2})-(\\d{2})|(\\d{2})[-/](\\d{2})[-/](\\d{4}))$",
+            "description": "Date de début (format YYYY-MM-DD ou DD-MM-YYYY)",
+            "example": "2030-06-15"
           },
           "endDate": {
             "type": "string",
-            "description": "Date de fin pour les événements multi-jours (format YYYY-MM-DD ou DD-MM-YYYY)"
+            "pattern": "^(?:(\\d{4})-(\\d{2})-(\\d{2})|(\\d{2})[-/](\\d{2})[-/](\\d{4}))$",
+            "description": "Date de fin pour les événements multi-jours (format YYYY-MM-DD ou DD-MM-YYYY)",
+            "example": "2030-06-15"
           },
           "category": {
             "type": "string",
@@ -560,24 +604,31 @@
           },
           "service": {
             "type": "string",
-            "description": "Service ou département organisateur"
+            "pattern": "^[^<>]*$",
+            "description": "Service ou département organisateur",
+            "example": "direction"
           },
           "startTime": {
             "type": "string",
-            "pattern": "^\\d{2}:\\d{2}$",
-            "description": "Heure de début au format HH:mm"
+            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+            "description": "Heure de début au format HH:mm",
+            "example": "09:00"
           },
           "endTime": {
             "type": "string",
-            "pattern": "^\\d{2}:\\d{2}$",
-            "description": "Heure de fin au format HH:mm"
+            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+            "description": "Heure de fin au format HH:mm",
+            "example": "10:00"
           },
           "location": {
             "type": "string",
-            "description": "Lieu de l'événement"
+            "pattern": "^[^<>]*$",
+            "description": "Lieu de l'événement",
+            "example": "Town hall"
           },
           "description": {
             "type": "string",
+            "pattern": "^[^<>]*$",
             "description": "Description détaillée"
           },
           "assigneeIds": {
@@ -590,7 +641,8 @@
                 {
                   "type": "number"
                 }
-              ]
+              ],
+              "example": 1
             },
             "description": "Liste des identifiants des personnes assignées"
           },
@@ -602,14 +654,7 @@
             "description": "Objets complets des personnes assignées (optionnel, peut être reconstruit côté front)"
           },
           "recurrence": {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/CalendarRecurrence"
-              },
-              {
-                "description": "Règle de récurrence de l'événement"
-              }
-            ]
+            "$ref": "#/components/schemas/CalendarRecurrence"
           },
           "approvalStatus": {
             "type": "string",
@@ -629,7 +674,8 @@
                 "type": "number"
               }
             ],
-            "description": "Identifiant de l'utilisateur ayant créé l'événement"
+            "description": "Identifiant de l'utilisateur ayant créé l'événement",
+            "example": 1
           },
           "canValidate": {
             "type": "boolean",
@@ -674,36 +720,84 @@
           "approvalStatus"
         ]
       },
-      "ApiError": {
+      "ErrorResponse": {
         "type": "object",
         "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          },
-          "details": {}
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "BAD_REQUEST",
+                  "UNAUTHORIZED",
+                  "FORBIDDEN",
+                  "NOT_FOUND",
+                  "CONFLICT",
+                  "PAYLOAD_TOO_LARGE",
+                  "UNPROCESSABLE_ENTITY",
+                  "TOO_MANY_REQUESTS",
+                  "INTERNAL_ERROR",
+                  "BAD_GATEWAY",
+                  "SERVICE_UNAVAILABLE",
+                  "GATEWAY_TIMEOUT"
+                ]
+              },
+              "message": {
+                "type": "string"
+              },
+              "details": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "path": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "message"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "code",
+              "message",
+              "details"
+            ]
+          }
         },
         "required": [
-          "code",
-          "message"
+          "error"
         ]
       },
-      "CheckApiResponse": {
+      "CheckApisResponse": {
         "type": "object",
         "properties": {
           "status": {
             "type": "string",
-            "example": "OK"
+            "enum": [
+              "OK",
+              "Error"
+            ]
           },
           "core_api": {
             "type": "string",
-            "example": "Connected"
+            "enum": [
+              "Connected",
+              "Unreachable"
+            ]
           },
           "calendar_api": {
             "type": "string",
-            "example": "Connected"
+            "enum": [
+              "Connected",
+              "Unreachable"
+            ]
           }
         },
         "required": [
@@ -718,6 +812,7 @@
   "paths": {
     "/health": {
       "get": {
+        "security": [],
         "tags": [
           "Connectivity"
         ],
@@ -731,27 +826,28 @@
     },
     "/check_apis": {
       "get": {
+        "security": [],
         "tags": [
           "Connectivity"
         ],
-        "summary": "Vérifie la connexion avec l'API Core et Calendar (Rust)",
+        "summary": "Checks that Core API and Calendar API are reachable",
         "responses": {
           "200": {
-            "description": "Connexion réussie",
+            "description": "Every upstream API is reachable",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CheckApiResponse"
+                  "$ref": "#/components/schemas/CheckApisResponse"
                 }
               }
             }
           },
           "502": {
-            "description": "API Core ou Calendar injoignable",
+            "description": "Core API or Calendar API is unreachable",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CheckApiResponse"
+                  "$ref": "#/components/schemas/CheckApisResponse"
                 }
               }
             }
@@ -773,7 +869,8 @@
             "required": false,
             "schema": {
               "type": "string",
-              "format": "date"
+              "format": "date",
+              "example": "2030-06-01"
             },
             "description": "Date de début au format YYYY-MM-DD (défaut : premier jour du mois courant)"
           },
@@ -783,7 +880,8 @@
             "required": false,
             "schema": {
               "type": "string",
-              "format": "date"
+              "format": "date",
+              "example": "2030-06-30"
             },
             "description": "Date de fin au format YYYY-MM-DD (défaut : dernier jour du mois courant)"
           }
@@ -800,41 +898,51 @@
             }
           },
           "400": {
-            "description": "Paramètres invalides",
+            "description": "Invalid parameters: dates not in the YYYY-MM-DD format, from after to, or more than 1096 days apart",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiError"
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
           },
           "401": {
-            "description": "Session invalide",
+            "description": "Missing or invalid session",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiError"
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
           },
           "500": {
-            "description": "Erreur serveur",
+            "description": "Unexpected server error",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiError"
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
           },
           "502": {
-            "description": "Calendar API indisponible",
+            "description": "Calendar API or Core API is unavailable or failed",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiError"
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Calendar API, Core API or JWT_SECRET is not configured",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -856,7 +964,8 @@
             "required": true,
             "schema": {
               "type": "string",
-              "format": "date"
+              "format": "date",
+              "example": "2030-06-01"
             },
             "description": "Date de début au format YYYY-MM-DD"
           },
@@ -866,7 +975,8 @@
             "required": true,
             "schema": {
               "type": "string",
-              "format": "date"
+              "format": "date",
+              "example": "2030-06-30"
             },
             "description": "Date de fin au format YYYY-MM-DD"
           }
@@ -886,41 +996,51 @@
             }
           },
           "400": {
-            "description": "Paramètres invalides",
+            "description": "Invalid parameters: dates not in the YYYY-MM-DD format, from after to, or more than 1096 days apart",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiError"
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
           },
           "401": {
-            "description": "Session invalide",
+            "description": "Missing or invalid session",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiError"
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
           },
           "500": {
-            "description": "Erreur serveur",
+            "description": "Unexpected server error",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiError"
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
           },
           "502": {
-            "description": "Calendar API indisponible",
+            "description": "Calendar API or Core API is unavailable or failed",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiError"
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Calendar API, Core API or JWT_SECRET is not configured",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -954,51 +1074,61 @@
             }
           },
           "400": {
-            "description": "Données invalides",
+            "description": "Invalid data",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiError"
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
           },
           "401": {
-            "description": "Session invalide",
+            "description": "Missing or invalid session",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiError"
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
           },
           "403": {
-            "description": "Personne assignée hors du périmètre autorisé",
+            "description": "Assignee outside the authorized scope, or refused by Calendar API",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiError"
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
           },
           "500": {
-            "description": "Erreur serveur",
+            "description": "Unexpected server error",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiError"
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
           },
           "502": {
-            "description": "Calendar API indisponible",
+            "description": "Calendar API or Core API is unavailable or failed",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiError"
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Calendar API, Core API or JWT_SECRET is not configured",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -1020,7 +1150,8 @@
             "required": true,
             "schema": {
               "type": "string",
-              "pattern": "^[0-9]+$"
+              "pattern": "^[0-9]+$",
+              "example": "101"
             },
             "description": "Identifiant unique de l'événement"
           }
@@ -1046,61 +1177,71 @@
             }
           },
           "400": {
-            "description": "Données invalides",
+            "description": "Invalid data",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiError"
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
           },
           "401": {
-            "description": "Session invalide",
+            "description": "Missing or invalid session",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiError"
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
           },
           "403": {
-            "description": "Action non autorisée sur cet événement",
+            "description": "Action not allowed on this event",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiError"
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
           },
           "404": {
-            "description": "Événement non trouvé",
+            "description": "Event not found",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiError"
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
           },
           "500": {
-            "description": "Erreur serveur",
+            "description": "Unexpected server error",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiError"
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
           },
           "502": {
-            "description": "Calendar API indisponible",
+            "description": "Calendar API or Core API is unavailable or failed",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiError"
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Calendar API, Core API or JWT_SECRET is not configured",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -1120,7 +1261,8 @@
             "required": true,
             "schema": {
               "type": "string",
-              "pattern": "^[0-9]+$"
+              "pattern": "^[0-9]+$",
+              "example": "102"
             },
             "description": "Identifiant unique de l'événement"
           }
@@ -1130,61 +1272,71 @@
             "description": "Événement supprimé avec succès"
           },
           "400": {
-            "description": "Identifiant invalide",
+            "description": "Invalid id",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiError"
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
           },
           "401": {
-            "description": "Session invalide",
+            "description": "Missing or invalid session",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiError"
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
           },
           "403": {
-            "description": "Seul le créateur peut supprimer l’événement",
+            "description": "Only the creator can delete the event",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiError"
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
           },
           "404": {
-            "description": "Événement non trouvé",
+            "description": "Event not found",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiError"
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
           },
           "500": {
-            "description": "Erreur serveur",
+            "description": "Unexpected server error",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiError"
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
           },
           "502": {
-            "description": "Calendar API indisponible",
+            "description": "Calendar API or Core API is unavailable or failed",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiError"
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Calendar API, Core API or JWT_SECRET is not configured",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -1206,7 +1358,8 @@
             "required": true,
             "schema": {
               "type": "string",
-              "pattern": "^[0-9]+$"
+              "pattern": "^[0-9]+$",
+              "example": "101"
             },
             "description": "Identifiant unique de l'événement"
           }
@@ -1232,61 +1385,71 @@
             }
           },
           "400": {
-            "description": "Données invalides",
+            "description": "Invalid data",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiError"
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
           },
           "401": {
-            "description": "Session invalide",
+            "description": "Missing or invalid session",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiError"
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
           },
           "403": {
-            "description": "Action non autorisée sur cet événement",
+            "description": "Action not allowed on this event",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiError"
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
           },
           "404": {
-            "description": "Événement non trouvé",
+            "description": "Event not found",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiError"
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
           },
           "500": {
-            "description": "Erreur serveur",
+            "description": "Unexpected server error",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiError"
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
           },
           "502": {
-            "description": "Calendar API indisponible",
+            "description": "Calendar API or Core API is unavailable or failed",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiError"
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Calendar API, Core API or JWT_SECRET is not configured",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -1308,7 +1471,8 @@
             "required": false,
             "schema": {
               "type": "string",
-              "format": "date"
+              "format": "date",
+              "example": "2030-06-01"
             },
             "description": "Date de début au format YYYY-MM-DD (défaut : premier jour du mois courant)"
           },
@@ -1318,7 +1482,8 @@
             "required": false,
             "schema": {
               "type": "string",
-              "format": "date"
+              "format": "date",
+              "example": "2030-06-30"
             },
             "description": "Date de fin au format YYYY-MM-DD (défaut : dernier jour du mois courant)"
           }
@@ -1338,41 +1503,51 @@
             }
           },
           "400": {
-            "description": "Paramètres invalides",
+            "description": "Invalid parameters: dates not in the YYYY-MM-DD format, from after to, or more than 1096 days apart",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiError"
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
           },
           "401": {
-            "description": "Session invalide",
+            "description": "Missing or invalid session",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiError"
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
           },
           "500": {
-            "description": "Erreur serveur",
+            "description": "Unexpected server error",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiError"
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
           },
           "502": {
-            "description": "Calendar API indisponible",
+            "description": "Calendar API or Core API is unavailable or failed",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiError"
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Calendar API, Core API or JWT_SECRET is not configured",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -1382,6 +1557,7 @@
     },
     "/calendar/categories": {
       "get": {
+        "security": [],
         "tags": [
           "Calendar"
         ],
@@ -1402,13 +1578,21 @@
             }
           },
           "500": {
-            "description": "Erreur serveur"
+            "description": "Unexpected server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
         }
       }
     },
     "/calendar/services": {
       "get": {
+        "security": [],
         "tags": [
           "Calendar"
         ],
@@ -1429,7 +1613,14 @@
             }
           },
           "500": {
-            "description": "Erreur serveur"
+            "description": "Unexpected server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
         }
       }
