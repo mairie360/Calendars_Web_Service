@@ -96,6 +96,7 @@ const OPERATION_FIXTURES = {
   'GET /health': { path: '/health', reply: { status: 200 } },
   'GET /check_apis': { path: '/check_apis', reply: { status: 200, body: { status: 'OK', core_api: 'Connected', calendar_api: 'Connected' } } },
   'GET /calendar/bootstrap': { path: '/calendar/bootstrap?from=2026-09-01&to=2026-09-30', reply: { body: bootstrap() } },
+  'GET /calendar/period': { path: '/calendar/period?from=2026-09-01&to=2026-09-30', reply: { body: (({ events, users }) => ({ events: events.map(({ assignees, ...event }) => event), users }))(bootstrap()) } },
   'GET /calendar/events': { path: '/calendar/events?from=2026-09-01&to=2026-09-30', reply: { body: [calendarEvent(1)] } },
   'POST /calendar/events': { path: '/calendar/events', body: { title: 'Conseil', date: '2026-09-16' }, reply: { status: 201, body: calendarEvent(2) } },
   'PATCH /calendar/events/{id}': { path: '/calendar/events/2', body: { title: 'Conseil' }, reply: { body: calendarEvent(2) } },

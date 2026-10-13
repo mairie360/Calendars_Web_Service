@@ -37,7 +37,7 @@ x-service: &service-template
 
 services:
   postgres:
-    image: ghcr.io/mairie360/database:dev-99f6127
+    image: ghcr.io/mairie360/database:dev-90c22bb
     restart: always
     container_name: mairie360-db-calendar-front #change front name
     environment:
@@ -57,7 +57,7 @@ services:
       retries: 5
 
   liquibase:
-    image: ghcr.io/mairie360/liquibase-migrations:dev-99f6127
+    image: ghcr.io/mairie360/liquibase-migrations:dev-90c22bb
     container_name: mairie360-liquibase-calendar-front #change front name
     depends_on:
       postgres:
@@ -110,7 +110,7 @@ services:
 
   core:
     container_name: core-calendar-front-developpement
-    image: ghcr.io/mairie360/core-api:dev-2529974
+    image: ghcr.io/mairie360/core-api:dev-95531e2
     ports:
       - "3000:3000"
     networks:
@@ -129,6 +129,11 @@ services:
       DB_PASSWORD: password
       DB_PORT: 5432
       PUBLIC_URL: http://core.development.mairie360.fr
+      # Core refuses to start without its Resend configuration (MAIR-522). No page of this front sends an
+      # e-mail through these stacks, so the key is fake and the URL never called.
+      RESEND_API_KEY: "re_fake_local"
+      RESEND_BASE_URL: "http://fake-resend.invalid"
+      EMAIL_DOMAIN: "mairie360.local"
       # API >= api_lib 3.0 refuses the weak shared test secret unless this flag is set (MAIR-428),
       # and rate-limits each account (MAIR-425): the scan / load test hammer it as one user.
       JWT_ALLOW_WEAK_SECRET: "true"
@@ -157,7 +162,7 @@ services:
 
   calendar-api:
     container_name: calendar-api-front-calendar-developpement
-    image: ghcr.io/mairie360/calendar-api:dev-a7252e8
+    image: ghcr.io/mairie360/calendar-api:dev-7486387
     ports:
       - "3002:3002"
     networks:
@@ -207,7 +212,7 @@ services:
 
   bff-user:
     container_name: bff-user-calendar-front
-    image: ghcr.io/mairie360/bff-user:dev-0d80ef4
+    image: ghcr.io/mairie360/bff-user:dev-46a698b
     ports:
       - "4000:4000"
     networks:
@@ -241,7 +246,7 @@ services:
 
   bff-calendar:
     container_name: bff-calendar-calendar-front
-    image: ghcr.io/mairie360/bff-calendar:dev-9b2bbc2
+    image: ghcr.io/mairie360/bff-calendar:dev-fcc4f16
     ports:
       - "4002:4002"
     networks:

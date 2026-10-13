@@ -72,6 +72,7 @@ test('loadCalendarData keeps optional bootstrap data as the BFF returns it', asy
         calendarEvent(8, { recurrence: { frequency: 'daily', interval: 1, daysOfWeek: [1, 5] }, approvalStatus: 'approved', endDate: '2026-09-18' }),
         calendarEvent(9, { recurrence: { frequency: 'none' }, approvalStatus: 'rejected', canEdit: false, canDelete: false }),
       ],
+      users: {},
       assignees: [],
       categories: [],
       services: [],
@@ -85,6 +86,24 @@ test('loadCalendarData keeps optional bootstrap data as the BFF returns it', asy
   assert.deepEqual([data.events[1].approvalStatus, data.events[1].canEdit, data.events[1].canDelete], ['rejected', false, false]);
   assert.equal(data.currentUser, undefined);
   assert.equal(data.assigneeScope, undefined);
+});
+
+test('MAIR-553: an event member outside the assignable people is resolved from the users index of the bootstrap', async () => {
+  const guest = { id: 'user-12', name: 'Paul Invité', email: 'paul@mairie.test', role: 'User' };
+  const { assignees, ...event } = calendarEvent(5, { assigneeIds: [guest.id, alice.id] });
+  front.calendarBff.on('get', '/calendar/bootstrap', {
+    body: bootstrap({
+      events: [event],
+      users: Object.fromEntries([admin, alice, marie, guest].map((person) => [person.id, person])),
+      assignees: [admin, alice],
+    }),
+  });
+
+  const data = await api.loadCalendarData({ from: '2026-09-01', to: '2026-09-30' });
+
+  assert.deepEqual(data.events[0].assignees.map((person) => person.id).sort(), [alice.id, guest.id].sort());
+  // The assignable people stay the referential of the forms: the users index does not widen it.
+  assert.deepEqual(data.people, [admin, alice]);
 });
 
 test('a client Authorization header never replaces the HttpOnly session cookie', async () => {
