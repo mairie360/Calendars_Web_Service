@@ -17,7 +17,7 @@ const renewed=()=>h.userBff.on('post','/auth/refresh',{body:{message:'JWT refres
 const business=()=>h.calendarBff.on('get','/calendar/bootstrap',request=>request.headers.authorization===`Bearer ${access}`?{body:bootstrap()}:{status:401,body:apiError('UNAUTHORIZED','Session expirée')});
 
 test('expired access renews through Login and retries the actual published range',async()=>{
- renewed();business();await read();assert.deepEqual(h.browserRequests.map(x=>x.path),['/api/bff/calendar/bootstrap'+range]);
+ renewed();business();await read();assert.deepEqual(h.browserRequests.map(x=>x.path),['/calendar/bootstrap'+range]);
  assert.equal(h.ownerCalls.length,1);assert.equal(h.ownerCalls[0].url.pathname,'/api/auth/refresh');
  assert.deepEqual(h.userBff.calls('/auth/refresh')[0].body,{refresh_token:token});assert.equal(h.userBff.calls('/auth/refresh')[0].headers.authorization,undefined);
  assert.deepEqual(h.calendarBff.calls('/calendar/bootstrap').map(x=>x.headers.authorization),[`Bearer ${jwtFor(1,1)}`,`Bearer ${access}`]);
@@ -56,7 +56,7 @@ test('a published Calendar mutation retries the original body exactly once',asyn
  assert.deepEqual(h.calendarBff.requests.map(x=>x.body),[body,body]);assert.equal(h.userBff.calls('/auth/refresh').length,1);
 });
 test('foreign API reads and logout mutations cannot contact a service or alter cookies',async()=>{
- for(const [path,init]of[['/api/bff/health',{headers:{Origin:'https://foreign.mairie.test'}}],['/api/auth/logout',{method:'POST',headers:{Origin:'https://foreign.mairie.test','Content-Type':'application/json'},body:'{}'}]]){
+ for(const [path,init]of[['/health',{headers:{Origin:'https://foreign.mairie.test'}}],['/api/auth/logout',{method:'POST',headers:{Origin:'https://foreign.mairie.test','Content-Type':'application/json'},body:'{}'}]]){
   const r=await fetch(path,init);assert.equal(r.status,403);assert.equal(r.headers.get('set-cookie'),null);
  }
  assert.equal(h.ownerCalls.length,0);assert.equal(h.calendarBff.requests.length,0);assert.equal(h.userBff.requests.length,0);assert.equal(h.cookies.get('refreshToken'),token);
