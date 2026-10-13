@@ -1,6 +1,6 @@
 import { BffRequestError } from "../../lib/bff-client";
 import type { components } from '@/contracts/bff';
-import { requestBff } from "@/lib/bff-client";
+import { bffCalendar } from "@/lib/bff-client";
 import { getEventColor, resolveAssignees } from "./constants";
 import { formatDateForQuery } from "./date-utils";
 import type {
@@ -36,9 +36,6 @@ type CalendarLoadParams = {
   to: string;
   signal?: AbortSignal;
 };
-
-const EVENT_ENDPOINT = "/calendar/events";
-const BOOTSTRAP_ENDPOINT = "/calendar/bootstrap";
 
 function toCalendarEventItem(event: BffCalendarEvent, people: CalendarAssignee[]): CalendarEventItem {
   const assigneeIds = event.assigneeIds ?? [];
@@ -76,13 +73,11 @@ function eventBody(event: CreateCalendarEventValues | CalendarEventItem): BffCal
   };
 }
 
-function eventPath(eventId: CalendarAssigneeId, suffix = "") {
-  return `${EVENT_ENDPOINT}/${encodeURIComponent(String(eventId))}${suffix}`;
-}
-
 export async function loadCalendarData(params: CalendarLoadParams): Promise<CalendarData> {
-  const query = new URLSearchParams({ from: params.from, to: params.to });
-  const bootstrap = await requestBff<BffCalendarBootstrap>(`${BOOTSTRAP_ENDPOINT}?${query}`, { signal: params.signal });
+  const { data: bootstrap } = await bffCalendar.getCalendarBootstrap(
+    { from: params.from, to: params.to },
+    { signal: params.signal },
+  );
 
   return {
     events: bootstrap.events.map((event) => toCalendarEventItem(event, bootstrap.assignees)),
@@ -98,10 +93,7 @@ export async function createCalendarEvent(
   values: CreateCalendarEventValues,
   people: CalendarAssignee[],
 ) {
-  const event = await requestBff<BffCalendarEvent>(EVENT_ENDPOINT, {
-    method: "POST",
-    body: JSON.stringify(eventBody(values)),
-  });
+  const { data: event } = await bffCalendar.postCalendarEvents(eventBody(values));
   return toCalendarEventItem(event, people);
 }
 
@@ -109,15 +101,12 @@ export async function updateCalendarEvent(
   event: CalendarEventItem,
   people: CalendarAssignee[],
 ) {
-  const savedEvent = await requestBff<BffCalendarEvent>(eventPath(event.id), {
-    method: "PATCH",
-    body: JSON.stringify(eventBody(event)),
-  });
+  const { data: savedEvent } = await bffCalendar.patchCalendarEventsId(encodeURIComponent(String(event.id)), eventBody(event));
   return toCalendarEventItem(savedEvent, people);
 }
 
 export async function deleteCalendarEvent(eventId: CalendarAssigneeId) {
-  await requestBff<void>(eventPath(eventId), { method: "DELETE" });
+  await bffCalendar.deleteCalendarEventsId(encodeURIComponent(String(eventId)));
 }
 
 export async function updateCalendarEventApproval(
@@ -125,10 +114,7 @@ export async function updateCalendarEventApproval(
   approvalStatus: Schemas['UpdateCalendarEventApprovalBody']['approvalStatus'],
   people: CalendarAssignee[],
 ) {
-  const savedEvent = await requestBff<BffCalendarEvent>(eventPath(eventId, "/approval"), {
-    method: "PATCH",
-    body: JSON.stringify({ approvalStatus }),
-  });
+  const { data: savedEvent } = await bffCalendar.patchCalendarEventsIdApproval(encodeURIComponent(String(eventId)), { approvalStatus });
   return toCalendarEventItem(savedEvent, people);
 }
 

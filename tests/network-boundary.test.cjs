@@ -43,10 +43,15 @@ test('no absolute BFF destination is hard-coded in frontend source', () => {
   assert.deepEqual(absolute.sort(), []);
 });
 
-test('requestBff is only used by the calendar client, whose endpoints are all declared in the contract', async () => {
+test('the calendar client only calls generated operations of the published contract, with no path literal', async () => {
   const callers = sourceFiles().filter(file => policy.requestOwners(policy.parse('src/' + relative(file)))).map(relative).sort();
-  assert.deepEqual(callers, ['app/calendar/api.ts', 'lib/bff-client.ts']);
-  assert.equal(policy.calls(policy.parse('src/app/calendar/api.ts'), 'requestBff').length, 5);
+  assert.deepEqual(callers, ['lib/bff-client.ts']);
+  const source = fs.readFileSync(path.join(SRC, 'app/calendar/api.ts'), 'utf8');
+  assert.doesNotMatch(source, /requestBff|["'`]\/(?:calendar|api|bff)\b/);
+  const operations = [...source.matchAll(/bffCalendar\.(\w+)\(/g)].map(([, name]) => name);
+  assert.equal(operations.length, 5);
+  const generated = fs.readFileSync(path.join(path.dirname(require.resolve('@mairie360/bff-calendar-openapi/package.json')), 'endpoints/bffCalendar.ts'), 'utf8');
+  operations.forEach((name) => assert.match(generated, new RegExp(`const ${name} = \\(`), `${name} is not a generated operation`));
   // Exercise the actual five client operations through the existing contract-gated HTTP harness.
   const api = loadTs('app/calendar/api');
   front.calendarBff.on('get', '/calendar/bootstrap', { body: bootstrap() });
@@ -68,8 +73,8 @@ test('the session hook and logout only call the dedicated /api routes, which exi
   calls.forEach((route) => assert.ok(APP_ROUTES[route], `${route} n'a pas de route dédiée`));
 
   const routeFiles = sourceFiles(path.join(SRC, 'app', 'api')).map((file) => `/${path.dirname(relative(file))}`.replace('/app', '')).sort();
-  assert.deepEqual(routeFiles, [...Object.keys(APP_ROUTES), '/api/bff/[...path]'].sort());
-  const entry=loadTs('app/api/bff/[...path]/route');
+  assert.deepEqual(routeFiles, Object.keys(APP_ROUTES).sort());
+  const entry=loadTs('app/[...path]/route');
   const proxy=loadTs('lib/bff-proxy').proxyBffRequest;
   for(const method of ['GET','POST','PUT','PATCH','DELETE','HEAD'])assert.equal(entry[method],proxy);
 });

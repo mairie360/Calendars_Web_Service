@@ -166,10 +166,9 @@ class FrontHarness {
       const handler = loadTs(routeFile)[request.method];
       return handler ? handler(request) : new Response(null, { status: 405 });
     }
-    const apiPrefix = pathname.startsWith('/api/bff/');
-    const handler = loadTs(apiPrefix ? 'app/api/bff/[...path]/route' : 'app/[...path]/route')[request.method];
+    const handler = loadTs('app/[...path]/route')[request.method];
     if (!handler) return new Response(null, { status: 405 });
-    const segments = (apiPrefix ? pathname.slice('/api/bff'.length) : pathname).split('/').filter(Boolean).map(decodeURIComponent);
+    const segments = pathname.split('/').filter(Boolean).map(decodeURIComponent);
     return handler(request, { params: Promise.resolve({ path: segments }) });
   }
 }

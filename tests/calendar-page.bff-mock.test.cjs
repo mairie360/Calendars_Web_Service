@@ -43,7 +43,7 @@ test('the first render loads the visible month through GET /calendar/bootstrap o
   const state = await renderLoadedPage();
 
   assert.deepEqual(front.calendarBff.sequence(), [`GET /calendar/bootstrap?${rangeQuery('month', initialDate)}`]);
-  assert.deepEqual(front.browserRequests, [{ method: 'GET', path: `/api/bff/calendar/bootstrap?${rangeQuery('month', initialDate)}` }]);
+  assert.deepEqual(front.browserRequests, [{ method: 'GET', path: `/calendar/bootstrap?${rangeQuery('month', initialDate)}` }]);
   assert.equal(state.error, null);
   assert.deepEqual(state.events.map((event) => event.id), [5, 6]);
   assert.equal(state.people.length, 3);

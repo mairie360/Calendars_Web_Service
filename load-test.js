@@ -7,10 +7,10 @@ import encoding from 'k6/encoding';
 // k6 load test of the Calendars front (Calendars_Web_Service).
 // Two scenarios run side by side against the routes the Next.js server really serves:
 //   * `reads`: the page (Next.js render behind the authentication middleware), the session
-//     adapter /api/user/me (-> BFF User), /health, then the /api/bff/calendar/* reads the page
+//     adapter /api/user/me (-> BFF User), /health, then the /calendar/* reads the page
 //     fetches, relayed by the same-origin proxy to BFF Calendar;
 //   * `writes` (MAIR-516): the event creation and deletion a user performs from the page,
-//     POST then DELETE /api/bff/calendar/events (-> BFF Calendar -> Calendar API).
+//     POST then DELETE /calendar/events (-> BFF Calendar -> Calendar API).
 // Authentication goes through the accessToken cookie, like in the browser: the proxy turns it
 // into Authorization: Bearer for the BFF.
 // ---------------------------------------------------------------------------
@@ -94,18 +94,18 @@ export function reads(data) {
   });
 
   group('calendar reads', () => {
-    // Browser paths of the page (src/lib/bff-client.ts prefixes /api/bff), not the root catch-all.
-    const calendarBootstrap = http.get(`${BASE_URL}/api/bff/calendar/bootstrap?from=${from}&to=${to}`, dataParams);
-    check(calendarBootstrap, { '/api/bff/calendar/bootstrap 200': (r) => r.status === 200 });
+    // Browser paths of the page (the generated client wrapped by src/lib/bff-client.ts requests the contract path as is), not the root catch-all.
+    const calendarBootstrap = http.get(`${BASE_URL}/calendar/bootstrap?from=${from}&to=${to}`, dataParams);
+    check(calendarBootstrap, { '/calendar/bootstrap 200': (r) => r.status === 200 });
 
-    const calendarEvents = http.get(`${BASE_URL}/api/bff/calendar/events?from=${from}&to=${to}`, dataParams);
-    check(calendarEvents, { '/api/bff/calendar/events 200': (r) => r.status === 200 });
+    const calendarEvents = http.get(`${BASE_URL}/calendar/events?from=${from}&to=${to}`, dataParams);
+    check(calendarEvents, { '/calendar/events 200': (r) => r.status === 200 });
 
-    const calendarCategories = http.get(`${BASE_URL}/api/bff/calendar/categories`, dataParams);
-    check(calendarCategories, { '/api/bff/calendar/categories 200': (r) => r.status === 200 });
+    const calendarCategories = http.get(`${BASE_URL}/calendar/categories`, dataParams);
+    check(calendarCategories, { '/calendar/categories 200': (r) => r.status === 200 });
 
-    const calendarServices = http.get(`${BASE_URL}/api/bff/calendar/services`, dataParams);
-    check(calendarServices, { '/api/bff/calendar/services 200': (r) => r.status === 200 });
+    const calendarServices = http.get(`${BASE_URL}/calendar/services`, dataParams);
+    check(calendarServices, { '/calendar/services 200': (r) => r.status === 200 });
   });
 
   sleep(1);
@@ -117,7 +117,7 @@ export function writes(data) {
   group('event lifecycle', () => {
     const date = new Date().toISOString().slice(0, 10);
     const created = http.post(
-      `${BASE_URL}/api/bff/calendar/events`,
+      `${BASE_URL}/calendar/events`,
       JSON.stringify({
         title: `k6 ${__VU}-${__ITER}-${Date.now()}`,
         date,
@@ -136,17 +136,17 @@ export function writes(data) {
       id = null;
     }
     const ok = check(created, {
-      'POST /api/bff/calendar/events 201': (r) => r.status === 201,
-      'POST /api/bff/calendar/events returns the event id': () => id !== null,
+      'POST /calendar/events 201': (r) => r.status === 201,
+      'POST /calendar/events returns the event id': () => id !== null,
     });
     if (!ok) return;
 
-    const deleted = http.del(`${BASE_URL}/api/bff/calendar/events/${id}`, null, {
+    const deleted = http.del(`${BASE_URL}/calendar/events/${id}`, null, {
       headers: { Cookie: headers.Cookie, Accept: 'application/json' },
       redirects: 0,
       tags: { endpoint: 'event-delete' },
     });
-    check(deleted, { 'DELETE /api/bff/calendar/events/{id} 204': (r) => r.status === 204 });
+    check(deleted, { 'DELETE /calendar/events/{id} 204': (r) => r.status === 204 });
   });
 
   sleep(1);
