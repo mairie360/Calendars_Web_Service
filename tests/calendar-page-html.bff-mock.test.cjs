@@ -97,8 +97,8 @@ test('the shell shows the user resolved from BFF User in the header', async () =
   assert.match(html, /<footer/);
   const footer = html.match(/<footer\b[^>]*>[\s\S]*?<\/footer>/)?.[0];
   assert.ok(footer);
-  assert.match(html, /<aside\b[^]*?<footer\b[^]*?<\/footer>[^]*?<\/aside>/);
-  assert.doesNotMatch(html, /<\/main>\s*<footer\b/);
+  assert.doesNotMatch(html, /<aside\b[^]*?<footer\b[^]*?<\/footer>[^]*?<\/aside>/);
+  assert.match(html, /<\/main>\s*<footer\b/);
   assert.match(footer.replace(/<[^>]*>/g, ''), new RegExp(`© ${new Date().getFullYear()} Mairie360`));
   assert.doesNotMatch(footer, /Version|<button\b|<a\b/);
   assert.deepEqual(view.props('Sidebar').isAdmin, true);
