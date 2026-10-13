@@ -73,6 +73,18 @@ function eventBody(event: CreateCalendarEventValues | CalendarEventItem): BffCal
   };
 }
 
+/**
+ * People the answer references: the `users` index (event members included, MAIR-525), completed by the
+ * assignable people, each once. An event without `assignees` objects is resolved from it.
+ */
+function peopleOf(bootstrap: BffCalendarBootstrap): CalendarAssignee[] {
+  const byId = new Map<string, CalendarAssignee>();
+  for (const person of [...Object.values(bootstrap.users ?? {}), ...bootstrap.assignees]) {
+    if (!byId.has(String(person.id))) byId.set(String(person.id), person);
+  }
+  return [...byId.values()];
+}
+
 export async function loadCalendarData(params: CalendarLoadParams): Promise<CalendarData> {
   const { data: bootstrap } = await bffCalendar.getCalendarBootstrap(
     { from: params.from, to: params.to },
@@ -80,7 +92,7 @@ export async function loadCalendarData(params: CalendarLoadParams): Promise<Cale
   );
 
   return {
-    events: bootstrap.events.map((event) => toCalendarEventItem(event, bootstrap.assignees)),
+    events: bootstrap.events.map((event) => toCalendarEventItem(event, peopleOf(bootstrap))),
     people: bootstrap.assignees,
     categories: bootstrap.categories,
     services: bootstrap.services,

@@ -40,6 +40,7 @@ function bootstrap(overrides = {}) {
   return {
     events: [calendarEvent(5), calendarEvent(6, { title: 'Permanence', category: 'other', assignees: undefined, assigneeIds: [marie.id], canValidate: false })]
       .map((event) => JSON.parse(JSON.stringify(event))),
+    users: Object.fromEntries([admin, alice, marie].map((person) => [person.id, person])),
     assignees: [admin, alice, marie],
     categories: [{ label: 'Réunion', value: 'meeting' }, { label: 'Autre', value: 'other' }],
     services: [{ label: 'Direction générale', value: 'direction' }],
