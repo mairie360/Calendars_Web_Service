@@ -39,7 +39,7 @@ async function calendarDom(t) {
   await front.start();
   front.cookies.set('accessToken', jwtFor(1));
   front.userBff.on('get', '/me', { body: fixture.sessionResponse() });
-  front.calendarBff.on('get', '/calendar/bootstrap', { body: fixture.bootstrap() });
+  front.calendarRead({ body: fixture.bootstrap() });
   const console = new VirtualConsole();
   console.on('jsdomError', (error) => errors.push(error.message));
   dom = new JSDOM('<!doctype html><html><head></head><body><div id="root"></div></body></html>', {

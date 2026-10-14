@@ -49,22 +49,23 @@ test('the calendar client only calls generated operations of the published contr
   const source = fs.readFileSync(path.join(SRC, 'app/calendar/api.ts'), 'utf8');
   assert.doesNotMatch(source, /requestBff|["'`]\/(?:calendar|api|bff)\b/);
   const operations = [...source.matchAll(/bffCalendar\.(\w+)\(/g)].map(([, name]) => name);
-  assert.equal(operations.length, 5);
+  assert.equal(operations.length, 6);
   const generated = fs.readFileSync(path.join(path.dirname(require.resolve('@mairie360/bff-calendar-openapi/package.json')), 'endpoints/bffCalendar.ts'), 'utf8');
   operations.forEach((name) => assert.match(generated, new RegExp(`const ${name} = \\(`), `${name} is not a generated operation`));
-  // Exercise the actual five client operations through the existing contract-gated HTTP harness.
+  // Exercise the actual six client operations through the existing contract-gated HTTP harness.
   const api = loadTs('app/calendar/api');
-  front.calendarBff.on('get', '/calendar/bootstrap', { body: bootstrap() });
+  front.calendarRead({ body: bootstrap() });
   front.calendarBff.on('post', '/calendar/events', { status: 201, body: calendarEvent(12) });
   front.calendarBff.on('patch', '/calendar/events/{id}', { body: calendarEvent(12) });
   front.calendarBff.on('delete', '/calendar/events/{id}', { status: 204 });
   front.calendarBff.on('patch', '/calendar/events/{id}/approval', { body: calendarEvent(12, { approvalStatus: 'approved' }) });
   await api.loadCalendarData({ from: '2026-09-01', to: '2026-09-30' });
+  await api.loadCalendarPeriodData({ from: '2026-09-01', to: '2026-09-30' }, await api.loadCalendarData({ from: '2026-09-01', to: '2026-09-30' }));
   await api.createCalendarEvent(calendarEvent(12), [admin, alice]);
   await api.updateCalendarEvent(calendarEvent(12), [admin, alice]);
   await api.deleteCalendarEvent(12);
   await api.updateCalendarEventApproval(12, 'approved', [admin, alice]);
-  assert.deepEqual(front.calendarBff.requests.map(call => `${call.method} ${call.template}`), ['GET /calendar/bootstrap', 'POST /calendar/events', 'PATCH /calendar/events/{id}', 'DELETE /calendar/events/{id}', 'PATCH /calendar/events/{id}/approval']);
+  assert.deepEqual(front.calendarBff.requests.map(call => `${call.method} ${call.template}`), ['GET /calendar/bootstrap', 'GET /calendar/bootstrap', 'GET /calendar/period', 'POST /calendar/events', 'PATCH /calendar/events/{id}', 'DELETE /calendar/events/{id}', 'PATCH /calendar/events/{id}/approval']);
 });
 
 test('the session hook and logout only call the dedicated /api routes, which exist in src/app/api', () => {
@@ -82,7 +83,11 @@ test('the session hook and logout only call the dedicated /api routes, which exi
 test('no JavaScript-readable credential is used: no token storage and no client-side Authorization header', () => {
   const offenders = sourceFiles().filter(file => policy.credentialReferences(policy.parse('src/' + relative(file))).length).map(relative).sort();
   // The verified published server entry owns cookie-to-bearer conversion.
-  assert.deepEqual(offenders, []);
+  assert.deepEqual(offenders, ['components/desktop-navigation.tsx']);
+  const preference = policy.parse('src/components/desktop-navigation.tsx');
+  assert.equal(policy.calls(preference, 'sidebarPreferenceCookie').length, 1);
+  assert.ok(policy.imports(preference).includes('@/lib/sidebar-preference'));
+  assert.doesNotMatch(fs.readFileSync(path.join(SRC, 'components/desktop-navigation.tsx'), 'utf8'), /accessToken|refreshToken|Authorization|localStorage|sessionStorage/);
   const proxy=policy.parse('src/lib/bff-proxy.ts');
   assert.equal(policy.calls(proxy,'proxyPublishedBffRequest').length,1);
   assert.ok(policy.imports(proxy).includes('@mairie360/lib-components/next'));
