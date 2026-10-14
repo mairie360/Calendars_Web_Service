@@ -23,7 +23,7 @@ function shadow(window, value) {
 }
 
 test('real calendar sidebar applies reference position, shadow and seven command row styles', async (t) => {
-  const dom = await calendarDom(t), sidebar = dom.document.querySelector('aside[aria-label="Navigation principale"]');
+  const dom = await calendarDom(t), sidebar = dom.document.querySelector('.app-published-sidebar');
   const computed = dom.style(sidebar);
   assert.equal(computed.position, 'relative'); assert.equal(computed.zIndex, '20');
   assert.deepEqual(shadow(dom.window, computed.boxShadow), [{ lengths: [8, 0, 24, 0], color: 'rgba(12, 28, 48, 0.28)' }]);
@@ -82,7 +82,7 @@ test('actual shell and supplied density contexts apply reference typography, ins
   const shell = dom.document.querySelector('.calendar-scroll-shell');
   assert.equal(dom.style(shell).height, '100dvh'); assert.equal(dom.style(shell).overflow, 'hidden');
   assert.equal(Number.parseFloat(dom.style(shell.querySelector(':scope > div')).minHeight), 0);
-  assert.equal(dom.style(dom.document.querySelector('aside').closest('.hidden')).overflowY, 'auto');
+  assert.equal(dom.style(dom.document.querySelector('.app-published-sidebar').closest('.hidden')).overflowY, 'auto');
   assert.equal(Number.parseFloat(dom.style(main.parentElement).minHeight), 0);
   for (const [density, padding] of [['compact', '16px'], ['comfortable', '32px']]) {
     dom.document.documentElement.setAttribute('data-settings-density', density);

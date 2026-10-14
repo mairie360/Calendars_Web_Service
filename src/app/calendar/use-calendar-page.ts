@@ -1,9 +1,12 @@
+import { subscribePageReturn } from "@/lib/page-return";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { usePageUrlState } from '@/lib/use-page-url-state';
+import { urlChoice, urlDate } from '@/lib/page-url-state';
+import { createCalendarDataCache } from './data-cache';
 import {
   createCalendarEvent,
   deleteCalendarEvent,
   formatCalendarApiError,
-  loadCalendarData,
   updateCalendarEvent,
   updateCalendarEventApproval,
 } from "./api";
@@ -32,8 +35,14 @@ function calendarDateFromLink(value: string | null): Date | null {
   return formatDateForQuery(date) === value ? date : null;
 }
 
+const calendarUrlSchema = { view: urlChoice(['month', 'week', 'day'], 'month'), date: urlDate };
+
 export function useCalendarPage() {
-  const [view, setView] = useState<CalendarViewMode>("month");
+  const [view, setViewState] = useState<CalendarViewMode>("month");
+  const pageUrl = usePageUrlState(calendarUrlSchema);
+  const [dataCache] = useState(() => createCalendarDataCache());
+  const prefetchRef = useRef<AbortController | null>(null);
+  const linkInitialized = useRef(false);
   const [currentDate, setCurrentDate] = useState<Date>(() => new Date());
   // The period title, schedule, statistics and creation default share one date.
   const selectedDate = currentDate;
@@ -57,6 +66,8 @@ export function useCalendarPage() {
   const preserveConfirmedMutation = () => {
     // A read started before this confirmation can only describe older data.
     calendarReadRevision.current += 1;
+    dataCache.invalidate();
+    prefetchRef.current?.abort();
     setLoading(false);
   };
   const [saving, setSaving] = useState(false);
@@ -66,6 +77,7 @@ export function useCalendarPage() {
   const [readError, setReadError] = useState<string | null>(null);
   const [mutationError, setMutationError] = useState<string | null>(null);
   const error = mutationError ?? readError;
+  const navigationDateRef = useRef(currentDate);
   const [link, setLink] = useState<{ ready: boolean; eventId: string | null }>({
     ready: false,
     eventId: null,
@@ -81,30 +93,43 @@ export function useCalendarPage() {
   const rangeTo = useMemo(() => formatDateForQuery(periodRange.to), [periodRange.to]);
 
   useEffect(() => {
+    if (!pageUrl.ready) return;
     const params = new URLSearchParams(
       typeof window === "undefined" ? "" : window.location.search,
     );
-    const linkedDate = calendarDateFromLink(params.get("date"));
+    const linkedDate = calendarDateFromLink(pageUrl.state.date || null);
     // Date-dependent UI stays hidden until this browser-local initialization.
     // A server process/module date must not leak into the hydration markup.
     const openingDate = linkedDate ?? new Date();
     selectionFollowsToday.current = !linkedDate;
-    setCurrentDate(openingDate);
-    setLink({ ready: true, eventId: linkedDate ? params.get("event") || null : null });
+    navigationDateRef.current = openingDate;
+    setCurrentDate(current => formatDateForQuery(current) === formatDateForQuery(openingDate) ? current : openingDate);
+    setViewState(pageUrl.state.view as CalendarViewMode);
+    if (!linkInitialized.current) {
+      setLink({ ready: true, eventId: linkedDate ? params.get("event") || null : null });
+      linkInitialized.current = true;
+    }
+  }, [pageUrl.ready, pageUrl.state.date, pageUrl.state.view]);
+
+  const idlePrefetchRef = useRef<{ browser: Window; id: number } | null>(null);
+  const cancelPrefetch = useCallback(() => {
+    prefetchRef.current?.abort();
+    if (idlePrefetchRef.current) { idlePrefetchRef.current.browser.cancelIdleCallback(idlePrefetchRef.current.id); idlePrefetchRef.current = null; }
   }, []);
 
+
   const loadData = useCallback(
-    async (signal?: AbortSignal) => {
+    async (signal?: AbortSignal, refreshContext = false) => {
       const revision = ++calendarReadRevision.current;
       const isCurrent = () => !signal?.aborted && calendarReadRevision.current === revision;
       setLoading(true);
 
       try {
-        const calendarData = await loadCalendarData({
+        const calendarData = await dataCache.read({
           from: rangeFrom,
           to: rangeTo,
           signal,
-        });
+        }, refreshContext);
 
         if (!isCurrent()) return;
 
@@ -113,6 +138,18 @@ export function useCalendarPage() {
         setCategories(calendarData.categories);
         setServices(calendarData.services);
         setReadError(null);
+        cancelPrefetch();
+        if (dataCache.canPrefetch() && !mutationInFlight.current && typeof window !== 'undefined' && typeof window.requestIdleCallback === 'function') {
+          const browser = window;
+          idlePrefetchRef.current = { browser, id: browser.requestIdleCallback(() => {
+            idlePrefetchRef.current = null;
+            if (!isCurrent() || document.hidden || mutationInFlight.current) return;
+            const prefetch = new AbortController();
+            prefetchRef.current = prefetch;
+            const adjacent = getCalendarPeriodRange(view, getNextPeriod(parseDateInput(rangeFrom), view));
+            void dataCache.read({ from: formatDateForQuery(adjacent.from), to: formatDateForQuery(adjacent.to), signal: prefetch.signal }).catch(() => undefined);
+          }, { timeout: 1_000 }) };
+        }
       } catch (loadError) {
         if (
           !isCurrent() ||
@@ -126,7 +163,7 @@ export function useCalendarPage() {
         if (isCurrent()) setLoading(false);
       }
     },
-    [rangeFrom, rangeTo],
+    [dataCache, rangeFrom, rangeTo, view, cancelPrefetch],
   );
 
   useEffect(() => {
@@ -139,6 +176,16 @@ export function useCalendarPage() {
   }, [link.ready, loadData]);
 
   useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const page = document;
+    const controller = new AbortController();
+    const refresh = () => { if (link.ready && !page.hidden && !mutationInFlight.current) void loadData(controller.signal, true); };
+    const unsubscribe = subscribePageReturn(refresh);
+    return () => { controller.abort(); unsubscribe(); };
+  }, [link.ready, loadData]);
+  useEffect(() => () => { cancelPrefetch(); dataCache.clear(); }, [dataCache, cancelPrefetch]);
+
+  useEffect(() => {
     if (loading || readError || !link.eventId) return;
 
     const linkedEvent = events.find((event) => String(event.id) === link.eventId);
@@ -148,17 +195,30 @@ export function useCalendarPage() {
 
   const handlePrevious = () => {
     selectionFollowsToday.current = false;
-    setCurrentDate((date) => getPreviousPeriod(date, view));
+    const date = getPreviousPeriod(navigationDateRef.current, view);
+    navigationDateRef.current = date;
+    setCurrentDate(date);
+    pageUrl.update({ date: formatDateForQuery(date) });
   };
 
   const handleNext = () => {
     selectionFollowsToday.current = false;
-    setCurrentDate((date) => getNextPeriod(date, view));
+    const date = getNextPeriod(navigationDateRef.current, view);
+    navigationDateRef.current = date;
+    setCurrentDate(date);
+    pageUrl.update({ date: formatDateForQuery(date) });
   };
 
   const handleSelectDate = (date: Date) => {
     selectionFollowsToday.current = false;
+    navigationDateRef.current = date;
     setCurrentDate(date);
+    pageUrl.update({ date: formatDateForQuery(date) });
+  };
+
+  const setView = (next: CalendarViewMode) => {
+    setViewState(next);
+    pageUrl.update({ view: next, date: formatDateForQuery(navigationDateRef.current) });
   };
 
   const openCreateModal = (date?: Date, startTime = "09:00") => {
@@ -191,6 +251,7 @@ export function useCalendarPage() {
       setCreateModalOpen(false);
       selectionFollowsToday.current = false;
       setCurrentDate(parseDateInput(createdEvent.date));
+      pageUrl.update({ date: formatDateForQuery(parseDateInput(createdEvent.date)) });
     } catch (createError) {
       setMutationError(formatCalendarApiError(createError));
     } finally {
@@ -328,7 +389,7 @@ export function useCalendarPage() {
     openCreateModal,
     people,
     periodTitle,
-    refreshData: loadData,
+    refreshData: () => loadData(undefined, true),
     ready: link.ready,
     readError,
     selectedDate,

@@ -82,6 +82,15 @@ class FrontHarness {
     await Promise.all(this.mocks.map((mock) => mock.stop()));
   }
 
+  // Explicit fixtures for the bootstrap and the new published period operation.
+  calendarRead(reply) {
+    this.calendarBff.on('get', '/calendar/bootstrap', reply);
+    const periodReply = value => value?.body && (!value.status || value.status < 400)
+      ? { ...value, body: { events: value.body.events.map(({ assignees, ...event }) => event), users: value.body.users } } : value;
+    this.calendarBff.on('get', '/calendar/period', typeof reply === 'function'
+      ? async request => periodReply(await reply(request)) : periodReply(reply));
+  }
+
   reset() {
     forgetUserSession(this.userBff.url, this.cookies.get('refreshToken'));
     for (const mock of this.mocks) mock.reset();

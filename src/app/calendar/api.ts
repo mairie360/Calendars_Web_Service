@@ -31,7 +31,7 @@ export type CalendarData = {
   assigneeScope?: BffCalendarBootstrap['assigneeScope'];
 };
 
-type CalendarLoadParams = {
+export type CalendarLoadParams = {
   from: string;
   to: string;
   signal?: AbortSignal;
@@ -99,6 +99,14 @@ export async function loadCalendarData(params: CalendarLoadParams): Promise<Cale
     currentUser: bootstrap.currentUser,
     assigneeScope: bootstrap.assigneeScope,
   };
+}
+
+export async function loadCalendarPeriodData(params: CalendarLoadParams, context: CalendarData): Promise<CalendarData> {
+  const { data: period } = await bffCalendar.getCalendarPeriod(
+    { from: params.from, to: params.to }, { signal: params.signal },
+  );
+  const people = [...Object.values(period.users ?? {}), ...context.people];
+  return { ...context, events: period.events.map(event => toCalendarEventItem(event, people)) };
 }
 
 export async function createCalendarEvent(

@@ -44,7 +44,7 @@ const createValues = (overrides = {}) => ({
 });
 
 test('loadCalendarData reads GET /calendar/bootstrap once with the declared from/to and the session cookie as Bearer', async () => {
-  front.calendarBff.on('get', '/calendar/bootstrap', { body: bootstrap() });
+  front.calendarRead({ body: bootstrap() });
 
   const data = await api.loadCalendarData({ from: '2026-08-31', to: '2026-10-04' });
 
@@ -66,7 +66,7 @@ test('loadCalendarData reads GET /calendar/bootstrap once with the declared from
 });
 
 test('loadCalendarData keeps optional bootstrap data as the BFF returns it', async () => {
-  front.calendarBff.on('get', '/calendar/bootstrap', {
+  front.calendarRead({
     body: {
       events: [
         calendarEvent(8, { recurrence: { frequency: 'daily', interval: 1, daysOfWeek: [1, 5] }, approvalStatus: 'approved', endDate: '2026-09-18' }),
@@ -91,7 +91,7 @@ test('loadCalendarData keeps optional bootstrap data as the BFF returns it', asy
 test('MAIR-553: an event member outside the assignable people is resolved from the users index of the bootstrap', async () => {
   const guest = { id: 'user-12', name: 'Paul Invité', email: 'paul@mairie.test', role: 'User' };
   const { assignees, ...event } = calendarEvent(5, { assigneeIds: [guest.id, alice.id] });
-  front.calendarBff.on('get', '/calendar/bootstrap', {
+  front.calendarRead({
     body: bootstrap({
       events: [event],
       users: Object.fromEntries([admin, alice, marie, guest].map((person) => [person.id, person])),
@@ -107,7 +107,7 @@ test('MAIR-553: an event member outside the assignable people is resolved from t
 });
 
 test('a client Authorization header never replaces the HttpOnly session cookie', async () => {
-  front.calendarBff.on('get', '/calendar/bootstrap', { body: bootstrap() });
+  front.calendarRead({ body: bootstrap() });
   window.localStorage.setItem('mairie360.auth.jwt', 'stored-token');
 
   await api.loadCalendarData({ from: '2026-09-01', to: '2026-09-30' });
@@ -202,7 +202,7 @@ for (const [status, operation, call] of [
 }
 
 test('a final401 returns to Login without revoking the shared session', async () => {
-  front.calendarBff.on('get', '/calendar/bootstrap', { status: 401, body: apiError('UNAUTHORIZED', 'Session invalide.') });
+  front.calendarRead({ status: 401, body: apiError('UNAUTHORIZED', 'Session invalide.') });
   front.userBff.on('post', '/auth/logout', { body: { message: 'Logged out successfully' } });
 
   const error = await api.loadCalendarData({ from: '2026-09-01', to: '2026-09-30' }).catch((reason) => reason);

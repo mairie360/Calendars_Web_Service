@@ -36,7 +36,7 @@ afterEach(() => {
 });
 
 async function renderLoadedPage(body = bootstrap()) {
-  front.calendarBff.on('get', '/calendar/bootstrap', { body });
+  front.calendarRead({ body });
   view = mount(React.createElement(Page));
   return view.waitFor((html) => !html.includes('role="status"') && view.find('Header')[0]?.props.user.name !== 'Chargement…');
 }
@@ -61,7 +61,7 @@ test('server renders on either side of a month boundary expose no server-local c
 });
 
 test('the first pass renders the loading state, the second the events answered by GET /calendar/bootstrap', async () => {
-  front.calendarBff.on('get', '/calendar/bootstrap', { body: bootstrap() });
+  front.calendarRead({ body: bootstrap() });
   view = mount(React.createElement(Page));
 
   assert.equal(view.passes, 1);
@@ -136,7 +136,7 @@ test('desktop and mobile navigation expose only active modules and keep Settings
         assert.equal(props.activeItem, 'calendar');
       }
       const menus = view.html.match(/<nav\b[^>]*aria-label="Menu principal"[^>]*>[\s\S]*?<\/nav>/g) ?? [];
-      assert.equal(menus.length, sidebars.length);
+      assert.equal(menus.length, sidebars.length + 1);
       for (const menu of menus) {
         assert.doesNotMatch(menu, /E-mails|Fichiers/);
         assert.match(menu, /Paramètres/);
@@ -156,7 +156,7 @@ test('desktop and mobile navigation expose only active modules and keep Settings
 });
 
 test('a BFF error is rendered as an alert with a retry button that reloads the calendar', async () => {
-  front.calendarBff.on('get', '/calendar/bootstrap', { status: 502, body: apiError('BFF_ERROR', 'Calendar API unavailable') });
+  front.calendarRead({ status: 502, body: apiError('BFF_ERROR', 'Calendar API unavailable') });
   view = mount(React.createElement(Page));
   const failed = await view.waitFor((html) => html.includes('role="alert"'));
 
@@ -164,7 +164,7 @@ test('a BFF error is rendered as an alert with a retry button that reloads the c
   assert.match(failed, /<button type="button"[^>]*>[\s\S]*?<span>Réessayer<\/span><\/button>/);
   assert.doesNotMatch(view.text(), /Événement 5/);
 
-  front.calendarBff.on('get', '/calendar/bootstrap', { body: bootstrap() });
+  front.calendarRead({ body: bootstrap() });
   await view.click('Réessayer');
   const html = await view.waitFor((current) => !current.includes('role="alert"') && !current.includes('role="status"'));
 
@@ -174,7 +174,7 @@ test('a BFF error is rendered as an alert with a retry button that reloads the c
 });
 
 test('opening creation keeps the failed read and its retry, without claiming a refused save in the form', async () => {
-  front.calendarBff.on('get', '/calendar/bootstrap', { status: 502, body: apiError('UNAVAILABLE', 'Read unavailable') });
+  front.calendarRead({ status: 502, body: apiError('UNAVAILABLE', 'Read unavailable') });
   view = mount(React.createElement(Page));
   await view.waitFor(html => html.includes('Read unavailable'));
   await view.act(() => view.props('PageTitleBar').onAction());
@@ -196,12 +196,12 @@ test('a successful independent read cannot hide a refused edit or reset its draf
   const form = view.hostElements((props, _text, tag) => tag === 'form' && props.onSubmit)[0];
   await view.act(() => form.props.onSubmit({ preventDefault() {} }));
   await view.waitFor(html => html.includes('Edit refused'));
-  front.calendarBff.on('get', '/calendar/bootstrap', { status: 502, body: apiError('UNAVAILABLE', 'Read unavailable') });
+  front.calendarRead({ status: 502, body: apiError('UNAVAILABLE', 'Read unavailable') });
   await view.act(() => view.props('CalendarToolbar').onViewChange('week'));
   await view.waitFor(html => html.includes('Read unavailable'));
   assert.match(view.text(), /Edit refused/);
   assert.equal(view.props('EventDetailsModal').error, 'Edit refused');
-  front.calendarBff.on('get', '/calendar/bootstrap', { body: bootstrap() });
+  front.calendarRead({ body: bootstrap() });
   await view.click('Réessayer');
   await view.waitFor(html => !html.includes('Read unavailable') && !html.includes('Chargement des données'));
   assert.equal(view.props('EventDetailsModal').error, 'Edit refused');
@@ -226,15 +226,16 @@ test('pending and refused edit keeps its draft through reordered category reads,
   await view.waitFor(() => Boolean(reply));
   assert.match(view.html, /<fieldset[^>]*disabled=""[^>]*aria-busy="true"/);
   const reordered = bootstrap({ categories: [{ label: 'Autre reçue', value: 'other' }, { label: 'Réunion reçue', value: 'meeting' }] });
-  front.calendarBff.on('get', '/calendar/bootstrap', { body: reordered });
+  front.calendarRead({ body: reordered });
   await view.act(() => view.props('CalendarToolbar').onViewChange('week'));
-  await view.waitFor(() => view.props('EventDetailsModal').categories[0].value === 'other');
+  await view.waitFor(() => front.calendarBff.calls('/calendar/period', 'GET').length > 0 && view.find('WeekGrid').length > 0);
+  assert.equal(view.props('EventDetailsModal').categories[0].value, 'meeting', 'period reads keep the bootstrap categories');
   assert.equal(view.hostElements(props => props.id === 'event-title')[0].props.value, 'Combined draft');
   assert.equal(view.hostElements(props => props.id === 'event-category')[0].props.value, 'other');
   assert.equal(view.props('EventDetailsModal').saving, true);
   await view.act(() => reply({ status: 403, body: apiError('FORBIDDEN', 'Combined edit refused') }));
   await view.waitFor(html => html.includes('Combined edit refused'));
-  front.calendarBff.on('get', '/calendar/bootstrap', { body: bootstrap() });
+  front.calendarRead({ body: bootstrap() });
   await view.act(() => view.props('CalendarToolbar').onViewChange('day'));
   await view.waitFor(() => !view.props('EventDetailsModal').saving && view.props('EventDetailsModal').categories[0].value === 'meeting');
   assert.equal(view.hostElements(props => props.id === 'event-title')[0].props.value, 'Combined draft');
@@ -276,7 +277,7 @@ test('day arrows render the navigated date in the actual schedule, statistics an
   assert.equal(view.props('CalendarSidebar').stats[2].value, '1 événement');
   await view.act(() => view.props('PageTitleBar').onAction());
   assert.equal(view.props('CreateEventModal').initialValues.date, '01-01-2027');
-  assert.ok(front.calendarBff.sequence().every((call) => call.startsWith('GET /calendar/bootstrap?')));
+  assert.ok(front.calendarBff.sequence().every((call) => /^GET \/calendar\/(bootstrap|period)\?/.test(call)));
 });
 
 test('calendar layout uses responsive grids and a bounded sidebar with BFF-backed events', async () => {
@@ -307,7 +308,7 @@ test('the create modal opens from the title bar and the created event appears in
   const created = calendarEvent(9, { title: 'Conseil municipal', date: '2026-09-18' });
   // Creating in another month reloads that visible range. The mock must return
   // the persisted event too, rather than overwrite it with today's old fixture.
-  front.calendarBff.on('get', '/calendar/bootstrap', { body: bootstrap({ events: [created] }) });
+  front.calendarRead({ body: bootstrap({ events: [created] }) });
   front.calendarBff.on('post', '/calendar/events', { status: 201, body: created });
   await view.act(() => view.props('CreateEventModal').onCreate({
     title: 'Conseil municipal', date: new Date(2026, 8, 18), startTime: '18:00', endTime: '20:00', category: 'meeting', service: 'direction',
@@ -388,7 +389,7 @@ for (const [label, method, route, approvalStatus] of [
 test('a refused session returns to Login without an automatic logout request', async () => {
   front.userBff.on('get', '/me', { status: 401 });
   front.userBff.on('post', '/auth/logout', { body: { message: 'Logged out successfully' } });
-  front.calendarBff.on('get', '/calendar/bootstrap', { body: bootstrap() });
+  front.calendarRead({ body: bootstrap() });
   view = mount(React.createElement(Page));
 
   await view.waitFor(() => window.location.assigned.length === 1);
