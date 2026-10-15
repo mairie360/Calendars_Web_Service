@@ -63,13 +63,15 @@ async function readBody(request: NextRequest): Promise<ArrayBuffer | null> {
   const reader = request.body.getReader();
   const chunks: Uint8Array[] = [];
   let size = 0;
-  for (let chunk = await reader.read(); !chunk.done; chunk = await reader.read()) {
-    size += chunk.value.byteLength;
+  // Stream chunks are dependent: request the next only after checking the limit.
+  const chunksInOrder = { [Symbol.asyncIterator]: () => ({ next: () => reader.read() }) };
+  for await (const chunk of chunksInOrder) {
+    size += chunk.byteLength;
     if (size > MAX_REQUEST_BODY_BYTES) {
       await reader.cancel();
       return null;
     }
-    chunks.push(chunk.value);
+    chunks.push(chunk);
   }
   const body = new Uint8Array(size);
   let offset = 0;
