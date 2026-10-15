@@ -1,3 +1,4 @@
+import { calendarToday } from './date-utils';
 import { subscribePageReturn } from "@/lib/page-return";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePageUrlState } from '@/lib/use-page-url-state';
@@ -43,7 +44,7 @@ export function useCalendarPage() {
   const [dataCache] = useState(() => createCalendarDataCache());
   const prefetchRef = useRef<AbortController | null>(null);
   const linkInitialized = useRef(false);
-  const [currentDate, setCurrentDate] = useState<Date>(() => new Date());
+  const [currentDate, setCurrentDate] = useState<Date>(() => calendarToday());
   // The period title, schedule, statistics and creation default share one date.
   const selectedDate = currentDate;
   const selectionFollowsToday = useRef(true);
@@ -100,7 +101,7 @@ export function useCalendarPage() {
     const linkedDate = calendarDateFromLink(pageUrl.state.date || null);
     // Date-dependent UI stays hidden until this browser-local initialization.
     // A server process/module date must not leak into the hydration markup.
-    const openingDate = linkedDate ?? new Date();
+    const openingDate = linkedDate ?? calendarToday();
     selectionFollowsToday.current = !linkedDate;
     navigationDateRef.current = openingDate;
     setCurrentDate(current => formatDateForQuery(current) === formatDateForQuery(openingDate) ? current : openingDate);
@@ -225,7 +226,7 @@ export function useCalendarPage() {
     if (!link.ready) return;
     // Refresh an implicit "today" when a tab crosses midnight, but never
     // overwrite a deliberately selected date, deep link or time slot.
-    const creationDate = date ?? (selectionFollowsToday.current ? new Date() : selectedDate);
+    const creationDate = date ?? (selectionFollowsToday.current ? calendarToday() : selectedDate);
     setMutationError(null);
     setCreateInitialValues(buildCreateInitialValues(creationDate, startTime));
     setCreateModalOpen(true);

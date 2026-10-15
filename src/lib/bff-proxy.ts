@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { proxyPublishedBffRequest, type PublishedPaths } from '@mairie360/lib-components/next';
+import { proxyPublishedBffRequest, type PublishedPaths } from '@mairie360/front-kit/next';
 import contract from '../../contracts/openapi.json';
 import { allowedMethods, findContractRoute, requestBodyMediaTypes } from './bff-contract';
 

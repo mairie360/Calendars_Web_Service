@@ -1,6 +1,7 @@
+import { civilDateInZone } from '@mairie360/front-kit/shared';
 import type { CalendarDateInput, CalendarViewMode } from "./types";
 
-export function parseDateInput(date: CalendarDateInput = new Date()) {
+export function parseDateInput(date: CalendarDateInput = calendarToday()) {
   if (date instanceof Date) {
     return new Date(date.getFullYear(), date.getMonth(), date.getDate());
   }
@@ -19,7 +20,9 @@ export function parseDateInput(date: CalendarDateInput = new Date()) {
   }
 
   const parsedDate = new Date(normalizedDate);
-  return new Date(parsedDate.getFullYear(), parsedDate.getMonth(), parsedDate.getDate());
+  if (Number.isNaN(parsedDate.valueOf())) return parsedDate;
+  const [year, month, day] = civilDateInZone(parsedDate).split("-").map(Number);
+  return new Date(year, month - 1, day);
 }
 
 export function addDays(date: CalendarDateInput, amount: number) {
@@ -139,4 +142,9 @@ export function buildCreateInitialValues(date: CalendarDateInput, startTime = "0
     startTime,
     endTime: addOneHour(startTime),
   };
+}
+
+/** A civil calendar day, independent of the browser/container timezone. */
+export function calendarToday(instant = new Date()) {
+  return parseDateInput(civilDateInZone(instant));
 }
