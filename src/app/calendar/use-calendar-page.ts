@@ -2,9 +2,11 @@ import { calendarToday } from './date-utils';
 import { subscribePageReturn } from "@/lib/page-return";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePageUrlState } from '@/lib/use-page-url-state';
-import { urlChoice, urlDate } from '@/lib/page-url-state';
+import { calendarUrlSchema } from './page-query';
+import { type InitialCalendarPage, CALENDAR_INITIAL_UNAVAILABLE } from '@/lib/calendar-bootstrap-receipt';
 import { createCalendarDataCache } from './data-cache';
 import {
+  calendarDataFromReceipt,
   createCalendarEvent,
   deleteCalendarEvent,
   formatCalendarApiError,
@@ -36,22 +38,27 @@ function calendarDateFromLink(value: string | null): Date | null {
   return formatDateForQuery(date) === value ? date : null;
 }
 
-const calendarUrlSchema = { view: urlChoice(['month', 'week', 'day'], 'month'), date: urlDate };
 
-export function useCalendarPage() {
-  const [view, setViewState] = useState<CalendarViewMode>("month");
+export function useCalendarPage(initial?: InitialCalendarPage) {
+  const [initialReceipt] = useState(() => {
+    if (initial?.status !== 'confirmed') return null;
+    try { return { query: initial.query, data: calendarDataFromReceipt(initial.data) }; } catch { return null; }
+  });
+  const seedRange = initialReceipt ? getCalendarPeriodRange(initialReceipt.query.view, initialReceipt.query.date) : null;
+  const initialRangeRef = useRef(seedRange ? `${formatDateForQuery(seedRange.from)}:${formatDateForQuery(seedRange.to)}` : null);
+  const [view, setViewState] = useState<CalendarViewMode>(initialReceipt?.query.view ?? "month");
   const pageUrl = usePageUrlState(calendarUrlSchema);
-  const [dataCache] = useState(() => createCalendarDataCache());
+  const [dataCache] = useState(() => createCalendarDataCache({ initial: initialReceipt && seedRange ? { params: { from: formatDateForQuery(seedRange.from), to: formatDateForQuery(seedRange.to) }, value: initialReceipt.data } : undefined }));
   const prefetchRef = useRef<AbortController | null>(null);
-  const linkInitialized = useRef(false);
-  const [currentDate, setCurrentDate] = useState<Date>(() => calendarToday());
+  const linkInitialized = useRef(Boolean(initialReceipt));
+  const [currentDate, setCurrentDate] = useState<Date>(() => initialReceipt ? parseDateInput(initialReceipt.query.date) : calendarToday());
   // The period title, schedule, statistics and creation default share one date.
   const selectedDate = currentDate;
-  const selectionFollowsToday = useRef(true);
-  const [events, setEvents] = useState<CalendarEventItem[]>([]);
-  const [people, setPeople] = useState<CalendarAssignee[]>([]);
-  const [categories, setCategories] = useState<CalendarReferenceOption[]>([]);
-  const [services, setServices] = useState<CalendarReferenceOption[]>([]);
+  const selectionFollowsToday = useRef(!initialReceipt?.query.linkedDate);
+  const [events, setEvents] = useState<CalendarEventItem[]>(initialReceipt?.data.events ?? []);
+  const [people, setPeople] = useState<CalendarAssignee[]>(initialReceipt?.data.people ?? []);
+  const [categories, setCategories] = useState<CalendarReferenceOption[]>(initialReceipt?.data.categories ?? []);
+  const [services, setServices] = useState<CalendarReferenceOption[]>(initialReceipt?.data.services ?? []);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [createInitialValues, setCreateInitialValues] = useState(() =>
     buildCreateInitialValues(currentDate),
@@ -62,10 +69,11 @@ export function useCalendarPage() {
     eventSelectionRevision.current += 1;
     setSelectedEventState(event);
   }, []);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!initialReceipt);
   const calendarReadRevision = useRef(0);
   const preserveConfirmedMutation = () => {
     // A read started before this confirmation can only describe older data.
+    initialRangeRef.current = null;
     calendarReadRevision.current += 1;
     dataCache.invalidate();
     prefetchRef.current?.abort();
@@ -75,13 +83,13 @@ export function useCalendarPage() {
   const mutationInFlight = useRef(false);
   // Reads and writes have independent outcomes: a successful bootstrap cannot
   // acknowledge a refused save, and opening a form cannot repair a failed read.
-  const [readError, setReadError] = useState<string | null>(null);
+  const [readError, setReadError] = useState<string | null>(initial?.status === 'unavailable' ? initial.message : initial && !initialReceipt ? CALENDAR_INITIAL_UNAVAILABLE : null);
   const [mutationError, setMutationError] = useState<string | null>(null);
   const error = mutationError ?? readError;
   const navigationDateRef = useRef(currentDate);
   const [link, setLink] = useState<{ ready: boolean; eventId: string | null }>({
-    ready: false,
-    eventId: null,
+    ready: Boolean(initialReceipt),
+    eventId: initialReceipt?.query.eventId ?? null,
   });
 
   const stats = useMemo(() => buildStats(events, selectedDate), [events, selectedDate]);
@@ -121,6 +129,7 @@ export function useCalendarPage() {
 
   const loadData = useCallback(
     async (signal?: AbortSignal, refreshContext = false) => {
+      initialRangeRef.current = null;
       const revision = ++calendarReadRevision.current;
       const isCurrent = () => !signal?.aborted && calendarReadRevision.current === revision;
       setLoading(true);
@@ -169,12 +178,16 @@ export function useCalendarPage() {
 
   useEffect(() => {
     if (!link.ready) return;
+    if (initialRangeRef.current !== null) {
+      if (initialRangeRef.current === `${rangeFrom}:${rangeTo}`) return;
+      initialRangeRef.current = null;
+    }
 
     const controller = new AbortController();
     void loadData(controller.signal);
 
     return () => controller.abort();
-  }, [link.ready, loadData]);
+  }, [link.ready, loadData, rangeFrom, rangeTo]);
 
   useEffect(() => {
     if (typeof document === 'undefined') return;
@@ -184,7 +197,15 @@ export function useCalendarPage() {
     const unsubscribe = subscribePageReturn(refresh);
     return () => { controller.abort(); unsubscribe(); };
   }, [link.ready, loadData]);
-  useEffect(() => () => { cancelPrefetch(); dataCache.clear(); }, [dataCache, cancelPrefetch]);
+  const cacheLifetimeRef = useRef(0);
+  useEffect(() => {
+    const lifetime = ++cacheLifetimeRef.current;
+    return () => {
+      cancelPrefetch();
+      // StrictMode immediately starts the same lifetime again; only a disposed page clears its cache.
+      queueMicrotask(() => { if (cacheLifetimeRef.current === lifetime) dataCache.clear(); });
+    };
+  }, [dataCache, cancelPrefetch]);
 
   useEffect(() => {
     if (loading || readError || !link.eventId) return;
