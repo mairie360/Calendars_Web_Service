@@ -3,7 +3,7 @@ const http = require('node:http');
 const path = require('node:path');
 const { AsyncLocalStorage } = require('node:async_hooks');
 const { NextRequest } = require('next/server');
-const { createSessionRefreshHandler, createSessionLogoutHandler, forgetUserSession } = require('@mairie360/lib-components/next');
+const { createSessionRefreshHandler, createSessionLogoutHandler, forgetUserSession } = require('@mairie360/front-kit/next');
 const { loadTs } = require('./load-ts.cjs');
 const { OpenApiContract } = require('./openapi-contract.cjs');
 const { ContractMockServer } = require('./contract-mock-server.cjs');
@@ -26,6 +26,8 @@ const APP_ROUTES = {
   '/api/auth/me': 'app/api/auth/me/route',
   '/api/auth/session': 'app/api/auth/session/route',
   '/api/auth/logout': 'app/api/auth/logout/route',
+  '/api/auth/refresh': 'app/api/auth/refresh/route',
+  '/api/auth/resume': 'app/api/auth/resume/route',
 };
 
 /** Selected actual published User read and session documents, available in standalone CI. */
@@ -139,7 +141,7 @@ class FrontHarness {
     // Le navigateur signale toujours une requête same-origin (voir la protection CSRF du proxy).
     if (!headers.has('sec-fetch-site')) headers.set('sec-fetch-site', 'same-origin');
     if (!headers.has('origin')) headers.set('origin', this.origin);
-    if (this.cookies.size) headers.set('cookie', [...this.cookies].map(([name, value]) => `${name}=${value}`).join('; '));
+    if (this.cookies.size) headers.set('cookie', [...this.cookies].filter(([name]) => name !== 'refreshToken' || target.pathname === '/api' || target.pathname.startsWith('/api/')).map(([name, value]) => `${name}=${value}`).join('; '));
     this.browserRequests.push({ method: (init?.method ?? 'GET').toUpperCase(), path: `${target.pathname}${target.search}` });
     const response = await this.nativeFetch(target, { ...init, headers });
     for (const cookie of response.headers.getSetCookie()) {

@@ -17,7 +17,7 @@ const renewed=()=>h.userBff.on('post','/auth/refresh',{body:{message:'JWT refres
 const business=()=>h.calendarBff.on('get','/calendar/bootstrap',request=>request.headers.authorization===`Bearer ${access}`?{body:bootstrap()}:{status:401,body:apiError('UNAUTHORIZED','Session expirée')});
 
 test('expired access renews through Login and retries the actual published range',async()=>{
- renewed();business();await read();assert.deepEqual(h.browserRequests.map(x=>x.path),['/calendar/bootstrap'+range]);
+ renewed();business();await read();assert.deepEqual(h.browserRequests.map(x=>x.path),['/calendar/bootstrap'+range,'/api/auth/refresh','/calendar/bootstrap'+range]);
  assert.equal(h.ownerCalls.length,1);assert.equal(h.ownerCalls[0].url.pathname,'/api/auth/refresh');
  assert.deepEqual(h.userBff.calls('/auth/refresh')[0].body,{refresh_token:token});assert.equal(h.userBff.calls('/auth/refresh')[0].headers.authorization,undefined);
  assert.deepEqual(h.calendarBff.calls('/calendar/bootstrap').map(x=>x.headers.authorization),[`Bearer ${jwtFor(1,1)}`,`Bearer ${access}`]);
@@ -27,7 +27,8 @@ test('expired access renews through Login and retries the actual published range
 test('simultaneous Calendar and User reads share one real User rotation',async()=>{
  renewed();business();h.userBff.on('get','/me',req=>req.headers.authorization===`Bearer ${access}`?{body:sessionResponse()}:{status:401});
  const [one,two,user]=await Promise.all([read(),read(),fetch('/api/user/me')]);assert.ok(one&&two);assert.equal(user.status,200);
- assert.equal(h.ownerCalls.length,3);assert.equal(h.userBff.calls('/auth/refresh').length,1);assert.equal(h.calendarBff.requests.length,4);assert.equal(h.userBff.calls('/me').length,2);
+ assert.equal(h.ownerCalls.length,2);
+ assert.equal(h.browserRequests.filter(request=>request.path==='/api/auth/refresh').length,1);assert.equal(h.userBff.calls('/auth/refresh').length,1);assert.equal(h.calendarBff.requests.length,4);assert.equal(h.userBff.calls('/me').length,2);
  assert.equal(h.cookies.get('refreshToken'),'renewed-'+token);
 });
 test('the read without an access cookie never forwards a browser bearer',async()=>{

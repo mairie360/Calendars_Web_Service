@@ -90,10 +90,10 @@ test('no JavaScript-readable credential is used: no token storage and no client-
   assert.doesNotMatch(fs.readFileSync(path.join(SRC, 'components/desktop-navigation.tsx'), 'utf8'), /accessToken|refreshToken|Authorization|localStorage|sessionStorage/);
   const proxy=policy.parse('src/lib/bff-proxy.ts');
   assert.equal(policy.calls(proxy,'proxyPublishedBffRequest').length,1);
-  assert.ok(policy.imports(proxy).includes('@mairie360/lib-components/next'));
+  assert.ok(policy.imports(proxy).includes('@mairie360/front-kit/next'));
   const owner=policy.parse('src/app/api/auth/logout/route.ts');
   assert.equal(policy.calls(owner,'createSessionLogoutProxy').length,1);
-  assert.ok(policy.imports(owner).includes('@mairie360/lib-components/next'));
+  assert.ok(policy.imports(owner).includes('@mairie360/front-kit/next'));
 });
 
 // Réponse conforme pour chaque opération du contrat : le proxy doit toutes les relayer.

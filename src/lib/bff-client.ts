@@ -1,3 +1,4 @@
+import { sessionFetch } from '@mairie360/front-kit/browser';
 import axios, { type AxiosAdapter } from "axios";
 import { getBffCalendar } from "@mairie360/bff-calendar-openapi/endpoints/bffCalendar";
 import { navigateToLogin } from "./logout";
@@ -55,7 +56,7 @@ export async function requestBff<T>(path: string, init: RequestInit = {}) {
   headers.set("Accept", "application/json");
   if (init.body !== undefined) headers.set("Content-Type", "application/json");
 
-  const response = await fetch(path, {
+  const response = await sessionFetch(path, {
     ...init,
     headers,
     cache: "no-store",

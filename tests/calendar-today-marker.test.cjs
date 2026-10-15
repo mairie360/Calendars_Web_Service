@@ -32,7 +32,7 @@ test('month and week date controls mark today independently of selection', () =>
   const tomorrow = dateButton('Sélectionner le 27 Septembre 2026');
   yesterday.setAttribute('aria-selected', 'true');
 
-  assert.equal(markTodayInGrid(grid([yesterday, today, tomorrow]), new Date(2026, 8, 26, 12)), true);
+  assert.equal(markTodayInGrid(grid([yesterday, today, tomorrow]), new Date(Date.UTC(2026, 8, 26, 12))), true);
   assert.equal(today.getAttribute('aria-current'), 'date');
   assert.equal(yesterday.getAttribute('aria-current'), null);
   assert.equal(yesterday.getAttribute('aria-selected'), 'true');
@@ -42,16 +42,16 @@ test('an out-of-period date never leaves a stale today marker', () => {
   const oldToday = dateButton('Sélectionner le 26 Septembre 2026');
   oldToday.setAttribute('aria-current', 'date');
 
-  assert.equal(markTodayInGrid(grid([oldToday]), new Date(2026, 9, 1, 12)), false);
+  assert.equal(markTodayInGrid(grid([oldToday]), new Date(Date.UTC(2026, 9, 1, 12))), false);
   assert.equal(oldToday.getAttribute('aria-current'), null);
-  assert.equal(markTodayInGrid(null, new Date(2026, 9, 1)), false);
+  assert.equal(markTodayInGrid(null, new Date(Date.UTC(2026, 9, 1))), false);
 });
 
-test('local midnight changes the marked day and cleanup cancels the timer', () => {
+test('instance UTC midnight changes the marked day and cleanup cancels the timer', () => {
   const first = dateButton('Sélectionner le 26 Septembre 2026');
   const next = dateButton('Sélectionner le 27 Septembre 2026');
-  const beforeMidnight = new Date(2026, 8, 26, 23, 59, 59, 900);
-  const afterMidnight = new Date(2026, 8, 27, 0, 0, 0, 10);
+  const beforeMidnight = new Date(Date.UTC(2026, 8, 26, 23, 59, 59, 900));
+  const afterMidnight = new Date(Date.UTC(2026, 8, 27, 0, 0, 0, 10));
   let instant = beforeMidnight;
   let scheduled;
   let cancelled;
