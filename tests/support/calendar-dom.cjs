@@ -37,7 +37,8 @@ async function calendarDom(t) {
     }
   });
   await front.start();
-  front.cookies.set('accessToken', jwtFor(1));
+  const adminCookie='e30.'+Buffer.from(JSON.stringify({sub:'1',role:'Admin',exp:Math.floor(Date.now()/1000)+3600})).toString('base64url')+'.signature';
+  front.cookies.set('accessToken', adminCookie);
   front.userBff.on('get', '/me', { body: fixture.sessionResponse() });
   front.calendarRead({ body: fixture.bootstrap() });
   const console = new VirtualConsole();
@@ -72,7 +73,9 @@ async function calendarDom(t) {
   const { createRoot } = require('react-dom/client');
   const Page = loadTs('app/page').default;
   reactRoot = createRoot(dom.window.document.getElementById('root'));
-  await React.act(async () => reactRoot.render(React.createElement(Page)));
+  const {InstanceProvider}=require('@mairie360/front-kit/react');
+  const {jwtDisplayRole}=require('@mairie360/front-kit/shared');
+  await React.act(async () => reactRoot.render(React.createElement(InstanceProvider,{role:jwtDisplayRole(adminCookie),timeZone:'UTC'},React.createElement(Page))));
   async function waitFor(predicate) {
     for (let attempt = 0; attempt < 100 && !predicate(); attempt += 1) {
       await React.act(async () => new Promise((resolve) => setTimeout(resolve, 10)));

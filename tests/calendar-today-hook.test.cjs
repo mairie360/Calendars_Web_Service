@@ -7,7 +7,7 @@ const { loadTs } = require('./support/load-ts.cjs');
 const { useCalendarTodayMarker } = loadTs('app/calendar/_components/use-calendar-today-marker');
 
 test('the actual today hook marks the mounted grid, replaces period timers and cleans up on unmount', async t => {
-  t.mock.timers.enable({ apis: ['Date'], now: new Date(2026, 9, 15, 12).getTime() });
+  t.mock.timers.enable({ apis: ['Date'], now: new Date(Date.UTC(2026, 9, 15, 12)).getTime() });
   const dom = new JSDOM('<div id="root"></div>');
   const previous = { window:global.window, document:global.document, act:global.IS_REACT_ACT_ENVIRONMENT };
   global.window = dom.window; global.document = dom.window.document; global.IS_REACT_ACT_ENVIRONMENT = true;
@@ -31,7 +31,7 @@ test('the actual today hook marks the mounted grid, replaces period timers and c
     assert.equal(sequence, 1, 'unchanged period must not restart the observer');
     await React.act(async () => root.render(React.createElement(Probe, { view:'week', period:2 })));
     assert.deepEqual(cancelled, [1]); assert.equal(timers.size, 1);
-    t.mock.timers.setTime(new Date(2026, 9, 16, 0, 0, 1).getTime());
+    t.mock.timers.setTime(new Date(Date.UTC(2026, 9, 16, 0, 0, 1)).getTime());
     const [nextId, next] = [...timers.entries()][0];
     timers.delete(nextId);
     await React.act(async () => next.callback());

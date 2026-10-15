@@ -5,7 +5,7 @@ const { loadTs, stubModule, SRC } = require('./support/load-ts.cjs');
 const { react, renderHook } = require('./support/hook-runner.cjs');
 
 const RealDate = Date;
-let clock = new RealDate(2026, 8, 30, 23, 59).getTime();
+let clock = new RealDate(Date.UTC(2026, 8, 30, 23, 59)).getTime();
 class ClockDate extends RealDate {
   constructor(...args) { super(...(args.length ? args : [clock])); }
   static now() { return clock; }
@@ -28,7 +28,7 @@ let page;
 
 beforeEach(() => {
   global.Date = ClockDate;
-  clock = new RealDate(2026, 9, 1, 10).getTime();
+  clock = new RealDate(Date.UTC(2026, 9, 1, 10)).getTime();
   global.window = { location: { search: '' } };
   loads.length = 0;
 });
@@ -38,7 +38,7 @@ afterEach(() => {
   global.Date = RealDate;
   delete global.window;
 });
-const at = (...parts) => { clock = new RealDate(...parts).getTime(); };
+const at = (...parts) => { clock = new RealDate(RealDate.UTC(...parts)).getTime(); };
 async function mountPage() {
   page = renderHook(useCalendarPage);
   return page.waitFor((state) => !state.loading);

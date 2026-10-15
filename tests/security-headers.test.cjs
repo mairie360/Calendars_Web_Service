@@ -1,8 +1,10 @@
 const assert = require('node:assert/strict');
 const { test, beforeEach, afterEach } = require('node:test');
 const savedLoginUrl = process.env.LOGIN_FRONT_URL;
-beforeEach(() => { process.env.LOGIN_FRONT_URL = 'https://login.mairie.test/'; });
+const savedFrontUrl=process.env.CALENDAR_FRONT_URL;
+beforeEach(() => { process.env.LOGIN_FRONT_URL = 'https://login.mairie.test/';process.env.CALENDAR_FRONT_URL='https://calendar.mairie.test/'; });
 afterEach(() => {
+  if(savedFrontUrl===undefined)delete process.env.CALENDAR_FRONT_URL;else process.env.CALENDAR_FRONT_URL=savedFrontUrl;
   if (savedLoginUrl === undefined) delete process.env.LOGIN_FRONT_URL;
   else process.env.LOGIN_FRONT_URL = savedLoginUrl;
 });
@@ -31,7 +33,7 @@ test('authenticated pages get a per-request nonce CSP forwarded to Next.js', () 
   assert.notEqual(second.headers.get('x-middleware-request-x-nonce'), nonce);
 });
 
-test('missing or expired sessions are redirected to Login without a CSP', () => {
+test('missing or expired documents use local resume without a CSP', () => {
   for (const token of [undefined, jwt(1)]) {
     const response = middleware(pageRequest(token));
     assert.equal(response.status, 307);
@@ -41,11 +43,11 @@ test('missing or expired sessions are redirected to Login without a CSP', () => 
   }
 });
 
-test('BFF data routes are left to the BFF: no Login redirect, no cookie cleared, even without a session', () => {
+test('unauthenticated contract data routes return 401 without a redirect or cookie changes', () => {
   for (const [path, token] of [['/calendar/bootstrap', undefined], ['/calendar/events/12', jwt(1)], ['/health', undefined]]) {
     const response = middleware(new NextRequest(`http://localhost:5002${path}`, token ? { headers: { cookie: `accessToken=${token}` } } : {}));
-    assert.equal(response.status, 200, path);
-    assert.equal(response.headers.get('x-middleware-next'), '1', path);
+    assert.equal(response.status, 401, path);
+    assert.equal(response.headers.get('location'), null, path);
     assert.equal(response.headers.get('set-cookie'), null, path);
   }
   // Un chemin hors contrat reste traité comme une page.

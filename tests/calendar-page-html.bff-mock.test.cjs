@@ -101,7 +101,7 @@ test('the shell shows the user resolved from BFF User in the header', async () =
   assert.match(html, /<\/main>\s*<footer\b/);
   assert.match(footer.replace(/<[^>]*>/g, ''), new RegExp(`© ${new Date().getFullYear()} Mairie360`));
   assert.doesNotMatch(footer, /Version|<button\b|<a\b/);
-  assert.deepEqual(view.props('Sidebar').isAdmin, true);
+  assert.deepEqual(view.props('Sidebar').isAdmin, false, 'a page mounted without its server provider keeps the least privileged display role');
 });
 
 test('desktop and mobile navigation expose only active modules and keep Settings functional', async () => {
