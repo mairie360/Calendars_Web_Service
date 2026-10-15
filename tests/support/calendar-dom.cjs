@@ -7,7 +7,7 @@ const { loadTs, SRC } = require('./load-ts.cjs');
 const fixture = require('./calendar-fixtures.cjs');
 
 /** Mount the actual page and published components with real React hooks and existing contract mocks. */
-async function calendarDom(t) {
+async function calendarDom(t, { initial, strict = false } = {}) {
   const keys = ['Date', 'window', 'document', 'HTMLElement', 'Element', 'Node', 'SVGElement',
     'MutationObserver', 'Event', 'MouseEvent', 'KeyboardEvent', 'CustomEvent',
     'getComputedStyle', 'requestAnimationFrame', 'cancelAnimationFrame',
@@ -71,11 +71,12 @@ async function calendarDom(t) {
   t.after(() => setBrowserFrontUrls({}));
   React = require('react');
   const { createRoot } = require('react-dom/client');
-  const Page = loadTs('app/page').default;
+  const Page = loadTs('app/calendar-client').default;
   reactRoot = createRoot(dom.window.document.getElementById('root'));
   const {InstanceProvider}=require('@mairie360/front-kit/react');
   const {jwtDisplayRole}=require('@mairie360/front-kit/shared');
-  await React.act(async () => reactRoot.render(React.createElement(InstanceProvider,{role:jwtDisplayRole(adminCookie),timeZone:'UTC'},React.createElement(Page))));
+  const client = React.createElement(InstanceProvider, { role: jwtDisplayRole(adminCookie), timeZone: 'UTC' }, React.createElement(Page, { initial }));
+  await React.act(async () => reactRoot.render(strict ? React.createElement(React.StrictMode, null, client) : client));
   async function waitFor(predicate) {
     for (let attempt = 0; attempt < 100 && !predicate(); attempt += 1) {
       await React.act(async () => new Promise((resolve) => setTimeout(resolve, 10)));

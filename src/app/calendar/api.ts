@@ -1,3 +1,4 @@
+import { parseCalendarBootstrapReceipt } from '@/lib/calendar-bootstrap-receipt';
 import { BffRequestError } from "../../lib/bff-client";
 import type { components } from '@/contracts/bff';
 import { bffCalendar } from "@/lib/bff-client";
@@ -91,6 +92,11 @@ export async function loadCalendarData(params: CalendarLoadParams): Promise<Cale
     { signal: params.signal },
   );
 
+  return calendarDataFromReceipt(bootstrap);
+}
+
+export function calendarDataFromReceipt(value: unknown): CalendarData {
+  const bootstrap = parseCalendarBootstrapReceipt(value);
   return {
     events: bootstrap.events.map((event) => toCalendarEventItem(event, peopleOf(bootstrap))),
     people: bootstrap.assignees,

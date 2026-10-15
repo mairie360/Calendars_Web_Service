@@ -82,3 +82,15 @@ test('period navigation during identity verification cannot reuse the previous a
   assert.equal(periods,0);
   finish(value('bob'));await identityRead;
 });
+
+test('a confirmed server period seeds only its known account and is cloned before local edits', async () => {
+  let boots = 0, periods = 0;
+  const cache = createCalendarDataCache({ initial: { params: params(), value: value() }, bootstrap: async () => { boots++; return value('bob'); }, period: async (_params, context) => { periods++; return context; } });
+  const first = await cache.read(params()); first.events[0].title = 'draft';
+  assert.equal((await cache.read(params())).events[0].title, 'confirmed');
+  await cache.read(params('2026-11-01'));
+  assert.equal(boots, 0); assert.equal(periods, 1);
+  await cache.read(params(), true);
+  assert.equal((await cache.read(params('2026-11-01'))).currentUser.id, 'bob');
+  assert.equal(boots, 1);
+});

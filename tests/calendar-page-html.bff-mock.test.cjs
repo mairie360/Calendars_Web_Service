@@ -12,8 +12,8 @@ const { alice, apiError, bootstrap, calendarEvent, installWindow, sessionRespons
 const { router } = installReactRuntime();
 const React = require('react');
 const { renderToStaticMarkup } = require('react-dom/server');
-const Page = loadTs('app/page').default;
-const initialDate = new Date();
+const Page = loadTs('app/calendar-client').default;
+const initialDate = loadTs('app/calendar/date-utils').calendarToday();
 const { getPeriodTitle } = loadTs('app/calendar/date-utils');
 
 const front = new FrontHarness();

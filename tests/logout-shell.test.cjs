@@ -4,7 +4,7 @@ const {FrontHarness,jwtFor}=require('./support/front-harness.cjs');
 const {installReactRuntime,mount}=require('./support/server-view.cjs');
 const {loadTs}=require('./support/load-ts.cjs');
 const {installWindow,bootstrap,sessionResponse}=require('./support/calendar-fixtures.cjs');
-installReactRuntime();const React=require('react');const Page=loadTs('app/page').default;
+installReactRuntime();const React=require('react');const Page=loadTs('app/calendar-client').default;
 const h=new FrontHarness();let view,window;
 before(()=>h.start());after(()=>h.stop());
 beforeEach(()=>{h.reset();window=installWindow();h.cookies.set('accessToken',jwtFor(1));h.cookies.set('refreshToken','disposable-shell-refresh');h.userBff.on('get','/me',{body:sessionResponse()});h.calendarBff.on('get','/calendar/bootstrap',{body:bootstrap()});});

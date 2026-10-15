@@ -34,7 +34,16 @@ const relative = (file) => path.relative(SRC, file).split(path.sep).join('/');
 test('only the BFF client, the session hook, the logout helper and the server proxy emit network requests', () => {
   const emitters = sourceFiles().filter(file => { const ast = policy.parse('src/' + relative(file)); return policy.calls(ast, 'fetch').length || policy.networkReferences(ast).length; }).map(relative).sort();
 
-  assert.deepEqual(emitters, ['lib/auth-session.ts', 'lib/bff-client.ts', 'lib/logout.ts']);
+  assert.deepEqual(emitters, ['lib/auth-session.ts', 'lib/bff-client.ts', 'lib/logout.ts', 'lib/server-calendar-page.ts']);
+});
+
+test('the server bootstrap uses the generated SDK through the existing proxy, with no direct fetch', () => {
+  const ast = policy.parse('src/lib/server-calendar-page.ts');
+  assert.equal(policy.calls(ast, 'fetch').length, 0);
+  const source = fs.readFileSync(path.join(SRC, 'lib/server-calendar-page.ts'), 'utf8');
+  assert.match(source, /getBffCalendar/);
+  assert.match(source, /api\.getCalendarBootstrap\(/);
+  assert.match(source, /proxyBffRequest\(/);
 });
 
 test('no absolute BFF destination is hard-coded in frontend source', () => {
