@@ -130,3 +130,58 @@ test('deleting the event does not attempt to restore focus onto its disconnected
   assert.equal(opener.isConnected, false); assert.equal(restore.mock.callCount(), 0);
   assert.equal(dom.front.calendarBff.calls('/calendar/events/{id}', 'DELETE').length, 1);
 });
+
+const settleMutation = async mutate => React.act(async () => { mutate(); await new Promise(resolve => setTimeout(resolve, 0)); });
+function appendDialog(dom, content) {
+  const scope = dom.document.createElement('div'); scope.setAttribute('role', 'dialog'); scope.setAttribute('aria-modal', 'true');
+  scope.innerHTML = content; return scope;
+}
+
+test('focus stops skip controls inside a CSS-hidden ancestor', async t => {
+  const dom = await calendarDom(t), opener = dom.button('Nouvel événement'); opener.focus();
+  const scope = appendDialog(dom, '<div style="display:none"><button>Hidden</button></div><button id="visible-focus-stop">Visible</button>');
+  await settleMutation(() => dom.document.querySelector('.app-shell-frame').append(scope));
+  assert.equal(dom.document.activeElement, scope.querySelector('#visible-focus-stop'));
+});
+
+test('a CSS-hidden dialog ancestor leaves navigation and background focus available', async t => {
+  const dom = await calendarDom(t), opener = dom.button('Nouvel événement'); opener.focus();
+  const hidden = dom.document.createElement('div'); hidden.style.display = 'none';
+  hidden.append(appendDialog(dom, '<button>Hidden dialog action</button>'));
+  await settleMutation(() => dom.document.querySelector('.app-shell-frame').append(hidden));
+  assert.equal(dom.document.querySelector('.app-skip-link').hasAttribute('inert'), false);
+  assert.equal(dom.document.activeElement, opener);
+});
+
+test('frame-local eligibility attributes are observed without requiring a child-list mutation', async t => {
+  const dom = await calendarDom(t), opener = dom.button('Nouvel événement'); opener.focus();
+  const ancestor = dom.document.createElement('div'), scope = appendDialog(dom, '<button>Action</button>'); ancestor.append(scope);
+  const style = dom.document.createElement('style'); style.textContent = '.focus-scope-hidden { display:none; }'; dom.document.head.append(style);
+  await settleMutation(() => dom.document.querySelector('.app-shell-frame').append(ancestor));
+  const inactive = () => dom.document.querySelector('.app-skip-link').hasAttribute('inert');
+  assert.equal(inactive(), true);
+  for (const [name, disable, enable] of [
+    ['role', () => scope.setAttribute('role', 'region'), () => scope.setAttribute('role', 'dialog')],
+    ['aria-modal', () => scope.setAttribute('aria-modal', 'false'), () => scope.setAttribute('aria-modal', 'true')],
+    ['aria-hidden', () => ancestor.setAttribute('aria-hidden', 'true'), () => ancestor.removeAttribute('aria-hidden')],
+    ['hidden', () => ancestor.setAttribute('hidden', ''), () => ancestor.removeAttribute('hidden')],
+    ['inert', () => ancestor.setAttribute('inert', ''), () => ancestor.removeAttribute('inert')],
+    ['class', () => ancestor.classList.add('focus-scope-hidden'), () => ancestor.classList.remove('focus-scope-hidden')],
+    ['style', () => ancestor.style.display = 'none', () => ancestor.style.removeProperty('display')],
+  ]) {
+    await settleMutation(disable); assert.equal(inactive(), false, name + ' must release modal navigation inactivity');
+    assert.equal(dom.document.activeElement, opener, name + ' must return focus when its modal becomes ineligible');
+    await settleMutation(enable); assert.equal(inactive(), true, name + ' must re-enter the eligible modal');
+    assert.ok(scope.contains(dom.document.activeElement));
+  }
+});
+
+test('Tab and Shift+Tab from the negative-tabindex dialog container stay inside its controls', async t => {
+  const dom = await calendarDom(t); await openEvent(dom);
+  const scope = dialog(dom), controls = enabled(scope);
+  scope.focus(); assert.equal(dom.document.activeElement, scope);
+  assert.equal(press(dom, scope, 'Tab', true).defaultPrevented, true);
+  assert.equal(dom.document.activeElement, controls.at(-1));
+  scope.focus(); assert.equal(press(dom, scope, 'Tab').defaultPrevented, true);
+  assert.equal(dom.document.activeElement, controls[0]);
+});
