@@ -180,7 +180,7 @@ services:
       - backend
 
   bff-user:
-    image: ${BFF_USER_IMAGE:-ghcr.io/mairie360/bff-user:dev-46a698b}
+    image: ${BFF_USER_IMAGE:-ghcr.io/mairie360/bff-user:1.0.0}
     container_name: calendar-front-perf-bff-user
     depends_on:
       seeder:
@@ -215,7 +215,7 @@ services:
       - backend
 
   bff-calendar:
-    image: ${BFF_CALENDAR_IMAGE:-ghcr.io/mairie360/bff-calendar:dev-fcc4f16}
+    image: ${BFF_CALENDAR_IMAGE:-ghcr.io/mairie360/bff-calendar:1.0.0}
     container_name: calendar-front-perf-bff-calendar
     depends_on:
       seeder:
