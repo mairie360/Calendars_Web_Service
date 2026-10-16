@@ -111,7 +111,7 @@ test('a dialog with its own focus and Tab handler remains authoritative and can 
     dom.document.querySelector('.app-shell-frame').append(modern);
     preferred.focus();
   });
-  await dom.waitFor(() => dom.document.querySelector('.app-skip-link').hasAttribute('inert'));
+  await dom.waitFor(() => [...dom.document.querySelectorAll('a[href]')].find(link => link.getAttribute('href') === `#${dom.document.querySelector('main').id}`).closest('[inert]') !== null);
   assert.equal(dom.document.activeElement, preferred, 'The shared scope must preserve an existing initial focus');
   assert.equal(press(dom, preferred, 'Tab').defaultPrevented, true);
   assert.equal(dom.document.activeElement, preferred, 'An already handled Tab must not be handled again');
@@ -149,7 +149,7 @@ test('a CSS-hidden dialog ancestor leaves navigation and background focus availa
   const hidden = dom.document.createElement('div'); hidden.style.display = 'none';
   hidden.append(appendDialog(dom, '<button>Hidden dialog action</button>'));
   await settleMutation(() => dom.document.querySelector('.app-shell-frame').append(hidden));
-  assert.equal(dom.document.querySelector('.app-skip-link').hasAttribute('inert'), false);
+  assert.equal([...dom.document.querySelectorAll('a[href]')].find(link => link.getAttribute('href') === `#${dom.document.querySelector('main').id}`).closest('[inert]') !== null, false);
   assert.equal(dom.document.activeElement, opener);
 });
 
@@ -158,7 +158,7 @@ test('frame-local eligibility attributes are observed without requiring a child-
   const ancestor = dom.document.createElement('div'), scope = appendDialog(dom, '<button>Action</button>'); ancestor.append(scope);
   const style = dom.document.createElement('style'); style.textContent = '.focus-scope-hidden { display:none; }'; dom.document.head.append(style);
   await settleMutation(() => dom.document.querySelector('.app-shell-frame').append(ancestor));
-  const inactive = () => dom.document.querySelector('.app-skip-link').hasAttribute('inert');
+  const inactive = () => [...dom.document.querySelectorAll('a[href]')].find(link => link.getAttribute('href') === `#${dom.document.querySelector('main').id}`).closest('[inert]') !== null;
   assert.equal(inactive(), true);
   for (const [name, disable, enable] of [
     ['role', () => scope.setAttribute('role', 'region'), () => scope.setAttribute('role', 'dialog')],

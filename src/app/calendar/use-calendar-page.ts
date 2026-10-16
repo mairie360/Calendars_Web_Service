@@ -85,6 +85,7 @@ export function useCalendarPage(initial?: InitialCalendarPage) {
   // acknowledge a refused save, and opening a form cannot repair a failed read.
   const [readError, setReadError] = useState<string | null>(initial?.status === 'unavailable' ? initial.message : initial && !initialReceipt ? CALENDAR_INITIAL_UNAVAILABLE : null);
   const [mutationError, setMutationError] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<string | null>(null);
   const error = mutationError ?? readError;
   const navigationDateRef = useRef(currentDate);
   const [link, setLink] = useState<{ ready: boolean; eventId: string | null }>({
@@ -245,6 +246,7 @@ export function useCalendarPage(initial?: InitialCalendarPage) {
 
   const openCreateModal = (date?: Date, startTime = "09:00") => {
     if (!link.ready) return;
+    setFeedback(null);
     // Refresh an implicit "today" when a tab crosses midnight, but never
     // overwrite a deliberately selected date, deep link or time slot.
     const creationDate = date ?? (selectionFollowsToday.current ? calendarToday() : selectedDate);
@@ -264,12 +266,14 @@ export function useCalendarPage(initial?: InitialCalendarPage) {
 
     setSaving(true);
     setMutationError(null);
+    setFeedback(null);
 
     try {
       const createdEvent = await createCalendarEvent(values, people);
 
       preserveConfirmedMutation();
       setEvents((currentEvents) => [...currentEvents, createdEvent]);
+      if (createdEvent.id !== undefined && String(createdEvent.id).trim()) setFeedback(`Événement « ${createdEvent.title} » créé.`);
       setCreateModalOpen(false);
       selectionFollowsToday.current = false;
       setCurrentDate(parseDateInput(createdEvent.date));
@@ -283,6 +287,7 @@ export function useCalendarPage(initial?: InitialCalendarPage) {
   };
 
   const handleEventClick = (event: unknown) => {
+    setFeedback(null);
     setMutationError(null);
     setSelectedEvent(event as CalendarEventItem);
   };
@@ -296,6 +301,7 @@ export function useCalendarPage(initial?: InitialCalendarPage) {
 
     setSaving(true);
     setMutationError(null);
+    setFeedback(null);
 
     try {
       const savedEvent = await updateCalendarEvent(updatedEvent, people);
@@ -308,6 +314,7 @@ export function useCalendarPage(initial?: InitialCalendarPage) {
             : event,
         ),
       );
+      if (String(savedEvent.id) === String(updatedEvent.id)) setFeedback(`Événement « ${savedEvent.title} » enregistré.`);
       const selectionUnchanged = eventSelectionRevision.current === selection;
       if (selectionUnchanged) {
         setSelectedEventState((current) =>
@@ -332,6 +339,7 @@ export function useCalendarPage(initial?: InitialCalendarPage) {
 
     setSaving(true);
     setMutationError(null);
+    setFeedback(null);
 
     try {
       await deleteCalendarEvent(eventToDelete.id);
@@ -339,6 +347,7 @@ export function useCalendarPage(initial?: InitialCalendarPage) {
       setEvents((currentEvents) =>
         currentEvents.filter((event) => String(event.id) !== String(eventToDelete.id)),
       );
+      setFeedback(`Événement « ${eventToDelete.title} » supprimé.`);
       // A reopened copy of the deleted event is no longer official either.
       // Never close a different event selected in the meantime.
       setSelectedEventState((current) =>
@@ -363,6 +372,7 @@ export function useCalendarPage(initial?: InitialCalendarPage) {
 
     setSaving(true);
     setMutationError(null);
+    setFeedback(null);
 
     try {
       const savedEvent = await updateCalendarEventApproval(
@@ -377,6 +387,9 @@ export function useCalendarPage(initial?: InitialCalendarPage) {
           String(event.id) === String(savedEvent.id) ? savedEvent : event,
         ),
       );
+      if (String(savedEvent.id) === String(eventToValidate.id) && savedEvent.approvalStatus === approvalStatus) {
+        setFeedback(`Événement « ${savedEvent.title} » ${approvalStatus === 'approved' ? 'approuvé' : 'refusé'}.`);
+      }
       if (eventSelectionRevision.current === selection) {
         setSelectedEventState((current) =>
           String(current?.id) === String(eventToValidate.id) ? savedEvent : current,
@@ -421,6 +434,8 @@ export function useCalendarPage(initial?: InitialCalendarPage) {
     setView,
     services,
     saving,
+    feedback,
+    dismissFeedback: () => setFeedback(null),
     stats,
     view,
   };

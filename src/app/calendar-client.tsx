@@ -3,12 +3,12 @@
 import {
   CalendarSidebar,
   CalendarToolbar,
-  Card,
   DaySchedule,
   MonthGrid,
-  PageTitleBar,
   WeekGrid,
-} from "@mairie360/lib-components";
+} from "@mairie360/lib-components/calendar";
+import { Card, Skeleton, Toast } from "@mairie360/lib-components/primitives";
+import { PageTitleBar } from "@mairie360/lib-components/shell";
 import { RefreshCw } from "lucide-react";
 import { AppShell } from "./_components/app-shell";
 import { prepareUpcomingScrollRegion } from "./calendar/_components/upcoming-scroll-region";
@@ -33,6 +33,7 @@ export default function CalendarClient({ initial }: { initial?: InitialCalendarP
         <Card className="mt-7 min-h-[620px] rounded-lg px-6 py-6">
           {calendar.readError ? <p role="alert">{calendar.readError}</p> : null}
           <span role="status">Chargement des données du calendrier…</span>
+          {!calendar.readError && <Skeleton className="mt-6 h-96" />}
         </Card>
       </AppShell>
     );
@@ -40,6 +41,7 @@ export default function CalendarClient({ initial }: { initial?: InitialCalendarP
 
   return (
     <AppShell activeItem="calendar">
+      {calendar.feedback && <Toast variant="success" message={calendar.feedback} onClose={calendar.dismissFeedback} className="mb-5" />}
       <PageTitleBar
         title="Calendrier & Événements"
         subtitle="Planifiez et organisez vos activités"

@@ -81,7 +81,10 @@ test('actual shell and supplied density contexts apply reference typography, ins
   assert.equal(dom.style(main).overflowY, 'auto'); assert.equal(dom.style(main).overflowX, 'hidden');
   const shell = dom.document.querySelector('.calendar-scroll-shell');
   assert.equal(dom.style(shell).height, '100dvh'); assert.equal(dom.style(shell).overflow, 'hidden');
-  assert.equal(Number.parseFloat(dom.style(shell.querySelector(':scope > div')).minHeight), 0);
+  assert.equal(Number.parseFloat(dom.style(shell.querySelector(':scope > .flex')).minHeight), 0);
+  const skip = [...shell.querySelectorAll('a[href]')].find(link => link.getAttribute('href') === `#${main.id}`);
+  assert.ok(skip);
+  assert.notEqual(dom.style(skip.parentElement).height, '100%', 'The skip-link wrapper cannot displace the calendar frame');
   assert.equal(dom.style(dom.document.querySelector('.app-published-sidebar').closest('.hidden')).overflowY, 'auto');
   assert.equal(Number.parseFloat(dom.style(main.parentElement).minHeight), 0);
   for (const [density, padding] of [['compact', '16px'], ['comfortable', '32px']]) {
@@ -115,7 +118,8 @@ test('real page marks today after bootstrap, keeps selection independent and rea
   assert.deepEqual(today().map((button) => button.getAttribute('aria-label')), ['Sélectionner le 9 Octobre 2026']);
   assert.equal(dom.style(today()[0]).borderTopWidth, '2px');
   assert.equal(dom.style(today()[0]).borderTopStyle, 'dashed');
-  assert.equal(dom.style(today()[0]).borderTopColor, 'rgb(15, 118, 110)');
+  assert.equal(dom.style(today()[0]).borderTopColor, 'rgb(18, 86, 166)');
+  assert.equal(dom.style(dom.document.documentElement).getPropertyValue('--mairie-accent').trim(), '#1256a6');
   const other = dom.button('Sélectionner le 8 Octobre 2026');
   const beforeOther = other.className, beforeToday = today()[0].className;
   await dom.click(other);
