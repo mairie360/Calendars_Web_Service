@@ -46,18 +46,18 @@ button {
   min-height: 100%;
 }
 
-.calendar-scroll-shell aside[aria-label="Navigation principale"] {
+.calendar-scroll-shell aside.app-published-sidebar[aria-label="Navigation principale"] {
   position: relative;
   z-index: 20;
   box-shadow: 8px 0 24px rgb(12 28 48 / 28%);
 }
 
-.calendar-scroll-shell aside[aria-label="Navigation principale"] > nav button {
+.calendar-scroll-shell aside.app-published-sidebar[aria-label="Navigation principale"] > nav button {
   min-height: 44px;
   flex-shrink: 0;
 }
 
-/* Preserve the published mobile Close control above the sidebar shadow. */
+/* Keep historical drawer rules away from the shared fixed desktop navigation. */
 .calendar-scroll-shell [role="dialog"][aria-label="Navigation mobile"] aside[aria-label="Navigation principale"] {
   z-index: 0;
 }

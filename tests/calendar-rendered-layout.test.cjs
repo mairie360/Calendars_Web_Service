@@ -133,3 +133,12 @@ test('real page marks today after bootstrap, keeps selection independent and rea
   assert.ok(dom.front.calendarBff.requests.length);
   assert.ok(dom.front.calendarBff.requests.every((request) => request.method === 'GET'), 'View/selection changes do not invent a BFF write');
 });
+
+
+test('historical calendar drawer styles do not put desktop navigation into normal flow', async t => {
+  const dom = await calendarDom(t);
+  const navigation = dom.document.querySelector('.app-desktop-navigation');
+  assert.ok(navigation);
+  assert.notEqual(dom.style(navigation).position, 'relative',
+    'The shared desktop navigation must not inherit the historical drawer position.');
+});
