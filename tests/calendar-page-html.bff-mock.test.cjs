@@ -18,6 +18,7 @@ const { getPeriodTitle } = loadTs('app/calendar/date-utils');
 
 const front = new FrontHarness();
 let view;
+const isCalendarPending = () => view.hostElements(props => props.role === 'status').some(({ text }) => /Chargement des données du calendrier|Enregistrement en cours/.test(text));
 let window;
 
 before(() => front.start());
@@ -38,7 +39,7 @@ afterEach(() => {
 async function renderLoadedPage(body = bootstrap()) {
   front.calendarRead({ body });
   view = mount(React.createElement(Page));
-  return view.waitFor((html) => !html.includes('role="status"') && view.find('Header')[0]?.props.user.name !== 'Chargement…');
+  return view.waitFor((html) => !isCalendarPending() && view.find('Header')[0]?.props.user.name !== 'Chargement…');
 }
 
 test('server renders on either side of a month boundary expose no server-local calendar date', () => {
@@ -71,7 +72,7 @@ test('the first pass renders the loading state, the second the events answered b
   assert.equal(view.find('MonthGrid').length, 0);
   assert.doesNotMatch(view.html, />Nouvel événement<\/button>/);
 
-  const html = await view.waitFor((current) => !current.includes('role="status"'));
+  const html = await view.waitFor((current) => !isCalendarPending());
 
   assert.match(html, new RegExp(`<h2[^>]*>${getPeriodTitle('month', initialDate)}</h2>`));
   assert.deepEqual(front.calendarBff.sequence().map((line) => line.split('?')[0]), ['GET /calendar/bootstrap']);
@@ -90,7 +91,7 @@ test('the shell shows the user resolved from BFF User in the header', async () =
 
   assert.match(html, /calendar-scroll-shell/);
   assert.match(html, /class="flex h-screen"/);
-  assert.match(html, /<main class="min-h-0 flex-1 overflow-auto/);
+  assert.match(html, /<main\b[^>]*class="min-h-0 flex-1 overflow-auto/);
   assert.deepEqual(front.userBff.sequence(), ['GET /me']);
   assert.match(html, /<span data-slot="avatar-fallback"[^>]*>AM<\/span>|<span[^>]*>AM<\/span>/);
   assert.match(html, /<span[^>]*>Admin Mairie<\/span>/);
@@ -166,7 +167,7 @@ test('a BFF error is rendered as an alert with a retry button that reloads the c
 
   front.calendarRead({ body: bootstrap() });
   await view.click('Réessayer');
-  const html = await view.waitFor((current) => !current.includes('role="alert"') && !current.includes('role="status"'));
+  const html = await view.waitFor((current) => !current.includes('role="alert"') && !isCalendarPending());
 
   assert.equal(front.calendarBff.requests.length, 2);
   assert.match(view.text(), /Événement 5/);
@@ -257,7 +258,7 @@ test('changing the view re-renders the week grid with the reloaded events', asyn
   await renderLoadedPage();
 
   await view.act(() => view.props('CalendarToolbar').onViewChange('week'));
-  const html = await view.waitFor(() => front.calendarBff.requests.length === 2 && !view.html.includes('role="status"'));
+  const html = await view.waitFor(() => front.calendarBff.requests.length === 2 && !isCalendarPending());
 
   assert.equal(view.find('WeekGrid').length, 1);
   assert.equal(view.find('MonthGrid').length, 0);
@@ -269,9 +270,9 @@ test('day arrows render the navigated date in the actual schedule, statistics an
   window.location.search = '?date=2026-12-31';
   await renderLoadedPage(bootstrap({ events: [calendarEvent(42, { date: '2027-01-01' })] }));
   await view.act(() => view.props('CalendarToolbar').onViewChange('day'));
-  await view.waitFor(() => !view.html.includes('role="status"'));
+  await view.waitFor(() => !isCalendarPending());
   await view.act(() => view.props('CalendarToolbar').onNext());
-  const html = await view.waitFor(() => !view.html.includes('role="status"') && view.props('CalendarToolbar').title === '1 janvier 2027');
+  const html = await view.waitFor(() => !isCalendarPending() && view.props('CalendarToolbar').title === '1 janvier 2027');
   assert.match(html, /aria-label="1 Janvier 2027 à 09:00"/);
   assert.doesNotMatch(html, /aria-label="31 Décembre 2026 à/);
   assert.equal(view.props('CalendarSidebar').stats[2].value, '1 événement');
@@ -291,7 +292,7 @@ test('calendar layout uses responsive grids and a bounded sidebar with BFF-backe
   assert.deepEqual(front.calendarBff.sequence().map((line) => line.split('?')[0]), ['GET /calendar/bootstrap']);
 
   await view.act(() => view.props('CalendarToolbar').onViewChange('week'));
-  await view.waitFor(() => front.calendarBff.requests.length === 2 && !view.html.includes('role="status"'));
+  await view.waitFor(() => front.calendarBff.requests.length === 2 && !isCalendarPending());
 
   assert.equal(view.props('WeekGrid').className, 'calendar-week-grid');
   assert.match(view.html, /class="calendar-grid-viewport mt-9"/);
@@ -314,7 +315,7 @@ test('the create modal opens from the title bar and the created event appears in
     title: 'Conseil municipal', date: new Date(2026, 8, 18), startTime: '18:00', endTime: '20:00', category: 'meeting', service: 'direction',
     location: 'Salle du conseil', description: '', assigneeIds: [alice.id],
   }));
-  const html = await view.waitFor((current) => current.includes('Conseil municipal') && !current.includes('role="status"'));
+  const html = await view.waitFor((current) => current.includes('Conseil municipal') && !isCalendarPending());
 
   assert.equal(front.calendarBff.sequence().filter((line) => line.startsWith('POST')).length, 1);
   assert.doesNotMatch(html, /Ajoutez une date au calendrier de la mairie\./);
@@ -366,14 +367,14 @@ for (const [label, method, route, approvalStatus] of [
     assert.equal(view.props('MonthGrid').events[0].approvalStatus, event.approvalStatus);
     // A read is not an acknowledgement of this refused detail action.
     await view.act(() => view.props('CalendarToolbar').onViewChange('week'));
-    await view.waitFor(() => front.calendarBff.requests.length === 3 && !view.html.includes('role="status"'));
+    await view.waitFor(() => front.calendarBff.requests.length === 3 && !isCalendarPending());
     assert.match(view.html.slice(view.html.indexOf('role="dialog"')), new RegExp(`role="alert"[^>]*>${label} refusé`));
     assert.equal(front.calendarBff.calls(route, method.toUpperCase()).length, 1);
     front.calendarBff.on(method, route, approvalStatus
       ? { body: calendarEvent(5, { approvalStatus }) }
       : { status: 204 });
     await view.click(label);
-    await view.waitFor(() => !view.html.includes('role="status"'));
+    await view.waitFor(() => !isCalendarPending());
     assert.equal(front.calendarBff.calls(route, method.toUpperCase()).length, 2);
     if (approvalStatus) {
       assert.equal(view.props('WeekGrid').events[0].approvalStatus, approvalStatus);

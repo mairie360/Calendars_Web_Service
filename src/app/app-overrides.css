@@ -10,13 +10,13 @@ html[data-theme="dark"] {
 html,
 body {
   min-height: 100%;
-  background: #f5f3f0;
+  background: var(--mairie-background);
 }
 
 body {
   margin: 0;
   font-family: system-ui, sans-serif;
-  color: #172033;
+  color: var(--mairie-text);
   -webkit-font-smoothing: antialiased;
   text-rendering: geometricPrecision;
 }
@@ -32,45 +32,45 @@ button {
   overflow: hidden;
 }
 
-.calendar-scroll-shell > div {
+.calendar-scroll-shell > .flex {
   height: 100%;
   min-height: 0;
 }
 
-.calendar-scroll-shell > div > .hidden {
+.calendar-scroll-shell > .flex > .hidden {
   min-height: 0;
   overflow-y: auto;
 }
 
-.calendar-scroll-shell > div > .hidden > aside {
+.calendar-scroll-shell > .flex > .hidden > aside {
   min-height: 100%;
 }
 
-.calendar-scroll-shell aside[aria-label="Navigation principale"] {
+.calendar-scroll-shell aside.app-published-sidebar[aria-label="Navigation principale"] {
   position: relative;
   z-index: 20;
   box-shadow: 8px 0 24px rgb(12 28 48 / 28%);
 }
 
-.calendar-scroll-shell aside[aria-label="Navigation principale"] > nav button {
+.calendar-scroll-shell aside.app-published-sidebar[aria-label="Navigation principale"] > nav button {
   min-height: 44px;
   flex-shrink: 0;
 }
 
-/* Preserve the published mobile Close control above the sidebar shadow. */
+/* Keep historical drawer rules away from the shared fixed desktop navigation. */
 .calendar-scroll-shell [role="dialog"][aria-label="Navigation mobile"] aside[aria-label="Navigation principale"] {
   z-index: 0;
 }
 
-.calendar-scroll-shell > div > div:last-child {
+.calendar-scroll-shell > .flex > div:last-child {
   min-height: 0;
 }
 
-.calendar-scroll-shell > div > div:last-child > header {
+.calendar-scroll-shell > .flex > div:last-child > header {
   flex-shrink: 0;
 }
 
-.calendar-scroll-shell > div > div:last-child > main {
+.calendar-scroll-shell > .flex > div:last-child > main {
   min-height: 0;
   min-width: 0;
   overflow-x: hidden;
@@ -85,7 +85,7 @@ button {
   }
 }
 
-.calendar-scroll-shell > div > div:last-child > footer {
+.calendar-scroll-shell > .flex > div:last-child > footer {
   position: static;
   flex-shrink: 0;
   width: 100%;
@@ -111,11 +111,11 @@ button {
 }
 
 .calendar-grid-viewport button[aria-current="date"][aria-label^="Sélectionner le "] {
-  border: 2px dashed #0f766e;
+  border: 2px dashed var(--mairie-accent);
 }
 
 .calendar-grid-viewport button[aria-current="date"]:focus-visible {
-  outline: 3px solid #1256a6;
+  outline: 3px solid var(--mairie-accent);
   outline-offset: 2px;
 }
 
@@ -170,7 +170,7 @@ button {
 }
 
 .calendar-sidebar > .calendar-upcoming-panel > div:focus-visible {
-  outline: 2px solid #1256a6;
+  outline: 2px solid var(--mairie-accent);
   outline-offset: -2px;
 }
 
@@ -205,7 +205,7 @@ button {
 }
 
 @media (max-width: 767px) {
-  .calendar-scroll-shell > div > div:last-child > main {
+  .calendar-scroll-shell > .flex > div:last-child > main {
     padding: 20px 14px;
   }
 
@@ -241,10 +241,10 @@ button {
 }
 
 /* Honor presentation attributes when supplied, without inventing persistence. */
-html[data-settings-density="compact"] .calendar-scroll-shell > div > div:last-child > main {
+html[data-settings-density="compact"] .calendar-scroll-shell > .flex > div:last-child > main {
   padding: 16px;
 }
 
-html[data-settings-density="comfortable"] .calendar-scroll-shell > div > div:last-child > main {
+html[data-settings-density="comfortable"] .calendar-scroll-shell > .flex > div:last-child > main {
   padding: 32px;
 }

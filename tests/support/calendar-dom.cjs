@@ -59,7 +59,12 @@ async function calendarDom(t, { initial, strict = false } = {}) {
   dom.window.matchMedia = () => ({ matches: false, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {} });
   dom.window.ResizeObserver = global.ResizeObserver = class { observe() {} unobserve() {} disconnect() {} };
   const style = dom.window.document.createElement('style');
-  style.textContent = fs.readFileSync(path.join(SRC, 'app/app-overrides.css'), 'utf8');
+  const sharedStyle = dom.window.document.createElement('style');
+  sharedStyle.textContent = require('./shared-theme-css.cjs').sharedThemeCss();
+  dom.window.document.head.append(sharedStyle);
+  // JSDOM cannot expand a variable-bearing border shorthand; preserve its exact longhands.
+  style.textContent = fs.readFileSync(path.join(SRC, 'app/app-overrides.css'), 'utf8')
+    .replace('border: 2px dashed var(--mairie-accent);', `border-width: 2px; border-style: dashed; border-color: ${dom.window.getComputedStyle(dom.window.document.documentElement).getPropertyValue('--mairie-accent').trim()};`);
   dom.window.document.head.append(style);
   const { setBrowserFrontUrls } = loadTs('lib/front-urls');
   setBrowserFrontUrls({
