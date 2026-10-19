@@ -1,0 +1,178 @@
+'use client';
+
+import {
+  CalendarSidebar,
+  CalendarToolbar,
+  DaySchedule,
+  MonthGrid,
+  WeekGrid,
+} from "@mairie360/lib-components/calendar";
+import { Card, Skeleton, Toast } from "@mairie360/lib-components/primitives";
+import { PageTitleBar } from "@mairie360/lib-components/shell";
+import { RefreshCw } from "lucide-react";
+import { AppShell } from "./_components/app-shell";
+import { prepareUpcomingScrollRegion } from "./calendar/_components/upcoming-scroll-region";
+import { useCalendarTodayMarker } from "./calendar/_components/use-calendar-today-marker";
+import { CreateEventModal, EventDetailsModal } from "./calendar/_components/validated-event-modals";
+import { useCalendarPage } from "./calendar/use-calendar-page";
+
+import type { InitialCalendarPage } from '@/lib/calendar-bootstrap-receipt';
+
+export default function CalendarClient({ initial }: { initial?: InitialCalendarPage }) {
+  const calendar = useCalendarPage(initial);
+  const gridRef = useCalendarTodayMarker(calendar.view, calendar.ready ? calendar.currentDate.getTime() : -1);
+
+  if (!calendar.ready) {
+    return (
+      <AppShell activeItem="calendar">
+        <PageTitleBar
+          title="Calendrier & Événements"
+          subtitle="Planifiez et organisez vos activités"
+          className="calendar-title-bar"
+        />
+        <Card className="mt-7 min-h-[620px] rounded-lg px-6 py-6">
+          {calendar.readError ? <p role="alert">{calendar.readError}</p> : null}
+          <span role="status">Chargement des données du calendrier…</span>
+          {!calendar.readError && <Skeleton className="mt-6 h-96" />}
+        </Card>
+      </AppShell>
+    );
+  }
+
+  return (
+    <AppShell activeItem="calendar">
+      {calendar.feedback && <Toast variant="success" message={calendar.feedback} onClose={calendar.dismissFeedback} className="mb-5" />}
+      <PageTitleBar
+        title="Calendrier & Événements"
+        subtitle="Planifiez et organisez vos activités"
+        actionLabel="Nouvel événement"
+        className="calendar-title-bar"
+        onAction={() => calendar.openCreateModal()}
+      />
+
+      <div className="calendar-board mt-7 grid items-start gap-6" ref={prepareUpcomingScrollRegion}>
+        <Card className="min-h-[620px] overflow-hidden rounded-lg">
+          <div className="px-6 pb-8 pt-6">
+            {calendar.loading || calendar.saving || calendar.error ? (
+              <div className="mb-5 flex flex-col gap-3 rounded-md border border-[#d8d2ca] bg-[#fbfaf9] px-4 py-3 text-sm text-[#334155] sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex flex-col gap-2">
+                  {calendar.readError ? (
+                    <span role="alert">Calendrier : {calendar.readError}</span>
+                  ) : null}
+                  {calendar.mutationError ? (
+                    <span role="alert">Enregistrement : {calendar.mutationError}</span>
+                  ) : null}
+                  {calendar.loading || calendar.saving ? (
+                    <span role="status">
+                      {calendar.saving
+                        ? "Enregistrement en cours…"
+                        : "Chargement des données du calendrier…"}
+                    </span>
+                  ) : null}
+                </div>
+                {calendar.readError ? (
+                  <button
+                    type="button"
+                    className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-[#d8d2ca] bg-white px-3 text-sm font-semibold text-[#172033] transition hover:bg-[#f8fafc] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3b82f6]/25"
+                    onClick={() => void calendar.refreshData()}
+                  >
+                    <RefreshCw className="size-4" strokeWidth={1.8} />
+                    <span>Réessayer</span>
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
+
+            <CalendarToolbar
+              title={calendar.periodTitle}
+              view={calendar.view}
+              onPrevious={calendar.handlePrevious}
+              onNext={calendar.handleNext}
+              onViewChange={calendar.setView}
+            />
+
+            <div className="calendar-grid-viewport mt-9" ref={gridRef}>
+              {calendar.view === "month" && (
+                <MonthGrid
+                  className="calendar-month-grid"
+                  currentDate={calendar.currentDate}
+                  selectedDate={calendar.selectedDate}
+                  events={calendar.events}
+                  onSelectDate={calendar.handleSelectDate}
+                  onEventClick={calendar.handleEventClick}
+                />
+              )}
+
+              {calendar.view === "week" && (
+                <WeekGrid
+                  className="calendar-week-grid"
+                  currentDate={calendar.currentDate}
+                  selectedDate={calendar.selectedDate}
+                  events={calendar.events}
+                  onSelectDate={calendar.handleSelectDate}
+                  onSelectSlot={calendar.handleSelectSlot}
+                  onEventClick={calendar.handleEventClick}
+                />
+              )}
+
+              {calendar.view === "day" && (
+                <DaySchedule
+                  currentDate={calendar.selectedDate}
+                  events={calendar.events}
+                  onSelectSlot={calendar.handleSelectSlot}
+                  onEventClick={calendar.handleEventClick}
+                />
+              )}
+            </div>
+          </div>
+        </Card>
+
+        <CalendarSidebar
+          className="calendar-sidebar"
+          events={calendar.events}
+          currentDate={calendar.selectedDate}
+          stats={calendar.stats}
+          showEmptyState={false}
+          onEventClick={calendar.handleEventClick}
+        />
+      </div>
+
+      <CreateEventModal
+        isOpen={calendar.createModalOpen}
+        people={calendar.people}
+        categories={calendar.categories}
+        initialValues={calendar.createInitialValues}
+        title="Nouvel événement"
+        subtitle="Ajoutez une date au calendrier de la mairie."
+        cancelLabel="Annuler"
+        submitLabel="Créer"
+        onCancel={() => calendar.setCreateModalOpen(false)}
+        onCreate={calendar.handleCreateEvent}
+        saving={calendar.saving}
+        error={calendar.mutationError}
+      />
+
+      <EventDetailsModal
+        isOpen={Boolean(calendar.selectedEvent)}
+        event={calendar.selectedEvent}
+        people={calendar.people}
+        categories={calendar.categories}
+        canEdit={Boolean(calendar.selectedEvent?.canEdit) && !calendar.saving}
+        canDelete={Boolean(calendar.selectedEvent?.canDelete) && !calendar.saving}
+        canValidate={Boolean(calendar.selectedEvent?.canValidate) && !calendar.saving}
+        closeLabel="Fermer"
+        editLabel="Modifier"
+        deleteLabel="Supprimer"
+        cancelLabel="Annuler"
+        saveLabel="Enregistrer"
+        onClose={() => calendar.setSelectedEvent(null)}
+        onSave={calendar.handleSaveEvent}
+        saving={calendar.saving}
+        error={calendar.mutationError}
+        onDelete={calendar.handleDeleteEvent}
+        onApprove={(event) => void calendar.handleValidateEvent(event, "approved")}
+        onReject={(event) => void calendar.handleValidateEvent(event, "rejected")}
+      />
+    </AppShell>
+  );
+}

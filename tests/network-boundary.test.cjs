@@ -34,7 +34,16 @@ const relative = (file) => path.relative(SRC, file).split(path.sep).join('/');
 test('only the BFF client, the session hook, the logout helper and the server proxy emit network requests', () => {
   const emitters = sourceFiles().filter(file => { const ast = policy.parse('src/' + relative(file)); return policy.calls(ast, 'fetch').length || policy.networkReferences(ast).length; }).map(relative).sort();
 
-  assert.deepEqual(emitters, ['lib/auth-session.ts', 'lib/bff-client.ts', 'lib/logout.ts']);
+  assert.deepEqual(emitters, ['lib/auth-session.ts', 'lib/bff-client.ts', 'lib/logout.ts', 'lib/server-calendar-page.ts']);
+});
+
+test('the server bootstrap uses the generated SDK through the existing proxy, with no direct fetch', () => {
+  const ast = policy.parse('src/lib/server-calendar-page.ts');
+  assert.equal(policy.calls(ast, 'fetch').length, 0);
+  const source = fs.readFileSync(path.join(SRC, 'lib/server-calendar-page.ts'), 'utf8');
+  assert.match(source, /getBffCalendar/);
+  assert.match(source, /api\.getCalendarBootstrap\(/);
+  assert.match(source, /proxyBffRequest\(/);
 });
 
 test('no absolute BFF destination is hard-coded in frontend source', () => {
@@ -90,10 +99,10 @@ test('no JavaScript-readable credential is used: no token storage and no client-
   assert.doesNotMatch(fs.readFileSync(path.join(SRC, 'components/desktop-navigation.tsx'), 'utf8'), /accessToken|refreshToken|Authorization|localStorage|sessionStorage/);
   const proxy=policy.parse('src/lib/bff-proxy.ts');
   assert.equal(policy.calls(proxy,'proxyPublishedBffRequest').length,1);
-  assert.ok(policy.imports(proxy).includes('@mairie360/lib-components/next'));
+  assert.ok(policy.imports(proxy).includes('@mairie360/front-kit/next'));
   const owner=policy.parse('src/app/api/auth/logout/route.ts');
   assert.equal(policy.calls(owner,'createSessionLogoutProxy').length,1);
-  assert.ok(policy.imports(owner).includes('@mairie360/lib-components/next'));
+  assert.ok(policy.imports(owner).includes('@mairie360/front-kit/next'));
 });
 
 // Réponse conforme pour chaque opération du contrat : le proxy doit toutes les relayer.
@@ -104,6 +113,7 @@ const OPERATION_FIXTURES = {
   'GET /calendar/period': { path: '/calendar/period?from=2026-09-01&to=2026-09-30', reply: { body: (({ events, users }) => ({ events: events.map(({ assignees, ...event }) => event), users }))(bootstrap()) } },
   'GET /calendar/events': { path: '/calendar/events?from=2026-09-01&to=2026-09-30', reply: { body: [calendarEvent(1)] } },
   'POST /calendar/events': { path: '/calendar/events', body: { title: 'Conseil', date: '2026-09-16' }, reply: { status: 201, body: calendarEvent(2) } },
+  'GET /calendar/events/{id}': { path: '/calendar/events/2', reply: { body: calendarEvent(2) } },
   'PATCH /calendar/events/{id}': { path: '/calendar/events/2', body: { title: 'Conseil' }, reply: { body: calendarEvent(2) } },
   'DELETE /calendar/events/{id}': { path: '/calendar/events/2', reply: { status: 204 } },
   'PATCH /calendar/events/{id}/approval': { path: '/calendar/events/2/approval', body: { approvalStatus: 'approved' }, reply: { body: calendarEvent(2, { approvalStatus: 'approved' }) } },
@@ -136,7 +146,7 @@ for (const [operation, fixture] of Object.entries(OPERATION_FIXTURES)) {
 test('the proxy answers routes and methods outside the contract without contacting any BFF', async () => {
   for (const [method, url, status] of [
     ['GET', '/calendar/unknown', 404],
-    ['GET', '/calendar/events/2', 405],
+    ['POST', '/calendar/events/2', 405],
     ['PUT', '/calendar/events/2', 405],
     ['POST', '/calendar/bootstrap', 405],
     ['GET', '/api/unknown', 404],

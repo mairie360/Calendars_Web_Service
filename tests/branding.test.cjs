@@ -23,7 +23,7 @@ test('browser and app icons use the same Mairie360 mark', () => {
   assert.equal(existsSync(path.join(root, 'src/app/icon1.png')), false);
 });
 
-test('manifest and page metadata expose the branded assets', () => {
+test('manifest and page metadata expose the branded assets', async () => {
   const manifest = JSON.parse(read('src/app/manifest.json').toString('utf8'));
   const { metadata, default: RootLayout } = loadRootLayout(() => require('./support/load-ts.cjs').loadTs('app/layout.tsx'));
   const React = require('react');
@@ -39,11 +39,11 @@ test('manifest and page metadata expose the branded assets', () => {
   const appleIcon = metadata.icons.apple.find(item => new URL(item.url, 'https://frontend.test').pathname === '/mairie360-logo.png');
   assert.ok(appleIcon, 'metadata contains the public app icon');
   assert.ok(new URL(appleIcon.url, 'https://frontend.test').searchParams.get('v'), 'the app icon keeps its cache key');
-  const html = renderToStaticMarkup(React.createElement(RootLayout, null, React.createElement('span', { id: 'branding-child' }, 'Preserved child')));
+  const html = renderToStaticMarkup(await RootLayout({children:React.createElement('span', { id: 'branding-child' }, 'Preserved child')}));
   assert.match(html, /<span id="branding-child">Preserved child<\/span>/);
 });
 
-test('shared navigation renders the public Mairie360 logo', () => {
+test('shared navigation renders the public Mairie360 logo', async () => {
   const { layout, AppShell } = loadRootLayout(() => ({
     layout: require('./support/load-ts.cjs').loadTs('app/layout.tsx'),
     AppShell: require('./support/load-ts.cjs').loadTs('app/_components/app-shell.tsx').AppShell,
@@ -51,6 +51,6 @@ test('shared navigation renders the public Mairie360 logo', () => {
   const React = require('react');
   const { renderToStaticMarkup } = require('react-dom/server');
   const shell = React.createElement(AppShell, { activeItem: 'calendar' }, 'Page content');
-  const html = renderToStaticMarkup(React.createElement(layout.default, null, shell));
+  const html = renderToStaticMarkup(await layout.default({children:shell}));
   assert.ok((html.match(/<img\b[^>]*>/g) ?? []).some(tag => /\bsrc="\/mairie360-logo\.png"/.test(tag)), 'the rendered navigation contains the public brand image');
 });

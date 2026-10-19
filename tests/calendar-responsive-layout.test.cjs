@@ -3,6 +3,12 @@ const { readFileSync } = require('node:fs');
 const { join } = require('node:path');
 const { test } = require('node:test');
 const { JSDOM, VirtualConsole } = require('jsdom');
+const postcss = require('postcss');
+const sharedTokens = new Map();
+postcss.parse(readFileSync(require.resolve('@mairie360/lib-components/styles.css'), 'utf8')).walkRules(':root', rule => {
+  rule.walkDecls(declaration => { if (declaration.prop.startsWith('--mairie-')) sharedTokens.set(declaration.prop, declaration.value); });
+});
+const resolveSharedColor = value => value.replace(/var\((--mairie-[\w-]+)\)/g, (_match, name) => sharedTokens.get(name) ?? _match);
 
 const stylesheet = readFileSync(join(__dirname, '../src/app/app-overrides.css'), 'utf8');
 const selector = (value) => value.replace(/\s*>\s*/g, ' > ').replace(/\s+/g, ' ').trim();
@@ -41,7 +47,7 @@ test('parsed calendar media policies retain reference tracks, insets and bounded
   const { declarations } = policyDocument(t);
   const mobile = '(max-width: 767px)', tablet = '(min-width: 768px) and (max-width: 1699px)', desktop = '(min-width: 1700px)';
   assert.equal(value(declarations('.calendar-week-grid > .grid', mobile)('grid-template-columns')), '2.4remrepeat(7,minmax(0,1fr))');
-  assert.equal(value(declarations('.calendar-scroll-shell > div > div:last-child > main', mobile)('padding')), '20px14px');
+  assert.equal(value(declarations('.calendar-scroll-shell > .flex > div:last-child > main', mobile)('padding')), '20px14px');
   assert.equal(value(declarations('.calendar-board > section > div', mobile)('padding')), '16px10px');
   assert.equal(value(declarations('.calendar-sidebar', tablet)('grid-template-columns')), 'repeat(2,minmax(0,1fr))');
   assert.equal(value(declarations('.calendar-board', desktop)('grid-template-columns')), 'minmax(0,1fr)310px');
@@ -53,8 +59,8 @@ test('parsed calendar media policies retain reference tracks, insets and bounded
 
 test('parsed calendar fallback and focus policies remain scoped without overriding global small-text tokens', (t) => {
   const { declarations, rows, window } = policyDocument(t);
-  assert.equal(declarations('.calendar-scroll-shell > div > div:last-child > footer')('position'), 'static');
-  assert.equal(declarations('.calendar-scroll-shell > div > .hidden')('overflow-y'), 'auto');
+  assert.equal(declarations('.calendar-scroll-shell > .flex > div:last-child > footer')('position'), 'static');
+  assert.equal(declarations('.calendar-scroll-shell > .flex > .hidden')('overflow-y'), 'auto');
   for (const row of rows) for (let index = 0; index < row.style.length; index += 1) {
     assert.equal(['--text-xs', '--text-sm'].includes(row.style.item(index)), false, 'Keep global small-text tokens');
   }
@@ -68,7 +74,7 @@ test('parsed calendar fallback and focus policies remain scoped without overridi
     assert.deepEqual(lengths, [width]); assert.ok(tokens.includes('solid')); assert.equal(colors.length, 1);
     // JSDOM does not expand outline shorthand into computed longhands reliably.
     const probe = window.document.createElement('span');
-    probe.style.color = colors[0]; window.document.body.append(probe);
+    probe.style.color = resolveSharedColor(colors[0]); window.document.body.append(probe);
     assert.equal(window.getComputedStyle(probe).color, 'rgb(18, 86, 166)'); probe.remove();
   }
   // Focus configuration is preserved; native keyboard/scroll and RGAA remain separate.

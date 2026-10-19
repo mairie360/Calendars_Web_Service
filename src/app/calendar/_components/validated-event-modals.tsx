@@ -1,7 +1,7 @@
 import {
   CreateEventModal as LibraryCreateEventModal,
   EventDetailsModal as LibraryEventDetailsModal,
-} from '@mairie360/lib-components';
+} from '@mairie360/lib-components/calendar';
 import type { ComponentProps, FormEvent, ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 import { formatDateForQuery } from '../date-utils';

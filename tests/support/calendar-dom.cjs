@@ -7,7 +7,7 @@ const { loadTs, SRC } = require('./load-ts.cjs');
 const fixture = require('./calendar-fixtures.cjs');
 
 /** Mount the actual page and published components with real React hooks and existing contract mocks. */
-async function calendarDom(t) {
+async function calendarDom(t, { initial, strict = false } = {}) {
   const keys = ['Date', 'window', 'document', 'HTMLElement', 'Element', 'Node', 'SVGElement',
     'MutationObserver', 'Event', 'MouseEvent', 'KeyboardEvent', 'CustomEvent',
     'getComputedStyle', 'requestAnimationFrame', 'cancelAnimationFrame',
@@ -37,7 +37,8 @@ async function calendarDom(t) {
     }
   });
   await front.start();
-  front.cookies.set('accessToken', jwtFor(1));
+  const adminCookie='e30.'+Buffer.from(JSON.stringify({sub:'1',role:'Admin',exp:Math.floor(Date.now()/1000)+3600})).toString('base64url')+'.signature';
+  front.cookies.set('accessToken', adminCookie);
   front.userBff.on('get', '/me', { body: fixture.sessionResponse() });
   front.calendarRead({ body: fixture.bootstrap() });
   const console = new VirtualConsole();
@@ -58,7 +59,12 @@ async function calendarDom(t) {
   dom.window.matchMedia = () => ({ matches: false, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {} });
   dom.window.ResizeObserver = global.ResizeObserver = class { observe() {} unobserve() {} disconnect() {} };
   const style = dom.window.document.createElement('style');
-  style.textContent = fs.readFileSync(path.join(SRC, 'app/app-overrides.css'), 'utf8');
+  const sharedStyle = dom.window.document.createElement('style');
+  sharedStyle.textContent = require('./shared-theme-css.cjs').sharedThemeCss();
+  dom.window.document.head.append(sharedStyle);
+  // JSDOM cannot expand a variable-bearing border shorthand; preserve its exact longhands.
+  style.textContent = fs.readFileSync(path.join(SRC, 'app/app-overrides.css'), 'utf8')
+    .replace('border: 2px dashed var(--mairie-accent);', `border-width: 2px; border-style: dashed; border-color: ${dom.window.getComputedStyle(dom.window.document.documentElement).getPropertyValue('--mairie-accent').trim()};`);
   dom.window.document.head.append(style);
   const { setBrowserFrontUrls } = loadTs('lib/front-urls');
   setBrowserFrontUrls({
@@ -70,9 +76,12 @@ async function calendarDom(t) {
   t.after(() => setBrowserFrontUrls({}));
   React = require('react');
   const { createRoot } = require('react-dom/client');
-  const Page = loadTs('app/page').default;
+  const Page = loadTs('app/calendar-client').default;
   reactRoot = createRoot(dom.window.document.getElementById('root'));
-  await React.act(async () => reactRoot.render(React.createElement(Page)));
+  const {InstanceProvider}=require('@mairie360/front-kit/react');
+  const {jwtDisplayRole}=require('@mairie360/front-kit/shared');
+  const client = React.createElement(InstanceProvider, { role: jwtDisplayRole(adminCookie), timeZone: 'UTC' }, React.createElement(Page, { initial }));
+  await React.act(async () => reactRoot.render(strict ? React.createElement(React.StrictMode, null, client) : client));
   async function waitFor(predicate) {
     for (let attempt = 0; attempt < 100 && !predicate(); attempt += 1) {
       await React.act(async () => new Promise((resolve) => setTimeout(resolve, 10)));
