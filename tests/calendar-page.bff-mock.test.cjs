@@ -644,11 +644,27 @@ test('MAIR-557: a detail started before a confirmed approval cannot restore the 
 
   state.handleEventClick(state.events[0]);
   const opened = await page.waitFor((current) => current.selectedEvent?.id === 5);
-  await opened.handleValidateEvent(opened.selectedEvent, 'approved');
+  // The opened event has no rights until its detail answers; this approval is dispatched for the listed event.
+  await opened.handleValidateEvent(state.events[0], 'approved');
   await page.waitFor((current) => !current.saving && current.selectedEvent?.approvalStatus === 'approved');
   releaseDetail();
   await page.waitFor(() => front.calendarBff.calls('/calendar/events/{id}', 'GET').length === 1);
   await new Promise((resolve) => setTimeout(resolve, 50));
 
   assert.equal(page.result.current.selectedEvent.approvalStatus, 'approved');
+});
+
+test('MAIR-557: rights an older list still carries are not shown before the detail, nor kept when it is refused', async () => {
+  const state = await renderLoadedPage();
+  front.calendarBff.on('get', '/calendar/events/{id}', { status: 403, body: apiError('FORBIDDEN', 'Accès refusé') });
+
+  state.handleEventClick(state.events[0]);
+  const opened = await page.waitFor((current) => current.selectedEvent?.id === 5);
+  assert.equal(opened.selectedEvent.canEdit, undefined);
+  const refused = await page.waitFor((current) => current.error !== null);
+
+  assert.equal(refused.error, 'Accès refusé');
+  assert.equal(refused.selectedEvent.canEdit, undefined);
+  assert.equal(refused.selectedEvent.canDelete, undefined);
+  assert.equal(refused.selectedEvent.canValidate, undefined);
 });

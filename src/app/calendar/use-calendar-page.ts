@@ -98,7 +98,9 @@ export function useCalendarPage(initial?: InitialCalendarPage) {
   // MAIR-557: the period lists no longer carry the rights, so an opened event is shown at once
   // and completed by its detail read. Only the still-selected event receives that answer.
   const openEvent = useCallback((event: CalendarEventItem) => {
-    setSelectedEvent(event);
+    // Actions come from the detail read only: rights an older list still carries are not shown before it,
+    // nor kept when it is refused.
+    setSelectedEvent({ ...event, canEdit: undefined, canDelete: undefined, canValidate: undefined });
     const controller = new AbortController();
     eventDetailRef.current = controller;
     const selection = eventSelectionRevision.current;
