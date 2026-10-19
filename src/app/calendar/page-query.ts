@@ -1,4 +1,4 @@
-import { civilDateInZone, instanceTimeZone } from '@mairie360/front-kit/shared';
+import { civilDateInZone, instanceTimeZone } from '@mairie360/lib-components/shared';
 import { readPageUrlState, urlChoice, urlDate, urlText } from '@/lib/page-url-state';
 import type { CalendarViewMode } from './types';
 export const calendarUrlSchema = { view: urlChoice(['month', 'week', 'day'], 'month'), date: urlDate };
