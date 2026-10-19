@@ -10,6 +10,7 @@ import {
   createCalendarEvent,
   deleteCalendarEvent,
   formatCalendarApiError,
+  loadCalendarEvent,
   updateCalendarEvent,
   updateCalendarEventApproval,
 } from "./api";
@@ -65,8 +66,11 @@ export function useCalendarPage(initial?: InitialCalendarPage) {
   );
   const [selectedEvent, setSelectedEventState] = useState<CalendarEventItem | null>(null);
   const eventSelectionRevision = useRef(0);
+  const eventDetailRef = useRef<AbortController | null>(null);
   const setSelectedEvent = useCallback((event: CalendarEventItem | null) => {
     eventSelectionRevision.current += 1;
+    // Closing or switching events cancels the previous detail read (MAIR-557).
+    eventDetailRef.current?.abort();
     setSelectedEventState(event);
   }, []);
   const [loading, setLoading] = useState(!initialReceipt);
@@ -77,6 +81,7 @@ export function useCalendarPage(initial?: InitialCalendarPage) {
     calendarReadRevision.current += 1;
     dataCache.invalidate();
     prefetchRef.current?.abort();
+    eventDetailRef.current?.abort();
     setLoading(false);
   };
   const [saving, setSaving] = useState(false);
@@ -88,6 +93,28 @@ export function useCalendarPage(initial?: InitialCalendarPage) {
   const [feedback, setFeedback] = useState<string | null>(null);
   const error = mutationError ?? readError;
   const navigationDateRef = useRef(currentDate);
+  const peopleRef = useRef(people);
+  useEffect(() => { peopleRef.current = people; }, [people]);
+  // MAIR-557: the period lists no longer carry the rights, so an opened event is shown at once
+  // and completed by its detail read. Only the still-selected event receives that answer.
+  const openEvent = useCallback((event: CalendarEventItem) => {
+    // Actions come from the detail read only: rights an older list still carries are not shown before it,
+    // nor kept when it is refused.
+    setSelectedEvent({ ...event, canEdit: undefined, canDelete: undefined, canValidate: undefined });
+    const controller = new AbortController();
+    eventDetailRef.current = controller;
+    const selection = eventSelectionRevision.current;
+    const stillSelected = () => !controller.signal.aborted && eventSelectionRevision.current === selection;
+    loadCalendarEvent(event.id, peopleRef.current, controller.signal).then((detail) => {
+      if (!stillSelected()) return;
+      setSelectedEventState((current) =>
+        String(current?.id) === String(detail.id) ? { ...current, ...detail } : current,
+      );
+    }, (detailError: unknown) => {
+      if (stillSelected()) setMutationError(formatCalendarApiError(detailError));
+    });
+  }, [setSelectedEvent]);
+  useEffect(() => () => eventDetailRef.current?.abort(), []);
   const [link, setLink] = useState<{ ready: boolean; eventId: string | null }>({
     ready: Boolean(initialReceipt),
     eventId: initialReceipt?.query.eventId ?? null,
@@ -212,9 +239,9 @@ export function useCalendarPage(initial?: InitialCalendarPage) {
     if (loading || readError || !link.eventId) return;
 
     const linkedEvent = events.find((event) => String(event.id) === link.eventId);
-    if (linkedEvent) setSelectedEvent(linkedEvent);
+    if (linkedEvent) openEvent(linkedEvent);
     setLink({ ready: true, eventId: null });
-  }, [readError, events, link.eventId, loading, setSelectedEvent]);
+  }, [readError, events, link.eventId, loading, openEvent]);
 
   const handlePrevious = () => {
     selectionFollowsToday.current = false;
@@ -289,7 +316,7 @@ export function useCalendarPage(initial?: InitialCalendarPage) {
   const handleEventClick = (event: unknown) => {
     setFeedback(null);
     setMutationError(null);
-    setSelectedEvent(event as CalendarEventItem);
+    openEvent(event as CalendarEventItem);
   };
 
   const handleSaveEvent = async (updatedEventPayload: unknown) => {

@@ -15,7 +15,10 @@ async function openEvent(dom) {
   const opener = [...dom.document.querySelectorAll('.calendar-month-grid [role="button"]')].find(node => node.textContent.includes('Événement 5'));
   assert.ok(opener, 'The real BFF event must appear in the grid');
   opener.focus(); await dom.click(opener);
-  assert.ok(dialog(dom)); return opener;
+  assert.ok(dialog(dom));
+  // The actions come from the event detail read (MAIR-557).
+  await dom.waitFor(() => [...(dialog(dom)?.querySelectorAll('button') ?? [])].some(node => node.textContent.trim() === 'Modifier'));
+  return opener;
 }
 
 test('opening the real event details moves focus inside, cycles Tab and returns to its grid trigger', async t => {

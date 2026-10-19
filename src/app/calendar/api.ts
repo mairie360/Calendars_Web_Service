@@ -115,6 +115,19 @@ export async function loadCalendarPeriodData(params: CalendarLoadParams, context
   return { ...context, events: period.events.map(event => toCalendarEventItem(event, people)) };
 }
 
+/**
+ * Detail of one event. Since MAIR-557 the bootstrap and period lists no longer carry the rights
+ * (`canEdit`/`canDelete`/`canValidate`), `createdById` or `description`: they come from this read.
+ */
+export async function loadCalendarEvent(
+  eventId: CalendarAssigneeId,
+  people: CalendarAssignee[],
+  signal?: AbortSignal,
+) {
+  const { data: event } = await bffCalendar.getCalendarEventsId(encodeURIComponent(String(eventId)), { signal });
+  return toCalendarEventItem(event, people);
+}
+
 export async function createCalendarEvent(
   values: CreateCalendarEventValues,
   people: CalendarAssignee[],
