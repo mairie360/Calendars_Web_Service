@@ -74,7 +74,19 @@ class FrontHarness {
     process.env.LOGIN_FRONT_URL = this.ownerOrigin;
     const ownerConfig = { userBffUrl: () => this.userBff.url, cookieOptions: () => ({secure:false}), allowedOrigins: () => [this.origin] };
     this.ownerHandlers = { '/api/auth/refresh': createSessionRefreshHandler(ownerConfig), '/api/auth/logout': createSessionLogoutHandler(ownerConfig) };
-    global.fetch = (input, init) => this.guardedFetch(input, init);
+    this.inFlight = new Set();
+    global.fetch = (input, init) => {
+      const request = this.guardedFetch(input, init);
+      this.inFlight.add(request);
+      request.then(() => this.inFlight.delete(request), () => this.inFlight.delete(request));
+      return request;
+    };
+  }
+
+  // Let requests started by a test (an opened event's detail read, MAIR-557) finish before the next
+  // test resets the mocks: the server-side renderer does not run effect cleanups on unmount.
+  async settle() {
+    while (this.inFlight.size) await Promise.allSettled([...this.inFlight]);
   }
 
   async stop() {
@@ -85,12 +97,23 @@ class FrontHarness {
   }
 
   // Explicit fixtures for the bootstrap and the new published period operation.
+  // Opening an event reads its detail (MAIR-557): by default it answers the last listed version of
+  // that event, so tests that only click keep their fixtures; a test can still override it with `on()`.
   calendarRead(reply) {
-    this.calendarBff.on('get', '/calendar/bootstrap', reply);
+    const listed = new Map();
+    const remember = value => {
+      if (value?.body?.events && (!value.status || value.status < 400)) for (const event of value.body.events) listed.set(String(event.id), event);
+      return value;
+    };
+    const read = typeof reply === 'function' ? async request => remember(await reply(request)) : remember(reply);
+    this.calendarBff.on('get', '/calendar/bootstrap', read);
     const periodReply = value => value?.body && (!value.status || value.status < 400)
       ? { ...value, body: { events: value.body.events.map(({ assignees, ...event }) => event), users: value.body.users } } : value;
     this.calendarBff.on('get', '/calendar/period', typeof reply === 'function'
-      ? async request => periodReply(await reply(request)) : periodReply(reply));
+      ? async request => periodReply(await read(request)) : periodReply(reply));
+    this.calendarBff.on('get', '/calendar/events/{id}', ({ pathParams }) => listed.has(pathParams.id)
+      ? { body: listed.get(pathParams.id) }
+      : { status: 404, body: { error: { code: 'NOT_FOUND', message: 'Événement introuvable', details: [] } } });
   }
 
   reset() {

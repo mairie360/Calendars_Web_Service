@@ -65,7 +65,9 @@ test('a dashboard link loads the linked month and opens its event after bootstra
     assert.equal(formatDateForQuery(state.currentDate), date);
     assert.equal(formatDateForQuery(state.selectedDate), date);
     assert.equal(state.selectedEvent.title, 'Événement 42');
-    assert.deepEqual(front.calendarBff.sequence(), [`GET /calendar/bootstrap?${rangeQuery('month', linkedDate)}`]);
+    // MAIR-557: the opened event is completed by its detail read.
+    await page.waitFor(() => front.calendarBff.calls('/calendar/events/{id}', 'GET').length === 1);
+    assert.deepEqual(front.calendarBff.sequence(), [`GET /calendar/bootstrap?${rangeQuery('month', linkedDate)}`, 'GET /calendar/events/42']);
   } finally {
     delete global.window;
   }
@@ -570,4 +572,83 @@ test('handleValidateEvent reports a refused approval', async () => {
   await page.result.current.handleValidateEvent(state.events[0], 'approved');
 
   assert.equal((await page.waitFor((current) => !current.saving)).error, 'Validation interdite');
+});
+
+// MAIR-557: BFF_Calendar lists no longer carry the rights, createdById or description of each event.
+const listedWithoutDetail = (event) => {
+  const { canEdit, canDelete, canValidate, createdById, description, ...listed } = event;
+  return listed;
+};
+
+test('MAIR-557: opening an event reads its detail and shows the rights the lists no longer carry', async () => {
+  const full = bootstrap();
+  const state = await renderLoadedPage({ ...full, events: full.events.map(listedWithoutDetail) });
+  front.calendarBff.on('get', '/calendar/events/{id}', ({ pathParams }) => ({ body: full.events.find((event) => String(event.id) === pathParams.id) }));
+
+  state.handleEventClick(state.events[0]);
+  assert.equal((await page.waitFor((current) => current.selectedEvent?.id === 5)).selectedEvent.canEdit, undefined);
+  const opened = await page.waitFor((current) => current.selectedEvent?.canEdit === true);
+
+  assert.deepEqual(front.calendarBff.calls('/calendar/events/{id}', 'GET').map((call) => call.pathParams.id), ['5']);
+  assert.equal(opened.selectedEvent.canDelete, true);
+  assert.equal(opened.selectedEvent.canValidate, true);
+  assert.equal(opened.selectedEvent.description, 'Description 5');
+  assert.equal(opened.selectedEvent.colorClassName, state.events[0].colorClassName);
+  assert.equal(opened.error, null);
+});
+
+test('MAIR-557: a late detail of a previously opened event cannot replace the current selection', async () => {
+  const full = bootstrap();
+  const state = await renderLoadedPage({ ...full, events: full.events.map(listedWithoutDetail) });
+  let releaseFirst;
+  const firstHeld = new Promise((resolve) => { releaseFirst = resolve; });
+  front.calendarBff.on('get', '/calendar/events/{id}', async ({ pathParams }) => {
+    if (pathParams.id === '5') await firstHeld;
+    return { body: full.events.find((event) => String(event.id) === pathParams.id) };
+  });
+
+  state.handleEventClick(state.events[0]);
+  (await page.waitFor((current) => current.selectedEvent?.id === 5)).handleEventClick(state.events[1]);
+  const second = await page.waitFor((current) => current.selectedEvent?.id === 6 && current.selectedEvent.canEdit === true);
+  releaseFirst();
+  await page.waitFor(() => front.calendarBff.calls('/calendar/events/{id}', 'GET').length === 2);
+  await new Promise((resolve) => setTimeout(resolve, 50));
+
+  assert.equal(page.result.current.selectedEvent.id, 6);
+  assert.equal(page.result.current.selectedEvent.canValidate, false);
+  assert.equal(second.error, null);
+});
+
+test('MAIR-557: a refused detail keeps the event visible without actions and reports the error', async () => {
+  const full = bootstrap();
+  const state = await renderLoadedPage({ ...full, events: full.events.map(listedWithoutDetail) });
+  front.calendarBff.on('get', '/calendar/events/{id}', { status: 404, body: apiError('NOT_FOUND', 'Événement introuvable') });
+
+  state.handleEventClick(state.events[0]);
+  const refused = await page.waitFor((current) => current.error !== null);
+
+  assert.equal(refused.error, 'Événement introuvable');
+  assert.equal(refused.selectedEvent.id, 5);
+  assert.equal(refused.selectedEvent.canEdit, undefined);
+});
+
+test('MAIR-557: a detail started before a confirmed approval cannot restore the earlier status', async () => {
+  const full = bootstrap();
+  const state = await renderLoadedPage();
+  let releaseDetail;
+  const detailHeld = new Promise((resolve) => { releaseDetail = resolve; });
+  front.calendarBff.on('get', '/calendar/events/{id}', async () => { await detailHeld; return { body: full.events[0] }; });
+  front.calendarBff.on('patch', '/calendar/events/{id}/approval', ({ body, pathParams }) => ({
+    body: calendarEvent(Number(pathParams.id), { approvalStatus: body.approvalStatus }),
+  }));
+
+  state.handleEventClick(state.events[0]);
+  const opened = await page.waitFor((current) => current.selectedEvent?.id === 5);
+  await opened.handleValidateEvent(opened.selectedEvent, 'approved');
+  await page.waitFor((current) => !current.saving && current.selectedEvent?.approvalStatus === 'approved');
+  releaseDetail();
+  await page.waitFor(() => front.calendarBff.calls('/calendar/events/{id}', 'GET').length === 1);
+  await new Promise((resolve) => setTimeout(resolve, 50));
+
+  assert.equal(page.result.current.selectedEvent.approvalStatus, 'approved');
 });

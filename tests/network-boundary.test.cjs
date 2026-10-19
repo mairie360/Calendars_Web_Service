@@ -58,23 +58,25 @@ test('the calendar client only calls generated operations of the published contr
   const source = fs.readFileSync(path.join(SRC, 'app/calendar/api.ts'), 'utf8');
   assert.doesNotMatch(source, /requestBff|["'`]\/(?:calendar|api|bff)\b/);
   const operations = [...source.matchAll(/bffCalendar\.(\w+)\(/g)].map(([, name]) => name);
-  assert.equal(operations.length, 6);
+  assert.equal(operations.length, 7);
   const generated = fs.readFileSync(path.join(path.dirname(require.resolve('@mairie360/bff-calendar-openapi/package.json')), 'endpoints/bffCalendar.ts'), 'utf8');
   operations.forEach((name) => assert.match(generated, new RegExp(`const ${name} = \\(`), `${name} is not a generated operation`));
-  // Exercise the actual six client operations through the existing contract-gated HTTP harness.
+  // Exercise the actual seven client operations through the existing contract-gated HTTP harness.
   const api = loadTs('app/calendar/api');
   front.calendarRead({ body: bootstrap() });
+  front.calendarBff.on('get', '/calendar/events/{id}', { body: calendarEvent(12) });
   front.calendarBff.on('post', '/calendar/events', { status: 201, body: calendarEvent(12) });
   front.calendarBff.on('patch', '/calendar/events/{id}', { body: calendarEvent(12) });
   front.calendarBff.on('delete', '/calendar/events/{id}', { status: 204 });
   front.calendarBff.on('patch', '/calendar/events/{id}/approval', { body: calendarEvent(12, { approvalStatus: 'approved' }) });
   await api.loadCalendarData({ from: '2026-09-01', to: '2026-09-30' });
   await api.loadCalendarPeriodData({ from: '2026-09-01', to: '2026-09-30' }, await api.loadCalendarData({ from: '2026-09-01', to: '2026-09-30' }));
+  await api.loadCalendarEvent(12, [admin, alice]);
   await api.createCalendarEvent(calendarEvent(12), [admin, alice]);
   await api.updateCalendarEvent(calendarEvent(12), [admin, alice]);
   await api.deleteCalendarEvent(12);
   await api.updateCalendarEventApproval(12, 'approved', [admin, alice]);
-  assert.deepEqual(front.calendarBff.requests.map(call => `${call.method} ${call.template}`), ['GET /calendar/bootstrap', 'GET /calendar/bootstrap', 'GET /calendar/period', 'POST /calendar/events', 'PATCH /calendar/events/{id}', 'DELETE /calendar/events/{id}', 'PATCH /calendar/events/{id}/approval']);
+  assert.deepEqual(front.calendarBff.requests.map(call => `${call.method} ${call.template}`), ['GET /calendar/bootstrap', 'GET /calendar/bootstrap', 'GET /calendar/period', 'GET /calendar/events/{id}', 'POST /calendar/events', 'PATCH /calendar/events/{id}', 'DELETE /calendar/events/{id}', 'PATCH /calendar/events/{id}/approval']);
 });
 
 test('the session hook and logout only call the dedicated /api routes, which exist in src/app/api', () => {

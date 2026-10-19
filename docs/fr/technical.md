@@ -156,6 +156,7 @@ Ces chemins de données sont exposés à la même origine par le proxy; les page
 | GET | `/check_apis` | — | 200, 502 |
 | GET | `/calendar/bootstrap` | query `from`, `to` (optionnels) | 200, 400, 401, 500, 502 |
 | GET | `/calendar/events` | query `from`, `to` | 200, 400, 401, 500, 502 |
+| GET | `/calendar/events/{id}` | — | 200, 400, 401, 403, 404, 500, 502 |
 | POST | `/calendar/events` | application/json | 201, 400, 401, 403, 500, 502 |
 | PATCH | `/calendar/events/{id}` | application/json | 200, 400, 401, 403, 404, 500, 502 |
 | DELETE | `/calendar/events/{id}` | — | 204, 400, 401, 403, 404, 500, 502 |
@@ -182,6 +183,8 @@ Les requêtes authentifiées `/profile` sont traitées par le [middleware du fro
 ## Session, permissions et erreurs
 
 Les adaptateurs `/api/auth/me`, `/api/auth/session` et `/api/user/me` utilisent BFF User pour la session; `/api/auth/logout` relaie la déconnexion. Les deux proxies n’authentifient qu’avec le cookie HttpOnly `accessToken` posé par Login, converti en `Authorization: Bearer`; un en-tête `Authorization` envoyé par le navigateur est ignoré et aucun jeton n’est stocké dans `localStorage`. Les méthodes non sûres (POST, PUT, PATCH, DELETE) sont refusées en 403 lorsque `Sec-Fetch-Site` ne vaut pas `same-origin` ou, en son absence, lorsque `Origin` ne correspond pas à l’hôte servi (protection CSRF en plus de `SameSite=Strict`).
+
+Depuis MAIR-557, les listes du bootstrap et des périodes ne portent plus les droits, `createdById` ni `description` de chaque événement : l’ouverture d’un événement (clic ou lien `event`) l’affiche aussitôt et lit `GET /calendar/events/{id}`, dont la réponse complète la fenêtre de détails. Les actions Modifier, Supprimer et Valider apparaissent donc à la réponse de cette lecture. Fermer ou changer d’événement annule la lecture, une réponse tardive ne remplace jamais une autre sélection, une mutation confirmée écarte une lecture lancée avant elle, et une lecture refusée laisse l’événement visible sans action avec le message du BFF.
 
 Le front fait confiance au BFF: les droits (`canEdit`, `canDelete`, `canValidate`), les personnes assignables, la validation des données et les messages d’erreur viennent de BFF_Calendar et sont utilisés tels quels. Le middleware ne redirige pas les chemins de données déclarés dans le contrat: le BFF répond 401, puis le client se déconnecte via BFF User et recharge la page, que le middleware renvoie vers Login. Les manques côté BFF sont listés dans [BFF.md](../../BFF.md).
 

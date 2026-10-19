@@ -30,7 +30,8 @@ beforeEach(() => {
   front.cookies.set('accessToken', jwtFor(1));
   front.userBff.on('get', '/me', { body: sessionResponse() });
 });
-afterEach(() => {
+afterEach(async () => {
+  await front.settle();
   view?.unmount();
   view = undefined;
   assert.deepEqual(front.allViolations(), []);
@@ -367,7 +368,8 @@ for (const [label, method, route, approvalStatus] of [
     assert.equal(view.props('MonthGrid').events[0].approvalStatus, event.approvalStatus);
     // A read is not an acknowledgement of this refused detail action.
     await view.act(() => view.props('CalendarToolbar').onViewChange('week'));
-    await view.waitFor(() => front.calendarBff.requests.length === 3 && !isCalendarPending());
+    // bootstrap, the opened event's detail (MAIR-557), the refused action and the week read.
+    await view.waitFor(() => front.calendarBff.requests.length === 4 && !isCalendarPending());
     assert.match(view.html.slice(view.html.indexOf('role="dialog"')), new RegExp(`role="alert"[^>]*>${label} refusé`));
     assert.equal(front.calendarBff.calls(route, method.toUpperCase()).length, 1);
     front.calendarBff.on(method, route, approvalStatus
@@ -397,4 +399,28 @@ test('a refused session returns to Login without an automatic logout request', a
   assert.deepEqual(front.userBff.sequence(), ['GET /me']);
   assert.equal(front.ownerCalls.length,0);
   assert.equal(window.location.reloads,0);
+});
+
+test('MAIR-557: the details dialog offers the actions granted by the event detail, not by the period list', async () => {
+  const full = bootstrap();
+  const listed = full.events.map(({ canEdit, canDelete, canValidate, createdById, description, ...event }) => event);
+  let release;
+  const held = new Promise((resolve) => { release = resolve; });
+  await renderLoadedPage({ ...full, events: listed });
+  front.calendarBff.on('get', '/calendar/events/{id}', async ({ pathParams }) => {
+    await held;
+    return { body: full.events.find((event) => String(event.id) === pathParams.id) };
+  });
+
+  await view.act(() => view.props('MonthGrid').onEventClick(view.props('MonthGrid').events[0]));
+  await view.waitFor((html) => html.includes('role="dialog"'));
+  assert.doesNotMatch(view.html.slice(view.html.indexOf('role="dialog"')), />Modifier<|>Supprimer<|>Valider</);
+
+  await view.act(() => release());
+  await view.waitFor((html) => />Modifier</.test(html.slice(html.indexOf('role="dialog"'))));
+  const dialog = view.html.slice(view.html.indexOf('role="dialog"'));
+  assert.match(dialog, />Supprimer</);
+  assert.match(dialog, />Valider</);
+  assert.match(dialog, /Description 5/);
+  assert.deepEqual(front.calendarBff.calls('/calendar/events/{id}', 'GET').map((call) => call.pathParams.id), ['5']);
 });

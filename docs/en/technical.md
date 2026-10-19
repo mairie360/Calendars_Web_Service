@@ -140,6 +140,7 @@ These data paths are exposed at the same origin through the proxy; Next.js pages
 | GET | `/check_apis` | — | 200, 502 |
 | GET | `/calendar/bootstrap` | `from`, `to` query (optional) | 200, 400, 401, 500, 502 |
 | GET | `/calendar/events` | `from`, `to` query | 200, 400, 401, 500, 502 |
+| GET | `/calendar/events/{id}` | — | 200, 400, 401, 403, 404, 500, 502 |
 | POST | `/calendar/events` | application/json | 201, 400, 401, 403, 500, 502 |
 | PATCH | `/calendar/events/{id}` | application/json | 200, 400, 401, 403, 404, 500, 502 |
 | DELETE | `/calendar/events/{id}` | — | 204, 400, 401, 403, 404, 500, 502 |
@@ -166,6 +167,8 @@ Authenticated `/profile` requests are handled by [frontend middleware](../../src
 ## Session, permissions and errors
 
 The `/api/auth/me`, `/api/auth/session` and `/api/user/me` adapters use BFF User for session access; `/api/auth/logout` forwards logout. Both proxies authenticate only with the HttpOnly `accessToken` cookie set by Login, turned into `Authorization: Bearer`; an `Authorization` header sent by the browser is ignored and no token is stored in `localStorage`. Unsafe methods (POST, PUT, PATCH, DELETE) are refused with 403 when `Sec-Fetch-Site` is not `same-origin`, or, without it, when `Origin` does not match the served host (CSRF protection on top of `SameSite=Strict`).
+
+Since MAIR-557 the bootstrap and period lists no longer carry each event's permissions, `createdById` or `description`: opening an event (click or `event` link) shows it at once and reads `GET /calendar/events/{id}`, whose answer completes the details modal. Edit, delete and approval actions therefore appear once that read answers. Closing or switching events cancels the read, a late answer never replaces another selection, a confirmed mutation discards a read started before it, and a refused read keeps the event visible without actions and shows the BFF message.
 
 The front trusts the BFF: permissions (`canEdit`, `canDelete`, `canValidate`), assignable people, payload validation and error messages come from BFF_Calendar and are used as returned. The middleware does not redirect data paths declared in the contract: the BFF answers 401, and the client then logs out through BFF User and reloads the page, which the middleware sends to Login. BFF-side gaps are listed in [BFF.md](../../BFF.md).
 
