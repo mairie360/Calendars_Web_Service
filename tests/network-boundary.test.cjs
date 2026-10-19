@@ -113,6 +113,7 @@ const OPERATION_FIXTURES = {
   'GET /calendar/period': { path: '/calendar/period?from=2026-09-01&to=2026-09-30', reply: { body: (({ events, users }) => ({ events: events.map(({ assignees, ...event }) => event), users }))(bootstrap()) } },
   'GET /calendar/events': { path: '/calendar/events?from=2026-09-01&to=2026-09-30', reply: { body: [calendarEvent(1)] } },
   'POST /calendar/events': { path: '/calendar/events', body: { title: 'Conseil', date: '2026-09-16' }, reply: { status: 201, body: calendarEvent(2) } },
+  'GET /calendar/events/{id}': { path: '/calendar/events/2', reply: { body: calendarEvent(2) } },
   'PATCH /calendar/events/{id}': { path: '/calendar/events/2', body: { title: 'Conseil' }, reply: { body: calendarEvent(2) } },
   'DELETE /calendar/events/{id}': { path: '/calendar/events/2', reply: { status: 204 } },
   'PATCH /calendar/events/{id}/approval': { path: '/calendar/events/2/approval', body: { approvalStatus: 'approved' }, reply: { body: calendarEvent(2, { approvalStatus: 'approved' }) } },
@@ -145,7 +146,7 @@ for (const [operation, fixture] of Object.entries(OPERATION_FIXTURES)) {
 test('the proxy answers routes and methods outside the contract without contacting any BFF', async () => {
   for (const [method, url, status] of [
     ['GET', '/calendar/unknown', 404],
-    ['GET', '/calendar/events/2', 405],
+    ['POST', '/calendar/events/2', 405],
     ['PUT', '/calendar/events/2', 405],
     ['POST', '/calendar/bootstrap', 405],
     ['GET', '/api/unknown', 404],
