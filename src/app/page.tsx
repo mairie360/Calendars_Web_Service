@@ -1,6 +1,6 @@
 import React from 'react';
 import { cookies } from 'next/headers';
-import { createNonce } from '@mairie360/front-kit/shared';
+import { createNonce } from '@mairie360/lib-components/shared';
 import { serverCalendarQuery } from './calendar/page-query';
 import { loadInitialCalendarPage } from '@/lib/server-calendar-page';
 import CalendarClient from './calendar-client';

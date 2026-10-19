@@ -1,4 +1,4 @@
-import { civilDateInZone } from '@mairie360/front-kit/shared';
+import { civilDateInZone } from '@mairie360/lib-components/shared';
 import type { CalendarDateInput, CalendarViewMode } from "./types";
 
 export function parseDateInput(date: CalendarDateInput = calendarToday()) {
