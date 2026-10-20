@@ -43,7 +43,13 @@ npm run contracts:check     # fail if types are stale, or if the BFF checkout at
 
 The script's default source `../BFF_Calendar/contracts` resolves to `Fronts/BFF_Calendar`, which does not exist in the EIP checkout, so always set `BFF_CONTRACT_DIR` (without it, `check` silently skips the BFF comparison), and make sure that checkout is at the pinned commit, not on a feature branch. The stacks pin dev images of BFF User, Core API, Calendar API and the database: the dev Liquibase needs `-Dallow_template_admin=true`, the database enforces argon2id hashes in `init-test.sql`, the dev APIs need `JWT_ALLOW_WEAK_SECRET` for the shared test secret and `RATE_LIMIT_ENABLED=false` (plus `RATE_LIMIT_PER_SECOND=0` on Calendar API, whose per-IP token bucket otherwise answers 429 under the k6 load), BFF_Calendar needs `JWT_SECRET` at startup and BFF User `AUTH_RATE_LIMIT_ENABLED=false` for the ZAP scan. All three commands `npm exec` `openapi-typescript`, so they need network access. The `@mairie360/bff-calendar-openapi` dependency is not imported anywhere; the code uses the committed snapshot and generated types.
 
+## Figma mockup
+
+Figma is the source of truth: design and agree any UI change on **Mairie360 – Calendars_Web_Service** (https://www.figma.com/design/TaP7bHBB2E4uyTEJ5wg6Df) first, then code it. Shared components come from the lib mockup https://www.figma.com/design/T7vetUfuzPEXk5TxjHRiO2 and are instantiated, never redrawn.
+
 ## Architecture
+
+- **Shell from the lib (MAIR-578)** — `src/app/_components/app-shell.tsx` wraps the lib `AccessibleShell` (`@mairie360/lib-components/shell`) with the session/logout binding; `src/lib/front-urls-provider.tsx` uses the lib `configureSidebarCookieDomain`. No local `accessible-shell.tsx`, `desktop-navigation.tsx` or `sidebar-preference.ts` (pinned by `tests/lib-shell-adoption.test.cjs`; `tests/network-boundary.test.cjs` expects no credential reference left in `src`).
 
 - **Profile routing (MAIR-180 partial delivery)** — `src/app/profile/[[...path]]/page.tsx`
   is now a dynamic Server Component redirecting old profile URLs to the existing

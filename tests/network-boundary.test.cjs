@@ -93,12 +93,9 @@ test('the session hook and logout only call the dedicated /api routes, which exi
 
 test('no JavaScript-readable credential is used: no token storage and no client-side Authorization header', () => {
   const offenders = sourceFiles().filter(file => policy.credentialReferences(policy.parse('src/' + relative(file))).length).map(relative).sort();
-  // The verified published server entry owns cookie-to-bearer conversion.
-  assert.deepEqual(offenders, ['components/desktop-navigation.tsx']);
-  const preference = policy.parse('src/components/desktop-navigation.tsx');
-  assert.equal(policy.calls(preference, 'sidebarPreferenceCookie').length, 1);
-  assert.ok(policy.imports(preference).includes('@/lib/sidebar-preference'));
-  assert.doesNotMatch(fs.readFileSync(path.join(SRC, 'components/desktop-navigation.tsx'), 'utf8'), /accessToken|refreshToken|Authorization|localStorage|sessionStorage/);
+  // The verified published server entry owns cookie-to-bearer conversion; the sidebar
+  // preference cookie is written by the published shell (MAIR-578), not by this front.
+  assert.deepEqual(offenders, []);
   const proxy=policy.parse('src/lib/bff-proxy.ts');
   assert.equal(policy.calls(proxy,'proxyPublishedBffRequest').length,1);
   assert.ok(policy.imports(proxy).includes('@mairie360/lib-components/next'));
