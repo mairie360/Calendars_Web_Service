@@ -18,7 +18,7 @@
     "test:bundle": "node --test tests/bundle/*.test.cjs"
   },
   "dependencies": {
-    "@mairie360/bff-calendar-openapi": "0.0.0-dev.45c8598d996d583f817170b206cb3648cb23ac40",
+    "@mairie360/bff-calendar-openapi": "0.0.0-staging.f6bf247392ba486f87c4d2d800c861953a0a8249",
     "@mairie360/lib-components": "0.10.2",
     "axios": "1.20.0",
     "daisyui": "^5.0.0",
