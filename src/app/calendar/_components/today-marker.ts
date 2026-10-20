@@ -1,4 +1,4 @@
-import { civilDateInZone } from '@mairie360/front-kit/shared';
+import { civilDateInZone } from '@mairie360/lib-components/shared';
 import { calendarToday } from '../date-utils';
 type DateGrid = Pick<HTMLElement, 'querySelectorAll'>;
 type Timer = (callback: () => void, delay: number) => number;

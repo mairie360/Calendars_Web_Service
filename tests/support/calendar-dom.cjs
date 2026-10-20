@@ -78,8 +78,8 @@ async function calendarDom(t, { initial, strict = false } = {}) {
   const { createRoot } = require('react-dom/client');
   const Page = loadTs('app/calendar-client').default;
   reactRoot = createRoot(dom.window.document.getElementById('root'));
-  const {InstanceProvider}=require('@mairie360/front-kit/react');
-  const {jwtDisplayRole}=require('@mairie360/front-kit/shared');
+  const {InstanceProvider}=require('@mairie360/lib-components/react');
+  const {jwtDisplayRole}=require('@mairie360/lib-components/shared');
   const client = React.createElement(InstanceProvider, { role: jwtDisplayRole(adminCookie), timeZone: 'UTC' }, React.createElement(Page, { initial }));
   await React.act(async () => reactRoot.render(strict ? React.createElement(React.StrictMode, null, client) : client));
   async function waitFor(predicate) {

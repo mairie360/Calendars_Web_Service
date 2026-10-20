@@ -1,7 +1,7 @@
 import axios, { type AxiosAdapter } from 'axios';
 import { NextRequest } from 'next/server';
 import { getBffCalendar } from '@mairie360/bff-calendar-openapi/endpoints/bffCalendar';
-import { isExpiredJwt, publicOrigin } from '@mairie360/front-kit/shared';
+import { isExpiredJwt, publicOrigin } from '@mairie360/lib-components/shared';
 import { proxyBffRequest } from './bff-proxy';
 import { parseCalendarBootstrapReceipt, CALENDAR_INITIAL_UNAVAILABLE, type InitialCalendarPage } from './calendar-bootstrap-receipt';
 import type { CalendarPageQuery } from '@/app/calendar/page-query';
