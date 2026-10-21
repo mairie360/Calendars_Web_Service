@@ -8,7 +8,7 @@ import { ValidatedEventDetailsModal } from './ValidatedEventDetailsModal';
 
 describe('ValidatedEventDetailsModal', () => {
   it('stays closed without an event, then shows the event with the page feedback', () => {
-    const props = { people: [], categories: [], closeLabel: 'Fermer', editLabel: 'Modifier', deleteLabel: 'Supprimer', cancelLabel: 'Annuler', saveLabel: 'Enregistrer', onClose: vi.fn() } as unknown as React.ComponentProps<typeof ValidatedEventDetailsModal>;
+    const props = { people: [], categories: [], closeLabel: 'Fermer', editLabel: 'Modifier', deleteLabel: 'Supprimer', cancelLabel: 'Annuler', saveLabel: 'Enregistrer', onClose: vi.fn() } as unknown as Omit<React.ComponentProps<typeof ValidatedEventDetailsModal>, 'isOpen' | 'event' | 'error'>;
     const { container, rerender } = render(<ValidatedEventDetailsModal isOpen={false} event={null as never} {...props} />);
     expect(container).toBeEmptyDOMElement();
     rerender(<ValidatedEventDetailsModal isOpen event={event as never} error="Refusé" {...props} />);

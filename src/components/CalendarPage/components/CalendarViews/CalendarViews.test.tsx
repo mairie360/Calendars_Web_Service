@@ -5,7 +5,7 @@ import { render, screen } from '@testing-library/react';
 
 import { CalendarViews } from './CalendarViews';
 
-const calendar = { periodTitle: 'Octobre 2026', view: 'month', currentDate: new Date(2026, 9, 21), selectedDate: new Date(2026, 9, 21), events: [], handlePrevious: vi.fn(), handleNext: vi.fn(), setView: vi.fn(), handleSelectDate: vi.fn(), handleSelectSlot: vi.fn(), handleEventClick: vi.fn() } as unknown as React.ComponentProps<typeof CalendarViews>;
+const calendar = { periodTitle: 'Octobre 2026', view: 'month', currentDate: new Date(2026, 9, 21), selectedDate: new Date(2026, 9, 21), events: [], handlePrevious: vi.fn(), handleNext: vi.fn(), setView: vi.fn(), handleSelectDate: vi.fn(), handleSelectSlot: vi.fn(), handleEventClick: vi.fn() } as never;
 
 describe('CalendarViews', () => {
   it('renders the toolbar and the month grid of the current view', () => {
