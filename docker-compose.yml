@@ -212,7 +212,7 @@ services:
 
   bff-user:
     container_name: bff-user-calendar-front
-    image: ghcr.io/mairie360/bff-user:1.0.0
+    image: ghcr.io/mairie360/bff-user:1.1.0
     ports:
       - "4000:4000"
     networks:
@@ -246,7 +246,7 @@ services:
 
   bff-calendar:
     container_name: bff-calendar-calendar-front
-    image: ghcr.io/mairie360/bff-calendar:staging-f6bf247
+    image: ghcr.io/mairie360/bff-calendar:1.1.0
     ports:
       - "4002:4002"
     networks:
