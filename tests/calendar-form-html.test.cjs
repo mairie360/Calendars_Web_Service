@@ -5,7 +5,7 @@ const { installReactRuntime, mount } = require('./support/server-view.cjs');
 
 installReactRuntime();
 const React = require('react');
-const { CreateEventModal, EventDetailsModal } = loadTs('app/calendar/_components/validated-event-modals');
+const { CreateEventModal, EventDetailsModal } = (() => { const create = loadTs('components/CalendarPage/components/CalendarModals/components/ValidatedCreateEventModal/ValidatedCreateEventModal'); const details = loadTs('components/CalendarPage/components/CalendarModals/components/ValidatedEventDetailsModal/ValidatedEventDetailsModal'); return { ...create, ...details, CreateEventModal: create.ValidatedCreateEventModal, EventDetailsModal: details.ValidatedEventDetailsModal }; })();
 
 const initialValues = {
   date: '16-09-2026',

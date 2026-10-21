@@ -6,7 +6,7 @@ const {
   markTodayInGrid,
   millisecondsUntilTomorrow,
   observeTodayInGrid,
-} = loadTs('app/calendar/_components/today-marker');
+} = loadTs('components/CalendarPage/today-marker');
 
 function dateButton(label) {
   const attributes = new Map([['aria-label', label]]);

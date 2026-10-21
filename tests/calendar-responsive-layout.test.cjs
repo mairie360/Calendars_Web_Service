@@ -75,7 +75,7 @@ test('parsed calendar fallback and focus policies remain scoped without overridi
     // JSDOM does not expand outline shorthand into computed longhands reliably.
     const probe = window.document.createElement('span');
     probe.style.color = resolveSharedColor(colors[0]); window.document.body.append(probe);
-    assert.equal(window.getComputedStyle(probe).color, 'rgb(18, 86, 166)'); probe.remove();
+    assert.equal(window.getComputedStyle(probe).color, 'rgb(62, 106, 98)' /* MAIR-608 charte accent */); probe.remove();
   }
   // Focus configuration is preserved; native keyboard/scroll and RGAA remain separate.
 });

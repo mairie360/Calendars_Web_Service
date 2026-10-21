@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict');
 const { test } = require('node:test');
 const { loadTs } = require('./support/load-ts.cjs');
-const { trainingDestination } = loadTs('app/calendar/_components/event-training-link.tsx');
+const { trainingDestination } = loadTs('components/CalendarPage/components/CalendarModals/components/ValidatedEventDetailsModal/components/EventTrainingLink/EventTrainingLink.tsx');
 
 test('event training links preserve a configured destination and encode the real course identifier', () => {
   const value = trainingDestination('https://training.example/catalog?view=all#top',{ id:'cours / éducation',title:'Formation' });

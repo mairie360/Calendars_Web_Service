@@ -1,5 +1,21 @@
 # Calendars_Web_Service
 
+## Figma mockup / Maquette Figma
+
+Source of truth for every screen of this front: **[Mairie360 – Calendars_Web_Service](https://www.figma.com/design/TaP7bHBB2E4uyTEJ5wg6Df)** (Mairie360 Figma team), built from the published **[Mairie360 – lib-components](https://www.figma.com/design/T7vetUfuzPEXk5TxjHRiO2)** library. A visual or behavioural change is designed and agreed in Figma first; the code then implements the mockup.
+
+Référence de chaque écran de ce front : **[Mairie360 – Calendars_Web_Service](https://www.figma.com/design/TaP7bHBB2E4uyTEJ5wg6Df)**, construit à partir de la bibliothèque **[Mairie360 – lib-components](https://www.figma.com/design/T7vetUfuzPEXk5TxjHRiO2)**. Tout changement visuel ou de comportement est d’abord conçu et validé dans Figma ; le code implémente ensuite la maquette.
+
+## Shared shell — MAIR-578
+
+The application shell (collapsible sidebar, top bar, footer) comes from `@mairie360/lib-components/shell` (`AccessibleShell`, sidebar-preference helpers); `src/components/CalendarPage/components/AppShell/AppShell.tsx` only binds the session and logout to it. `tests/lib-shell-adoption.test.cjs` pins that no local copy exists.
+
+## Calendar components — MAIR-607
+
+The month / week / day grids, toolbar, sidebar and event modals used to come from `@mairie360/lib-components/calendar`. The library now keeps only components shared by several fronts, so they live in `src/components/CalendarPage/` (one folder per component) with their tests beside each component (`Name.test.tsx`) (vitest + jsdom, same rendered HTML). `tests/lib-business-ownership.test.cjs` pins that no removed library entry is imported.
+
+Les grilles mois / semaine / jour, la barre d'outils, la barre latérale et les fenêtres d'événement venaient de `@mairie360/lib-components/calendar`. La lib ne garde que les composants partagés par plusieurs fronts : ces composants vivent désormais dans `src/components/calendar/`, avec leurs tests dans `tests/component/calendar/` (rendu HTML identique).
+
 ## Current shared UI artifact — 10 October 2026
 
 This frontend consumes the published `@mairie360/lib-components@0.6.12` artifact from source commit `6c022cb53da535fd16d4fa80a5cdb943d3791f31`. The selected manifest version, root lock entry, installed package, registry integrity and recorded distribution hashes are checked together by the release tests. Application pins and published BFF contracts are unchanged by this documentation update. Historical 0.6.11 notes below describe the earlier delivery.

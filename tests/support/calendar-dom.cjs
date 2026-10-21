@@ -76,7 +76,7 @@ async function calendarDom(t, { initial, strict = false } = {}) {
   t.after(() => setBrowserFrontUrls({}));
   React = require('react');
   const { createRoot } = require('react-dom/client');
-  const Page = loadTs('app/calendar-client').default;
+  const Page = loadTs('components/CalendarPage/CalendarPage').default;
   reactRoot = createRoot(dom.window.document.getElementById('root'));
   const {InstanceProvider}=require('@mairie360/lib-components/react');
   const {jwtDisplayRole}=require('@mairie360/lib-components/shared');
