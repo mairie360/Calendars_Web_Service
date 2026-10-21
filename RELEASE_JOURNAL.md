@@ -1,21 +1,41 @@
 # Journal des releases — Calendars_Web_Service
 
-<!-- release-journal-state {"dev": "c4beb3aaa105badfa3bed14d91c40d9a5de34b2b", "prod": "c4beb3aaa105badfa3bed14d91c40d9a5de34b2b", "prod_tag": "v0.5.0", "staging": "c4beb3aaa105badfa3bed14d91c40d9a5de34b2b", "updated": {"dev": "2026-10-21 11:00 UTC", "prod": "2026-10-21 11:08 UTC", "staging": "2026-10-21 11:05 UTC"}} -->
+<!-- release-journal-state {"dev": "55a2624f5bd52538b64c63da66eb579390424ddc", "prod": "c4beb3aaa105badfa3bed14d91c40d9a5de34b2b", "prod_tag": "v0.5.0", "staging": "c4beb3aaa105badfa3bed14d91c40d9a5de34b2b", "updated": {"dev": "2026-10-21 18:00 UTC", "prod": "2026-10-21 11:08 UTC", "staging": "2026-10-21 11:05 UTC"}} -->
 > Tenu à jour par la CI (`mairie360/CICD`, action `release/release-journal`) à chaque passage en dev, staging et prod. Ne pas modifier à la main : le fichier est réécrit au passage suivant.
 
 | Environnement | Version | Commit | Mis à jour |
 | --- | --- | --- | --- |
 | prod | v0.5.0 | `c4beb3a` | 2026-10-21 11:08 UTC |
 | staging | — | `c4beb3a` | 2026-10-21 11:05 UTC |
-| dev | — | `c4beb3a` | 2026-10-21 11:00 UTC |
+| dev | — | `55a2624` | 2026-10-21 18:00 UTC |
 
 ## Ajouté sur main depuis la dernière release prod (v0.5.0)
 
-_Rien._
+#### Nouveautés
+- Les fenêtres de création et de détail d'événement utilisent désormais la fenêtre modale de la lib (piégeage du focus, Échap, titre et description). Depuis l'éditeur de détail, Échap, le fond ou la fermeture ferment toute la fenêtre, et « Annuler » revient aux détails. (MAIR-608, [#287](https://github.com/mairie360/Calendars_Web_Service/pull/287))
+- L'en-tête de la page calendrier repose sur le `PageHeader` de la lib, et la carte de chargement est un composant dédié. (MAIR-608, [#287](https://github.com/mairie360/Calendars_Web_Service/pull/287))
+
+#### Changements de comportement
+- La coque de l'application (barre latérale, barre supérieure, pied de page) vient désormais de `AccessibleShell` (`@mairie360/lib-components/shell`), relié à la session et à la déconnexion par `AppShell`. Les composants locaux `desktop-navigation`, `accessible-shell` et `sidebar-preference` sont supprimés. (MAIR-608, [#287](https://github.com/mairie360/Calendars_Web_Service/pull/287))
+
+#### Technique
+- Les grilles mois / semaine / jour, la barre d'outils, la barre latérale et les fenêtres d'événement sont désormais des composants locaux sous `src/components/CalendarPage/` (un dossier par composant, un test co-localisé). Le rendu HTML est annoncé comme identique. (MAIR-608, [#287](https://github.com/mairie360/Calendars_Web_Service/pull/287))
+- Dépendance `@mairie360/lib-components` passée de 0.10.2 à 1.0.3 (saut majeur, d'où le `feat!`), et ajout de Vitest, Testing Library et jest-axe (`npm run test:components`, intégré à `npm test`). (MAIR-608, [#287](https://github.com/mairie360/Calendars_Web_Service/pull/287))
+- Le diff fourni est tronqué : certains changements de fichiers n'ont pas pu être vérifiés ligne à ligne.
 
 ## Différence dev → staging (en dev, pas encore en staging)
 
-_Rien._
+#### Nouveautés
+- Les fenêtres de création et de détail d'événement utilisent désormais la fenêtre modale de la lib (piégeage du focus, Échap, titre et description). Depuis l'éditeur de détail, Échap, le fond ou la fermeture ferment toute la fenêtre, et « Annuler » revient aux détails. (MAIR-608, [#287](https://github.com/mairie360/Calendars_Web_Service/pull/287))
+- L'en-tête de la page calendrier repose sur le `PageHeader` de la lib, et la carte de chargement est un composant dédié. (MAIR-608, [#287](https://github.com/mairie360/Calendars_Web_Service/pull/287))
+
+#### Changements de comportement
+- La coque de l'application (barre latérale, barre supérieure, pied de page) vient désormais de `AccessibleShell` (`@mairie360/lib-components/shell`), relié à la session et à la déconnexion par `AppShell`. Les composants locaux `desktop-navigation`, `accessible-shell` et `sidebar-preference` sont supprimés. (MAIR-608, [#287](https://github.com/mairie360/Calendars_Web_Service/pull/287))
+
+#### Technique
+- Les grilles mois / semaine / jour, la barre d'outils, la barre latérale et les fenêtres d'événement sont désormais des composants locaux sous `src/components/CalendarPage/` (un dossier par composant, un test co-localisé). Le rendu HTML est annoncé comme identique. (MAIR-608, [#287](https://github.com/mairie360/Calendars_Web_Service/pull/287))
+- Dépendance `@mairie360/lib-components` passée de 0.10.2 à 1.0.3 (saut majeur, d'où le `feat!`), et ajout de Vitest, Testing Library et jest-axe (`npm run test:components`, intégré à `npm test`). (MAIR-608, [#287](https://github.com/mairie360/Calendars_Web_Service/pull/287))
+- Le diff fourni est tronqué : certains changements de fichiers n'ont pas pu être vérifiés ligne à ligne.
 
 ## Différence staging → prod (en staging, pas encore en prod)
 
@@ -26,6 +46,7 @@ _Rien._
 <!-- release-journal-history:start -->
 | Date | Environnement | Version | Commit | Run |
 | --- | --- | --- | --- | --- |
+| 2026-10-21 18:00 UTC | dev | — | `55a2624` | [run](https://github.com/mairie360/Calendars_Web_Service/actions/runs/39647828387) |
 | 2026-10-21 11:08 UTC | prod | v0.5.0 | `c4beb3a` | [run](https://github.com/mairie360/Calendars_Web_Service/actions/runs/39589435988) |
 | 2026-10-21 11:05 UTC | staging | — | `c4beb3a` | [run](https://github.com/mairie360/Calendars_Web_Service/actions/runs/39588904477) |
 | 2026-10-21 11:00 UTC | dev | — | `c4beb3a` | [run](https://github.com/mairie360/Calendars_Web_Service/actions/runs/39587571414) |
