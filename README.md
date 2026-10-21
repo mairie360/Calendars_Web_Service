@@ -8,11 +8,11 @@ Référence de chaque écran de ce front : **[Mairie360 – Calendars_Web_Servic
 
 ## Shared shell — MAIR-578
 
-The application shell (collapsible sidebar, top bar, footer) comes from `@mairie360/lib-components/shell` (`AccessibleShell`, sidebar-preference helpers); `src/app/_components/app-shell.tsx` only binds the session and logout to it. `tests/lib-shell-adoption.test.cjs` pins that no local copy exists.
+The application shell (collapsible sidebar, top bar, footer) comes from `@mairie360/lib-components/shell` (`AccessibleShell`, sidebar-preference helpers); `src/components/CalendarPage/components/AppShell/AppShell.tsx` only binds the session and logout to it. `tests/lib-shell-adoption.test.cjs` pins that no local copy exists.
 
 ## Calendar components — MAIR-607
 
-The month / week / day grids, toolbar, sidebar and event modals used to come from `@mairie360/lib-components/calendar`. The library now keeps only components shared by several fronts, so they live in `src/components/calendar/` with their tests under `tests/component/calendar/` (vitest + jsdom, same rendered HTML). `tests/lib-business-ownership.test.cjs` pins that no removed library entry is imported.
+The month / week / day grids, toolbar, sidebar and event modals used to come from `@mairie360/lib-components/calendar`. The library now keeps only components shared by several fronts, so they live in `src/components/CalendarPage/` (one folder per component) with their tests beside each component (`Name.test.tsx`) (vitest + jsdom, same rendered HTML). `tests/lib-business-ownership.test.cjs` pins that no removed library entry is imported.
 
 Les grilles mois / semaine / jour, la barre d'outils, la barre latérale et les fenêtres d'événement venaient de `@mairie360/lib-components/calendar`. La lib ne garde que les composants partagés par plusieurs fronts : ces composants vivent désormais dans `src/components/calendar/`, avec leurs tests dans `tests/component/calendar/` (rendu HTML identique).
 
