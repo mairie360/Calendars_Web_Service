@@ -1,64 +1,71 @@
 # Journal des releases — Calendars_Web_Service
 
-<!-- release-journal-state {"dev": "0f95062ec1153b71ee5d9ac8e656d2e70ade716f", "prod": "9e21e348015b41cc3c22535c7b38433c50a7a2ed", "prod_tag": "v0.4.0", "staging": "e4129bdb05d4ddfd421d8afd9f1b60ff6a7cb595", "updated": {"dev": "2026-10-21 10:52 UTC", "staging": "2026-10-20 19:01 UTC"}} -->
+<!-- release-journal-state {"dev": "b4f0ae578cca3cb0ede06762a1e2b79adc7ec2fc", "prod": "9e21e348015b41cc3c22535c7b38433c50a7a2ed", "prod_tag": "v0.4.0", "staging": "e4129bdb05d4ddfd421d8afd9f1b60ff6a7cb595", "updated": {"dev": "2026-10-21 10:56 UTC", "staging": "2026-10-20 19:01 UTC"}} -->
 > Tenu à jour par la CI (`mairie360/CICD`, action `release/release-journal`) à chaque passage en dev, staging et prod. Ne pas modifier à la main : le fichier est réécrit au passage suivant.
 
 | Environnement | Version | Commit | Mis à jour |
 | --- | --- | --- | --- |
 | prod | v0.4.0 | `9e21e34` | — |
 | staging | — | `e4129bd` | 2026-10-20 19:01 UTC |
-| dev | — | `0f95062` | 2026-10-21 10:52 UTC |
+| dev | — | `b4f0ae5` | 2026-10-21 10:56 UTC |
 
 ## Ajouté sur main depuis la dernière release prod (v0.4.0)
 
 #### Nouveautés
-- Nouvelle route `GET /calendar/events/{id}` dans le contrat `@mairie360/bff-calendar-openapi` 1.0.0 ; le front la lit à l'ouverture d'un événement. (MAIR-569, [#264](https://github.com/mairie360/Calendars_Web_Service/pull/264))
-- Message de confirmation (toast fermable) après création, modification, suppression, validation ou refus d'un événement ; squelette de chargement pendant la lecture ; lien d'évitement en tête de page. ([#262](https://github.com/mairie360/Calendars_Web_Service/pull/262))
+- Ouvrir un événement appelle désormais `GET /calendar/events/{id}` : la fenêtre de détails s'affiche aussitôt, puis la réponse complète l'événement avec `canEdit`, `canDelete`, `canValidate`, `createdById` et `description`. (MAIR-557, [#265](https://github.com/mairie360/Calendars_Web_Service/pull/265))
+- Après une création, une modification, une suppression, une approbation ou un refus, un message de confirmation s'affiche (« Événement « … » créé. », « … enregistré. », « … supprimé. », « … approuvé. » ou « … refusé. »). Un squelette de chargement remplace le texte pendant la lecture du calendrier. ([#262](https://github.com/mairie360/Calendars_Web_Service/pull/262))
+
 #### Changements de comportement
-- Un push sur `main` ne lance plus que la release dev ; staging et prod se font à la main via `promote-staging.yml` et `promote-prod.yml`. (MAIR-494, [#284](https://github.com/mairie360/Calendars_Web_Service/pull/284))
-- Le contrat documente une réponse 429 (en-tête `Retry-After`) sur les routes calendrier : un appelant doit la prendre en compte. (MAIR-569, [#264](https://github.com/mairie360/Calendars_Web_Service/pull/264))
-- Thème visuel repris des variables de lib-components 0.9.0 ; `municipal-theme.css` est supprimé, l'aspect des écrans change. ([#262](https://github.com/mairie360/Calendars_Web_Service/pull/262))
+- Le contrat BFF Calendar passe en 1.0.0 : les listes bootstrap et période ne portent plus `canEdit`, `canDelete`, `canValidate`, `createdById` ni `description`. Le front ignore les droits présents dans ces listes et n'affiche Modifier, Supprimer ou Valider qu'après la réponse de `GET /calendar/events/{id}`. Un appelant qui lit les droits dans les listes ne les trouve plus. (02f5ff1, [#264](https://github.com/mairie360/Calendars_Web_Service/pull/264) ; 68a218c, [#265](https://github.com/mairie360/Calendars_Web_Service/pull/265))
+- Le contrat ajoute une réponse 429 (limite de débit, `Retry-After`) sur les routes calendrier. (02f5ff1, [#264](https://github.com/mairie360/Calendars_Web_Service/pull/264))
+- Le thème et les composants viennent de `@mairie360/lib-components` 0.9.0 puis 0.10.2 : la feuille `municipal-theme.css` est retirée et un lien d'évitement précède la navigation. (199dacb, [#262](https://github.com/mairie360/Calendars_Web_Service/pull/262) ; fe1296b / 5c3debe, [#269](https://github.com/mairie360/Calendars_Web_Service/pull/269))
+- Les pushs sur `main` ne vont plus jusqu'à staging ni prod : la promotion staging et prod est manuelle. (062845e, [#284](https://github.com/mairie360/Calendars_Web_Service/pull/284))
+
 #### Corrections
-- Fenêtre de détails d'un événement. Avant : Modifier, Supprimer et Valider n'apparaissaient jamais, les listes du BFF ne portant plus les droits. Maintenant : l'événement s'affiche aussitôt, puis la lecture de `GET /calendar/events/{id}` complète les actions ; une lecture refusée garde l'événement sans action et affiche le message du BFF. (MAIR-557, [#265](https://github.com/mairie360/Calendars_Web_Service/pull/265))
+- Fenêtre de détails d'un événement. Avant : Modifier, Supprimer et Valider n'apparaissaient jamais, les listes ne portant plus les droits. Maintenant : ces actions apparaissent à la réponse de la lecture détaillée. Une réponse tardive ne remplace pas un autre événement sélectionné, une mutation confirmée annule une lecture antérieure, et une lecture refusée garde l'événement visible sans action en affichant le message du BFF. (68a218c, [#265](https://github.com/mairie360/Calendars_Web_Service/pull/265))
+
 #### Technique
-- Renovate fait passer mairie360/CICD de v4.4.0 à v4.4.3 ([#280](https://github.com/mairie360/Calendars_Web_Service/pull/280)) ; le journal des releases (étape Release journal, secrets `ANTHROPIC_API_KEY`, `RELEASE_APP_ID`, `RELEASE_APP_PK`) arrive avec CICD v4.3.1 ([#267](https://github.com/mairie360/Calendars_Web_Service/pull/267)), et les références CICD sont épinglées avec leur tag ([#271](https://github.com/mairie360/Calendars_Web_Service/pull/271)).
-- `cicd.yml` et `contracts.yml` ne se déclenchent sur push que pour `main`, le jeton est en lecture seule par défaut, et seul le job CICD reçoit les droits d'écriture (MAIR-436, [#259](https://github.com/mairie360/Calendars_Web_Service/pull/259)).
-- `@mairie360/front-kit` est remplacé par `@mairie360/lib-components` 0.10.2, sans changement de comportement annoncé ; `npm run test:bundle` vérifie le bundle client (MAIR-126, [#269](https://github.com/mairie360/Calendars_Web_Service/pull/269), [#273](https://github.com/mairie360/Calendars_Web_Service/pull/273)).
-- Les stacks de test passent aux images prod (`bff-calendar` 1.0.0, `calendar-api` 1.1.0, `core-api` 2.1.0, `database` et `liquibase-migrations` 3.2.0) (MAIR-569, [#264](https://github.com/mairie360/Calendars_Web_Service/pull/264)).
-- Les pins du contrat et des images ont bougé plusieurs fois dans cette plage (builds dev MAIR-575, staging MAIR-600, puis 1.0.0) ; l'état final se lit dans `package.json` et `contracts/source.json`.
+- Dépendances CICD mises à jour jusqu'à v4.4.3 avec promotion séparée (4d59302, 0eecbe1, 0f95062, [#271](https://github.com/mairie360/Calendars_Web_Service/pull/271), [#267](https://github.com/mairie360/Calendars_Web_Service/pull/267), [#280](https://github.com/mairie360/Calendars_Web_Service/pull/280)). Journal de release rédigé par Claude, secrets transmis au workflow réutilisable.
+- CI : `cicd.yml` et `contracts.yml` tournent sur push vers `main` seulement, le jeton est en lecture seule par défaut et seul le job de release reçoit les droits d'écriture. (11205c7, [#259](https://github.com/mairie360/Calendars_Web_Service/pull/259))
+- `@mairie360/front-kit` est retiré au profit de `@mairie360/lib-components` 0.10.2, avec un test de bundle client. (5c3debe, fe1296b)
+- Dépendance contrat : `@mairie360/bff-calendar-openapi` est d'abord épinglé sur un artefact dev (dcbfb02, [#275](https://github.com/mairie360/Calendars_Web_Service/pull/275)), puis sur un artefact staging `0.0.0-staging.f6bf247…` (e4129bd, [#277](https://github.com/mairie360/Calendars_Web_Service/pull/277)).
+- Stacks de test : images `database` et `liquibase-migrations` en 3.2.0, `core-api` en 2.1.0, `calendar-api` en 1.1.0, `bff-user` en 1.0.0 (02f5ff1, [#264](https://github.com/mairie360/Calendars_Web_Service/pull/264)). `bff-calendar` passe de `dev-45c8598` à `staging-f6bf247` (e4129bd).
 
 ## Différence dev → staging (en dev, pas encore en staging)
 
 #### Changements de comportement
-- Un push sur `main` ne lance plus que la release dev : `cicd.yml` s'arrête à `release-dev`. Staging et prod se déclenchent à la main via `promote-staging.yml` et `promote-prod.yml` (`workflow_dispatch`, `sha` optionnel). (MAIR-494, [#284](https://github.com/mairie360/Calendars_Web_Service/pull/284))
+- Le push sur `main` ne déclenche plus la mise en staging ni en prod : `cicd.yml` s'arrête à `release-dev`. Staging se lance avec `gh workflow run promote-staging.yml`, éventuellement avec `-f sha=<sha>`, et l'environnement `Staging` garde son approbation. (062845e, [#284](https://github.com/mairie360/Calendars_Web_Service/pull/284))
+
 #### Technique
-- Renovate fait passer mairie360/CICD de v4.4.0 à v4.4.3 dans les trois workflows, avec le même commit épinglé. ([#280](https://github.com/mairie360/Calendars_Web_Service/pull/280))
-- `tests/cicd-pin.test.cjs` couvre désormais les huit références CICD des quatre workflows, et `CLAUDE.md` décrit la promotion. (MAIR-494, [#284](https://github.com/mairie360/Calendars_Web_Service/pull/284))
+- Le CICD passe en v4.4.3 avec la séparation de la promotion staging et prod (MAIR-494), et le workflow réutilisable est épinglé sur ce commit. (0f95062, [#280](https://github.com/mairie360/Calendars_Web_Service/pull/280))
+- Ajout de `promote-staging.yml` et `promote-prod.yml`, de la documentation de promotion dans `CLAUDE.md`, de `tests/cicd-pin.test.cjs` et de `follow-redirects` 1.16.1 dans le lockfile pour `npm audit`. (062845e, [#284](https://github.com/mairie360/Calendars_Web_Service/pull/284))
+- Dans `docker-compose.yml` et les stacks de test, les images `database` et `liquibase-migrations` passent de 3.2.0 à 3.3.0. Le diff ne détaille pas le changement de schéma. (b4f0ae5, [#290](https://github.com/mairie360/Calendars_Web_Service/pull/290))
 
 ## Différence staging → prod (en staging, pas encore en prod)
 
 #### Nouveautés
-- Nouvelle route `GET /calendar/events/{id}` dans le contrat `@mairie360/bff-calendar-openapi` 1.0.0, avec description, créateur, membres et droits `canEdit`, `canDelete`, `canValidate` ; réponses documentées 200, 400, 401, 403, 404, 429, 500, 502, 503. (MAIR-569, [#264](https://github.com/mairie360/Calendars_Web_Service/pull/264))
-- Messages de confirmation après création, modification, suppression et validation ou refus d'un événement (« Événement « … » créé. », « enregistré. », « supprimé. », « approuvé. » ou « refusé. »), dans un toast fermable ; squelette de chargement pendant la lecture ; lien d'évitement en tête de page. ([#262](https://github.com/mairie360/Calendars_Web_Service/pull/262))
+- Ouvrir un événement appelle désormais `GET /calendar/events/{id}` : la fenêtre de détails s'affiche aussitôt, puis la réponse complète l'événement avec ses droits et ses champs de détail. (MAIR-557, [#265](https://github.com/mairie360/Calendars_Web_Service/pull/265))
+- Messages de confirmation après création, enregistrement, suppression, approbation ou refus d'un événement, et squelette de chargement pendant la lecture du calendrier. ([#262](https://github.com/mairie360/Calendars_Web_Service/pull/262))
+
 #### Changements de comportement
-- Le contrat documente une réponse 429 (en-tête `Retry-After`) sur les routes calendrier : un appelant doit la gérer. (MAIR-569, [#264](https://github.com/mairie360/Calendars_Web_Service/pull/264))
-- Thème visuel repris des variables de lib-components 0.9.0 ; `municipal-theme.css` est supprimé, l'aspect des écrans change. ([#262](https://github.com/mairie360/Calendars_Web_Service/pull/262))
-- Les actions de la fenêtre de détails n'apparaissent qu'après la réponse de `GET /calendar/events/{id}` ; une lecture refusée garde l'événement sans action et affiche le message du BFF. (MAIR-557, [#265](https://github.com/mairie360/Calendars_Web_Service/pull/265))
+- Le BFF Calendar passe en contrat 1.0.0, avec une réponse 429 documentée sur les routes calendrier. Les listes bootstrap et période ne portent plus les droits : Modifier, Supprimer et Valider n'apparaissent qu'après la lecture détaillée. (02f5ff1, [#264](https://github.com/mairie360/Calendars_Web_Service/pull/264) ; 68a218c, [#265](https://github.com/mairie360/Calendars_Web_Service/pull/265))
+- Le front passe sur les sous-chemins publics de `@mairie360/lib-components` 0.10.2, et la feuille de thème locale `municipal-theme.css` est retirée. Un lien d'évitement précède la navigation répétée. (199dacb, [#262](https://github.com/mairie360/Calendars_Web_Service/pull/262) ; 5c3debe, [#269](https://github.com/mairie360/Calendars_Web_Service/pull/269))
+
 #### Corrections
-- Fenêtre de détails d'un événement. Avant : Modifier, Supprimer et Valider n'apparaissaient jamais, les listes du BFF ne portant plus les droits. Maintenant : l'événement s'affiche aussitôt, puis la lecture complète les actions ; une réponse tardive ne remplace pas une autre sélection, et une mutation confirmée annule une lecture lancée avant elle. (MAIR-557, [#265](https://github.com/mairie360/Calendars_Web_Service/pull/265))
+- Fenêtre de détails d'un événement. Avant : Modifier, Supprimer et Valider n'étaient jamais affichés. Maintenant : ces actions apparaissent à la réponse de la lecture détaillée. Une réponse tardive ne remplace pas la sélection en cours, une mutation confirmée annule une lecture antérieure, et une lecture refusée garde l'événement sans action en affichant le message du BFF. (68a218c, [#265](https://github.com/mairie360/Calendars_Web_Service/pull/265))
+
 #### Technique
-- Le journal des releases arrive avec mairie360/CICD v4.3.1 : l'étape Release journal réécrit `RELEASE_JOURNAL.md` sur `main`, avec les secrets `ANTHROPIC_API_KEY`, `RELEASE_APP_ID` et `RELEASE_APP_PK` transmis par `cicd.yml`. (MAIR-571, [#267](https://github.com/mairie360/Calendars_Web_Service/pull/267))
-- Les références CICD sont épinglées avec leur tag (v4.3.2 puis v4.4.0 sur cette plage), et Renovate les suit ensemble ; `tests/cicd-pin.test.cjs` le vérifie. (MAIR-571, [#271](https://github.com/mairie360/Calendars_Web_Service/pull/271))
-- `cicd.yml` et `contracts.yml` ne se déclenchent sur push que pour `main`, le jeton est en lecture seule par défaut, et seul le job CICD reçoit les droits d'écriture (`tests/workflow-permissions.test.cjs`). (MAIR-436, [#259](https://github.com/mairie360/Calendars_Web_Service/pull/259))
-- `@mairie360/front-kit` est remplacé par `@mairie360/lib-components` 0.10.2 (imports `@mairie360/lib-components/<entrée>`), sans changement de comportement annoncé ; l'archive vendue est supprimée. (MAIR-126, [#269](https://github.com/mairie360/Calendars_Web_Service/pull/269))
-- `npm run test:bundle` vérifie que le bundle client n'embarque ni entrée lib inutilisée ni code serveur de la lib (MAIR-126, [#273](https://github.com/mairie360/Calendars_Web_Service/pull/273)).
-- Les pins du contrat et des images de test changent plusieurs fois (builds dev MAIR-575 et staging MAIR-600, puis releases 1.0.0 MAIR-569) ; l'état final se lit dans `package.json` et `contracts/source.json`. ([#275](https://github.com/mairie360/Calendars_Web_Service/pull/275), [#277](https://github.com/mairie360/Calendars_Web_Service/pull/277))
+- Le contrat `@mairie360/bff-calendar-openapi` est épinglé sur l'artefact staging `0.0.0-staging.f6bf247…`, et les stacks de test utilisent `bff-calendar:staging-f6bf247`. (e4129bd, [#277](https://github.com/mairie360/Calendars_Web_Service/pull/277) ; dcbfb02, [#275](https://github.com/mairie360/Calendars_Web_Service/pull/275))
+- Le CICD passe en v4.3.1 puis v4.3.2 avec les secrets du journal de release, et les références CICD sont épinglées avec leur tag (0eecbe1, [#267](https://github.com/mairie360/Calendars_Web_Service/pull/267) ; 4d59302, [#271](https://github.com/mairie360/Calendars_Web_Service/pull/271)).
+- Les workflows `cicd.yml` et `contracts.yml` ne tournent sur push que pour `main`, avec un jeton en lecture seule par défaut (11205c7, [#259](https://github.com/mairie360/Calendars_Web_Service/pull/259)).
+- Test de bundle client qui vérifie que le build n'embarque pas les entrées inutilisées de la lib (fe1296b, [#273](https://github.com/mairie360/Calendars_Web_Service/pull/273) ; 5c3debe).
 
 ## Historique des passages
 
 <!-- release-journal-history:start -->
 | Date | Environnement | Version | Commit | Run |
 | --- | --- | --- | --- | --- |
+| 2026-10-21 10:56 UTC | dev | — | `b4f0ae5` | [run](https://github.com/mairie360/Calendars_Web_Service/actions/runs/39584997281) |
 | 2026-10-21 10:52 UTC | dev | — | `0f95062` | [run](https://github.com/mairie360/Calendars_Web_Service/actions/runs/39584859301) |
 | 2026-10-21 03:27 UTC | dev | — | `062845e` | [run](https://github.com/mairie360/Calendars_Web_Service/actions/runs/39538125565) |
 | 2026-10-20 19:01 UTC | staging | — | `e4129bd` | [run](https://github.com/mairie360/Calendars_Web_Service/actions/runs/39478616869) |
