@@ -1,3 +1,5 @@
+'use client';
+
 import type React from 'react';
 
 export type CalendarViewMode = 'month' | 'week' | 'day';
