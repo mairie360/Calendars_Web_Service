@@ -37,7 +37,7 @@ test('hydration shows the confirmed period immediately and revisiting it reuses 
 
 test('foreground verification keeps an open event draft on both confirmed and refused reads', async () => {
   view = mount(React.createElement(Client, { initial: initial() }));
-  await view.act(() => view.props('PageTitleBar').onAction());
+  await view.act(() => view.props('CalendarHeader').onCreate());
   await view.fire(props => props.id === 'event-title', 'onChange', { target: { value: 'Draft across foreground' } });
   front.calendarRead({ body: bootstrap({ events: [calendarEvent(5, { date: '2026-11-17', title: 'Foreground event' })] }) });
   await view.act(() => window.dispatchEvent({ type: 'focus' }));

@@ -100,7 +100,7 @@ test('the shell shows the user resolved from BFF User in the header', async () =
   assert.match(html, /class="flex h-screen"/);
   assert.match(html, /<main\b[^>]*class="min-h-0 flex-1 overflow-auto/);
   assert.deepEqual(front.userBff.sequence(), ['GET /me']);
-  assert.match(html, /<span data-slot="avatar-fallback"[^>]*>AM<\/span>|<span[^>]*>AM<\/span>/);
+  assert.match(html, /<(?:span|div) data-slot="avatar-fallback"[^>]*>AM<\/(?:span|div)>|<span[^>]*>AM<\/span>/);
   assert.match(html, /<span[^>]*>Admin Mairie<\/span>/);
   assert.match(html, /<footer/);
   const footer = html.match(/<footer\b[^>]*>[\s\S]*?<\/footer>/)?.[0];
@@ -169,7 +169,7 @@ test('a BFF error is rendered as an alert with a retry button that reloads the c
   const failed = await view.waitFor((html) => html.includes('role="alert"'));
 
   assert.match(failed, /<span role="alert">Calendrier : Calendar API unavailable<\/span>/);
-  assert.match(failed, /<button type="button"[^>]*>[\s\S]*?<span>Réessayer<\/span><\/button>/);
+  assert.match(failed, /<button type="button"[^>]*>[\s\S]*?Réessayer<\/button>/);
   assert.doesNotMatch(view.text(), /Événement 5/);
 
   front.calendarRead({ body: bootstrap() });
@@ -185,7 +185,7 @@ test('opening creation keeps the failed read and its retry, without claiming a r
   front.calendarRead({ status: 502, body: apiError('UNAVAILABLE', 'Read unavailable') });
   view = mount(React.createElement(Page));
   await view.waitFor(html => html.includes('Read unavailable'));
-  await view.act(() => view.props('PageTitleBar').onAction());
+  await view.act(() => view.props('CalendarHeader').onCreate());
   assert.match(view.html, /<span role="alert">Calendrier : Read unavailable<\/span>/);
   assert.match(view.text(), /Réessayer/);
   assert.equal(view.props('CreateEventModal').error, null);
@@ -283,7 +283,7 @@ test('day arrows render the navigated date in the actual schedule, statistics an
   assert.match(html, /aria-label="1 Janvier 2027 à 09:00"/);
   assert.doesNotMatch(html, /aria-label="31 Décembre 2026 à/);
   assert.equal(view.props('CalendarSidebar').stats[2].value, '1 événement');
-  await view.act(() => view.props('PageTitleBar').onAction());
+  await view.act(() => view.props('CalendarHeader').onCreate());
   assert.equal(view.props('CreateEventModal').initialValues.date, '01-01-2027');
   assert.ok(front.calendarBff.sequence().every((call) => /^GET \/calendar\/(bootstrap|period)\?/.test(call)));
 });
@@ -309,7 +309,7 @@ test('the create modal opens from the title bar and the created event appears in
   await renderLoadedPage();
   assert.doesNotMatch(view.html, /Ajoutez une date au calendrier de la mairie\./);
 
-  await view.act(() => view.props('PageTitleBar').onAction());
+  await view.act(() => view.props('CalendarHeader').onCreate());
   assert.match(view.html, /Ajoutez une date au calendrier de la mairie\./);
   assert.equal(view.props('CreateEventModal').isOpen, true);
 

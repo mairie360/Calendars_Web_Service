@@ -118,8 +118,8 @@ test('real page marks today after bootstrap, keeps selection independent and rea
   assert.deepEqual(today().map((button) => button.getAttribute('aria-label')), ['Sélectionner le 9 Octobre 2026']);
   assert.equal(dom.style(today()[0]).borderTopWidth, '2px');
   assert.equal(dom.style(today()[0]).borderTopStyle, 'dashed');
-  assert.equal(dom.style(today()[0]).borderTopColor, 'rgb(18, 86, 166)');
-  assert.equal(dom.style(dom.document.documentElement).getPropertyValue('--mairie-accent').trim(), '#1256a6');
+  assert.equal(dom.style(today()[0]).borderTopColor, 'rgb(62, 106, 98)' /* MAIR-608 charte accent */);
+  assert.equal(dom.style(dom.document.documentElement).getPropertyValue('--mairie-accent').trim(), '#3e6a62');
   const other = dom.button('Sélectionner le 8 Octobre 2026');
   const beforeOther = other.className, beforeToday = today()[0].className;
   await dom.click(other);

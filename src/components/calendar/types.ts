@@ -199,6 +199,8 @@ export interface CreateEventModalProps {
   cancelLabel?: string;
   submitLabel?: string;
   onCancel: () => void;
+  /** Escape, the backdrop and the header close; defaults to `onCancel`. The details editor closes the whole dialog with it. */
+  onDismiss?: () => void;
   onCreate: (event: CreateCalendarEventValues) => void;
 }
 
