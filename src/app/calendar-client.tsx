@@ -6,7 +6,7 @@ import {
   DaySchedule,
   MonthGrid,
   WeekGrid,
-} from "@mairie360/lib-components/calendar";
+} from "@/components/calendar";
 import { Card, Skeleton, Toast } from "@mairie360/lib-components/primitives";
 import { PageTitleBar } from "@mairie360/lib-components/shell";
 import { RefreshCw } from "lucide-react";

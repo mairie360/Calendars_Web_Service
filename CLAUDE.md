@@ -49,6 +49,7 @@ Figma is the source of truth: design and agree any UI change on **Mairie360 – 
 
 ## Architecture
 
+- **Calendar components owned here (MAIR-607)** — `src/components/calendar/` holds the grids, toolbar, sidebar, event modals, fields and helpers (formerly `@mairie360/lib-components/calendar`, removed because Calendars was their only consumer); `src/app/calendar-client.tsx` and `src/app/calendar/_components/validated-event-modals.tsx` import `@/components/calendar`. Their component tests are `tests/component/calendar/lib-*.test.tsx` (vitest + jsdom, `npm run test:components`, composed with the Node coverage like Dashboard/Settings); `tests/lib-business-ownership.test.cjs` forbids any import of a removed library entry and checks the installed lib has no `./calendar` export.
 - **Shell from the lib (MAIR-578)** — `src/app/_components/app-shell.tsx` wraps the lib `AccessibleShell` (`@mairie360/lib-components/shell`) with the session/logout binding; `src/lib/front-urls-provider.tsx` uses the lib `configureSidebarCookieDomain`. No local `accessible-shell.tsx`, `desktop-navigation.tsx` or `sidebar-preference.ts` (pinned by `tests/lib-shell-adoption.test.cjs`; `tests/network-boundary.test.cjs` expects no credential reference left in `src`).
 
 - **Profile routing (MAIR-180 partial delivery)** — `src/app/profile/[[...path]]/page.tsx`
