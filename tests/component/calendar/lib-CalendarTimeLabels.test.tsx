@@ -3,8 +3,8 @@ import '@testing-library/jest-dom/vitest';
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 
-import { EventPill } from '@/components/calendar/EventPill';
-import { formatTimeLabel, getEventTimeLabel } from '@/components/calendar/date';
+import { EventPill } from '@/components/CalendarPage/components/CalendarViews/components/EventPill';
+import { formatTimeLabel, getEventTimeLabel } from '@/components/CalendarPage';
 
 const event = {
   id: 'event-1',

@@ -3,12 +3,12 @@ import '@testing-library/jest-dom/vitest';
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 
-import { CalendarSidebar } from '@/components/calendar/CalendarSidebar';
-import { CalendarToolbar } from '@/components/calendar/CalendarToolbar';
-import { DaySchedule } from '@/components/calendar/DaySchedule';
-import { MonthGrid } from '@/components/calendar/MonthGrid';
-import { ViewSwitcher } from '@/components/calendar/ViewSwitcher';
-import { EventPill } from '@/components/calendar/EventPill';
+import { CalendarSidebar } from '@/components/CalendarPage/components/CalendarSidebar';
+import { CalendarToolbar } from '@/components/CalendarPage/components/CalendarViews/components/CalendarToolbar';
+import { DaySchedule } from '@/components/CalendarPage/components/CalendarViews/components/DaySchedule';
+import { MonthGrid } from '@/components/CalendarPage/components/CalendarViews/components/MonthGrid';
+import { ViewSwitcher } from '@/components/CalendarPage/components/CalendarViews/components/CalendarToolbar/components/ViewSwitcher';
+import { EventPill } from '@/components/CalendarPage/components/CalendarViews/components/EventPill';
 
 describe('Calendar components', () => {
   it('changes the active value from the view switcher', () => {

@@ -1,4 +1,4 @@
-import type { CalendarAssignee, CalendarEvent, CalendarServiceOption } from '@/components/calendar';
+import type { CalendarAssignee, CalendarEvent, CalendarServiceOption } from '@/components/CalendarPage';
 
 // Storybook-only sample records. Production consumers supply their own data.
 export const calendarPeople: CalendarAssignee[] = [

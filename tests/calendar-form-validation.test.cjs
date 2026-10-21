@@ -2,7 +2,7 @@ const assert = require('node:assert/strict');
 const { test } = require('node:test');
 const { loadTs } = require('./support/load-ts.cjs');
 
-const { validateEventChronology, validateEventTexts } = loadTs('app/calendar/_components/validation');
+const { validateEventChronology, validateEventTexts } = loadTs('components/CalendarPage/components/CalendarModals/components/ValidatedModal/validation');
 
 const valid = {
   date: '16-09-2026',

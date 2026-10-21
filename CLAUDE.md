@@ -47,10 +47,41 @@ The script's default source `../BFF_Calendar/contracts` resolves to `Fronts/BFF_
 
 Figma is the source of truth: design and agree any UI change on **Mairie360 – Calendars_Web_Service** (https://www.figma.com/design/TaP7bHBB2E4uyTEJ5wg6Df) first, then code it. Shared components come from the lib mockup https://www.figma.com/design/T7vetUfuzPEXk5TxjHRiO2 and are instantiated, never redrawn.
 
+## Component tree convention
+
+Every component under `src/components/` is a **folder named after it**, and the folder tree
+mirrors the composition tree:
+
+```
+Name/
+  index.ts          # exports the component (and the helpers it owns)
+  Name.tsx          # imports ONLY its direct sub-components, through their index.ts
+  Name.test.tsx     # its tests, co-located (vitest + jsdom)
+  components/       # one such folder per direct sub-component, recursively
+```
+
+- A component needs nothing but the `index.ts` of its direct sub-components: `Name.tsx` imports
+  `./components/Sub`, never `./components/Sub/Sub` nor a sub-sub-component. Leaves are folders
+  too (without `components/`).
+- Helpers a component owns (models, hooks, `*.ts`) sit beside it and are exported by its
+  `index.ts`; a helper shared by two siblings sits in their closest common ancestor.
+- A big component is acceptable only for a technical reason stated in a comment; otherwise
+  split it so that each visible part is a component and what composes it a sub-component.
+- Page and journey tests stay in `tests/`; per-component tests are the co-located
+  `Name.test.tsx`. `tests/component-tree-convention.test.cjs` enforces the folder, the index,
+  the co-located test and the index-only imports.
+
+## Front tickets and the Figma mockup
+
+A front ticket (Jira + GitHub issue + PR) **must link the Figma frame that serves as the
+example** of what is being built or changed. Without that link the ticket cannot be worked
+on, unless the change does not affect the display (tooling, tests, proxy, contracts…). Update
+and agree the mockup first, then code it: the sync direction is Figma → code.
+
 ## Architecture
 
 - **On the normalised lib 1.0.1 (MAIR-608)** — the event dialogs use the lib `Modal` (focus trap, Escape, title + description). `src/components/calendar/event-form/` splits the form into `EventTitleFields` / `EventLocationField` (lib `TextField`, `TextArea`), `EventDateRange` (local `CalendarDateField`), `EventTimeRange`, `EventCategoryField`, `EventRecurrenceFields` + `RecurrenceDayPicker` (lib `SelectField`, `NumberField`), composed by `EventFormFields`; `event-form-values.ts` holds the draft, submit and category helpers. `event-details/` holds `EventDetailRow`, `EventFacts`, `EventAssigneesList` and `EventDetailsActions` (lib button presets). From the details editor, Escape / backdrop / close dismiss the whole dialog (`onDismiss`), « Annuler » returns to the details. The page is composed in `src/app/calendar/_page/` (`CalendarHeader` on the lib `PageHeader`, `CalendarStatusBar`, `CalendarLoadingCard`, `CalendarViews`, `CalendarModals`). Field ids (`event-title`, `event-date`…) are kept: the validated wrapper reads the form by id. Tests per level: `tests/component/calendar/units/*.test.tsx`. Lib pin `1.0.1`, recorded in `tests/fixtures/shared-ui-releases.json`.
-- **Calendar components owned here (MAIR-607)** — `src/components/calendar/` holds the grids, toolbar, sidebar, event modals, fields and helpers (formerly `@mairie360/lib-components/calendar`, removed because Calendars was their only consumer); `src/app/calendar-client.tsx` and `src/app/calendar/_components/validated-event-modals.tsx` import `@/components/calendar`. Their component tests are `tests/component/calendar/lib-*.test.tsx` (vitest + jsdom, `npm run test:components`, composed with the Node coverage like Dashboard/Settings); `tests/lib-business-ownership.test.cjs` forbids any import of a removed library entry and checks the installed lib has no `./calendar` export.
+- **Calendar components owned here (MAIR-607) and laid out as a component tree (MAIR-608)** — `src/components/CalendarPage/` is the single root (see *Component tree convention*): `CalendarPage.tsx` (the former `app/calendar-client.tsx`, imported by `src/app/page.tsx`) owns `use-calendar-today-marker.ts`, `today-marker.ts`, `upcoming-scroll-region.ts` and the shared `calendar-types.ts`, `calendar-date.ts`, `calendar-constants.ts`, `calendar-style.ts`; its `components/` holds `AppShell/`, `CalendarHeader/`, `CalendarStatusBar/`, `CalendarLoadingCard/`, `CalendarSidebar/components/{StatsPanel,UpcomingEventsPanel}/`, `CalendarViews/` (+ `layout.ts`; `components/{CalendarToolbar/components/ViewSwitcher,MonthGrid,WeekGrid,DaySchedule,CalendarCell,EventPill}/`) and `CalendarModals/` (+ `form-categories.ts`; `components/{ValidatedModal (+ validation.ts),ModalFeedback,ValidatedCreateEventModal,ValidatedEventDetailsModal/components/EventTrainingLink,CreateEventModal (+ event-form-values.ts; components/EventFormFields/components/{EventTitleFields,EventLocationField,EventDateRange,EventTimeRange,EventCategoryField,EventRecurrenceFields/components/RecurrenceDayPicker,CalendarDateField,EventAssigneeSelect}),EventDetailsModal/components/{EventFacts/components/EventDetailRow,EventAssigneesList,EventDetailsActions}}/`). The page data layer stays in `src/app/calendar/` (`use-calendar-page.ts`, `api.ts`, `date-utils.ts`, `stats.ts`, `types.ts`, `page-query.ts`, `data-cache.ts`). Every component has its co-located `Name.test.tsx`; `tests/component-tree-convention.test.cjs` checks the tree.
 - **Shell from the lib (MAIR-578)** — `src/app/_components/app-shell.tsx` wraps the lib `AccessibleShell` (`@mairie360/lib-components/shell`) with the session/logout binding; `src/lib/front-urls-provider.tsx` uses the lib `configureSidebarCookieDomain`. No local `accessible-shell.tsx`, `desktop-navigation.tsx` or `sidebar-preference.ts` (pinned by `tests/lib-shell-adoption.test.cjs`; `tests/network-boundary.test.cjs` expects no credential reference left in `src`).
 
 - **Profile routing (MAIR-180 partial delivery)** — `src/app/profile/[[...path]]/page.tsx`

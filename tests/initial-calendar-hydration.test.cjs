@@ -6,7 +6,7 @@ const React = require('react');
 const { loadTs } = require('./support/load-ts.cjs');
 const { FrontHarness, jwtFor } = require('./support/front-harness.cjs');
 const { bootstrap, calendarEvent, installWindow, sessionResponse, apiError } = require('./support/calendar-fixtures.cjs');
-const Client = loadTs('app/calendar-client').default;
+const Client = loadTs('components/CalendarPage/CalendarPage').default;
 const front = new FrontHarness();
 let view;
 const data = () => bootstrap({ events: [calendarEvent(5, { date: '2026-11-17', title: 'Confirmed server event' })] });

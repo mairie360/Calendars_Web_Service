@@ -2,7 +2,7 @@ const assert = require('node:assert/strict');
 const { test } = require('node:test');
 const { loadTs } = require('./support/load-ts.cjs');
 
-const { prepareUpcomingScrollRegion } = loadTs('app/calendar/_components/upcoming-scroll-region');
+const { prepareUpcomingScrollRegion } = loadTs('components/CalendarPage/upcoming-scroll-region');
 
 test('the upcoming-events list is a named keyboard-scrollable region', () => {
   const attributes = {};

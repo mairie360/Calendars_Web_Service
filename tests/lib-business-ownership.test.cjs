@@ -14,12 +14,8 @@ test('MAIR-607 the calendar owns its components instead of importing a library e
     if (!/\.(tsx?|mjs|cjs|js)$/.test(file)) continue;
     assert.doesNotMatch(fs.readFileSync(file, 'utf8'), /@mairie360\/lib-components\/(dashboard|settings|projects|messages|calendar|admin|elearning)/, `${path.relative(root, file)} must not import a removed library entry`);
   }
-  for (const component of ['CalendarSidebar', 'CalendarToolbar', 'CreateEventModal', 'DaySchedule', 'EventDetailsModal', 'MonthGrid', 'WeekGrid']) {
-    assert.ok(fs.existsSync(path.join(root, 'src/components/calendar', `${component}.tsx`)), `${component} lives in src/components/calendar`);
-    assert.match(read('src/components/calendar/index.ts'), new RegExp(`export \\{ ${component} \\}`));
-  }
-  assert.match(read('src/app/calendar-client.tsx'), /from "@\/components\/calendar"/);
-  assert.match(read('src/app/calendar/_components/validated-event-modals.tsx'), /from '@\/components\/calendar'/);
+  // MAIR-608: the component tree itself is checked by tests/component-tree-convention.test.cjs.
+  assert.match(read('src/app/page.tsx'), /components\/CalendarPage/);
 });
 
 test('MAIR-607 the installed library no longer publishes a calendar entry', () => {

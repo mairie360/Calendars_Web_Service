@@ -46,7 +46,7 @@ test('manifest and page metadata expose the branded assets', async () => {
 test('shared navigation renders the public Mairie360 logo', async () => {
   const { layout, AppShell } = loadRootLayout(() => ({
     layout: require('./support/load-ts.cjs').loadTs('app/layout.tsx'),
-    AppShell: require('./support/load-ts.cjs').loadTs('app/_components/app-shell.tsx').AppShell,
+    AppShell: require('./support/load-ts.cjs').loadTs('components/CalendarPage/components/AppShell/AppShell.tsx').AppShell,
   }));
   const React = require('react');
   const { renderToStaticMarkup } = require('react-dom/server');

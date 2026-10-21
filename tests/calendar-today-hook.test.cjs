@@ -4,7 +4,7 @@ const { JSDOM } = require('jsdom');
 const React = require('react');
 const { createRoot } = require('react-dom/client');
 const { loadTs } = require('./support/load-ts.cjs');
-const { useCalendarTodayMarker } = loadTs('app/calendar/_components/use-calendar-today-marker');
+const { useCalendarTodayMarker } = loadTs('components/CalendarPage/use-calendar-today-marker');
 
 test('the actual today hook marks the mounted grid, replaces period timers and cleans up on unmount', async t => {
   t.mock.timers.enable({ apis: ['Date'], now: new Date(Date.UTC(2026, 9, 15, 12)).getTime() });

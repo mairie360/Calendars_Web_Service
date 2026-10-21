@@ -26,7 +26,8 @@ function sourceFiles(dir = SRC) {
   return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
     const file = path.join(dir, entry.name);
     if (entry.isDirectory()) return file === path.join(SRC, 'contracts') ? [] : sourceFiles(file);
-    return /\.(ts|tsx|js|jsx|mjs|cjs)$/.test(entry.name) ? [file] : [];
+    // MAIR-608: co-located component tests are not frontend source.
+    return /\.(ts|tsx|js|jsx|mjs|cjs)$/.test(entry.name) && !/\.test\.(tsx?|jsx)$/.test(entry.name) ? [file] : [];
   });
 }
 const relative = (file) => path.relative(SRC, file).split(path.sep).join('/');

@@ -11,7 +11,7 @@ globalThis.window ??= {};
 installReactRuntime();
 stubModule('react-dom', { createPortal: (children) => children });
 const React = require('react');
-const { CalendarDateField, EventAssigneeSelect } = loadTs('components/calendar/index.ts');
+const { CalendarDateField, EventAssigneeSelect } = { ...loadTs('components/CalendarPage/components/CalendarModals/components/CreateEventModal/components/EventFormFields/components/CalendarDateField/CalendarDateField'), ...loadTs('components/CalendarPage/components/CalendarModals/components/CreateEventModal/components/EventFormFields/components/EventAssigneeSelect/EventAssigneeSelect') };
 
 let view;
 afterEach(() => {
