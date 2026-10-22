@@ -204,6 +204,17 @@ The Dockerfile pins `NODE_VERSION=24.21.0` (official bookworm-slim image pinned 
 
 Before running Docker, check service variables, build secrets and networks in the repository files. Green CI validates its jobs; it does not prove business-service availability in a remote environment.
 
+### End-to-end journeys (MAIR-603)
+
+`./e2e_test.sh` starts `docker-compose-e2e.yml` (the performance stack with a Playwright runner in
+place of k6) and runs the journeys of `e2e/`: an event created by an `Admin` who invites an agent; the invited agent sees it without the actions to change it and gets a `403` when deleting it; the deletion by its creator. The prod promotion runs the same script on
+the verified `staging-<sha>` image (`e2e_tests` job, mairie360/CICD `actions/e2e/fronts`,
+MAIR-602) and blocks the release when a journey fails or when the folder is missing. The report
+(HTML, traces and videos of the failed journeys) is kept in `e2e-report/`. For local iterations,
+start the stack with `docker compose -f docker-compose-e2e.yml up -d calendar-front` and run
+`E2E_BASE_URL=http://localhost:5002 npm run e2e` (after `npm run e2e:install`); tear it down with
+`down -v` before a new run.
+
 ## Troubleshooting
 
 Associated BFF diagnostics: For missing events or rejected assignments, check the user, group membership and shared database. A `calendar_event_metadata` error requires checking the schema and SQL account permissions. `/check_apis` and the business client use different variables.
