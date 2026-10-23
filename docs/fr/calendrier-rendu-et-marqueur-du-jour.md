@@ -6,7 +6,7 @@ Les propriétés calculées vérifient les commandes de sidebar, l’ouverture/f
 
 Les politiques CSSOM parsées conservent l’association média/sélecteur, pistes/hauteurs bornées, insets mobiles, fallback du footer, tokens de petits textes et contours de focus. Ce sont des politiques de configuration. JSDOM simplifie les expressions mathématiques CSS imbriquées et ne développe pas fiablement outline en propriétés calculées longues ; dimensions/couleur sont donc vérifiées dans le raccourci parsé. Il ne calcule pas les media queries, ne compile pas Tailwind, ne mesure pas disposition/défilement ni hit-test natif. La recette dans le navigateur reste distincte et doit porter sur le main intégré et le snapshot local actualisé.
 
-JSDOM est ajouté uniquement en dépendance de développement, avec la version publiée exacte `30.1.1`. Utiliser un runtime pris en charge par ses engines, par exemple Node `24.19.0` ; la CI utilise `24.21.0`. Dépendances de production, contrats, styles applicatifs et contrôles d’accessibilité restent inchangés. Données et horloge synthétiques des tests sont isolées du runtime livré.
+JSDOM est ajouté uniquement en dépendance de développement, avec la version publiée exacte `30.1.1`. Utiliser un runtime pris en charge par ses engines, par exemple Node `24.22.1` ; la CI utilise `24.22.1`. Dépendances de production, contrats, styles applicatifs et contrôles d’accessibilité restent inchangés. Données et horloge synthétiques des tests sont isolées du runtime livré.
 
 ```sh
 node --test --test-concurrency=1 tests/calendar-rendered-layout.test.cjs tests/calendar-responsive-layout.test.cjs tests/calendar-today-marker.test.cjs

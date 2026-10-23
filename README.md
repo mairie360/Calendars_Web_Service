@@ -99,7 +99,7 @@ contournement de scan, changement de protection ou modification de CICD partagé
 Les tests ci-dessus vérifient la politique exacte. L'ancienne issue #167 reste
 clôturée pour ses findings initiaux ; l'issue #204 suit ce nouveau prérequis.
 
-Production, development and both consumer workflows use exact Node `24.21.0`;
+Production, development and both consumer workflows use exact Node `24.22.1`;
 the official Bookworm slim image is pinned by digest. Export the existing
 `NODE_AUTH_TOKEN` credential through your normal secure environment, never a
 build argument or a committed value. Both Dockerfiles use `npm ci` with the
@@ -114,7 +114,7 @@ curl without unused global package managers. Existing security/performance
 controls are not weakened; API/BFF services and product sources are unchanged.
 
 Production, développement et les deux workflows consommateurs utilisent Node
-`24.21.0` exact, avec image officielle Bookworm slim épinglée par digest.
+`24.22.1` exact, avec image officielle Bookworm slim épinglée par digest.
 Exporter le credential existant `NODE_AUTH_TOKEN` via l’environnement sécurisé
 habituel, jamais un argument de build ou une valeur commitée. Les deux
 Dockerfiles utilisent `npm ci`, le secret BuildKit requis `node_auth_token` et
