@@ -2,9 +2,11 @@ const assert = require('node:assert/strict');
 const { readFileSync } = require('node:fs');
 const { join } = require('node:path');
 const { test } = require('node:test');
+const yaml = require('js-yaml');
 
 const read = file => readFileSync(join(__dirname, '..', file), 'utf8');
-const digest = '0e0ff40c39bc087845bfb27465a0df4ea419520094bc35842ff83dd8cbe6f9b6';
+const cicdCommit = /frontend-cicd\.yml@([a-f0-9]{40})/.exec(read('.github/workflows/cicd.yml'))[1];
+const digest = '55fb5f5a527ea2c5c4a95f963e48ef90aa38c7b346054fdc8ee9957a2b55d205';
 
 test('production and development install the lock with a required ephemeral secret and readonly npm policy', () => {
   for (const file of ['Dockerfile', 'development.Dockerfile']) {
@@ -23,12 +25,12 @@ test('production and development install the lock with a required ephemeral secr
 test('production, development and both consumer workflows pin the same exact official Node LTS', () => {
   for (const file of ['Dockerfile', 'development.Dockerfile']) {
     const dockerfile = read(file);
-    assert.match(dockerfile, /^ARG NODE_VERSION=24\.21\.0$/m);
+    assert.match(dockerfile, /^ARG NODE_VERSION=24\.22\.1$/m);
     const images = [...dockerfile.matchAll(/^FROM node:\$\{NODE_VERSION\}-bookworm-slim@sha256:([a-f0-9]{64}) AS ([\w-]+)$/gm)];
     assert.deepEqual(images.map(([, sha]) => sha), file === 'Dockerfile' ? [digest, digest] : [digest]);
   }
-  assert.match(read('.github/workflows/cicd.yml'), /node_version: "24\.21\.0"/);
-  assert.match(read('.github/workflows/contracts.yml'), /node-version: '24\.21\.0'/);
+  assert.match(read('.github/workflows/cicd.yml'), /node_version: "24\.22\.1"/);
+  assert.match(read('.github/workflows/contracts.yml'), /node-version: '24\.22\.1'/);
 });
 
 test('production keeps the non-root standalone Node and curl runtime without unused package managers', () => {
@@ -74,5 +76,57 @@ test('consumer CI retains blocking security defaults and explicit named secrets'
   assert.doesNotMatch(ci, /secrets:\s*inherit|continue-on-error:|image_scan_fail_on_findings:|semgrep_fail_on_findings:\s*false/);
   assert.deepEqual([...ci.matchAll(/^ {6}([A-Z0-9_]+): \$\{\{ secrets\.([A-Z0-9_]+) \}\}$/gm)].map(([, target, source]) => [target, source]), [
     ['CODECOV_TOKEN', 'CODECOV_TOKEN'], ['N8N_WEBHOOK_SECRET', 'N8N_WEBHOOK_SECRET'],
+    ['ANTHROPIC_API_KEY', 'ANTHROPIC_API_KEY'], ['RELEASE_APP_ID', 'RELEASE_APP_ID'], ['RELEASE_APP_PK', 'RELEASE_APP_PK'],
   ]);
+});
+
+const workflow = () => yaml.load(read('.github/workflows/cicd.yml'));
+const checkout = 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1';
+const scannerCommit = '5b7d127d46f95d8951935b6209ca7c2ca857a21d';
+
+test('the exact required legacy status executes both real blocking scanners without extra access', () => {
+  assert.deepEqual(workflow().jobs.required_security_scan, {
+    name: 'CICD / Code Security Audit (Semgrep)',
+    'runs-on': 'ubuntu-latest',
+    'timeout-minutes': 20,
+    permissions: { contents: 'read' },
+    steps: [
+      { name: 'Checkout frontend history', uses: checkout, with: { 'fetch-depth': 0, 'persist-credentials': false } },
+      {
+        name: 'Checkout reviewed scanner actions', uses: checkout,
+        with: { repository: 'mairie360/CICD', ref: scannerCommit, path: 'cicd-repo', 'persist-credentials': false },
+      },
+      {
+        name: 'Run blocking Semgrep scan', uses: './cicd-repo/actions/frontend-semgrep-pypi',
+        with: {
+          config: 'p/typescript p/react p/owasp-top-ten p/secrets p/dockerfile p/github-actions',
+          fail_on_findings: 'true', artifact_name: 'semgrep-required-check-sarif',
+        },
+      },
+      { name: 'Run blocking redacted Gitleaks scan', uses: './cicd-repo/actions/frontend-gitleaks', with: { fail_on_findings: 'true' } },
+    ],
+  });
+});
+
+test('the existing reusable frontend workflow keeps its blocking defaults and only declared secrets', () => {
+  assert.deepEqual(workflow().jobs.CICD, {
+    permissions: { contents: 'write', packages: 'write', 'id-token': 'write' },
+    uses: `mairie360/CICD/.github/workflows/frontend-cicd.yml@${cicdCommit}`,
+    with: { package_name: 'calendar-front', node_version: '24.22.1', cicd_version: cicdCommit },
+    secrets: {
+      CODECOV_TOKEN: '${{ secrets.CODECOV_TOKEN }}',
+      N8N_WEBHOOK_SECRET: '${{ secrets.N8N_WEBHOOK_SECRET }}',
+      ANTHROPIC_API_KEY: '${{ secrets.ANTHROPIC_API_KEY }}',
+      RELEASE_APP_ID: '${{ secrets.RELEASE_APP_ID }}',
+      RELEASE_APP_PK: '${{ secrets.RELEASE_APP_PK }}',
+    },
+  });
+});
+
+test('the required scan runs for every existing workflow event with a read-only default token', () => {
+  const ci = workflow();
+  // MAIR-436: push runs on main only and the workflow token is read-only by default.
+  assert.deepEqual(ci.on, { push: { branches: ['main'] }, pull_request: null, workflow_dispatch: null });
+  assert.deepEqual(ci.permissions, { contents: 'read' });
+  assert.deepEqual(Object.keys(ci.jobs).sort(), ['CICD', 'required_security_scan']);
 });

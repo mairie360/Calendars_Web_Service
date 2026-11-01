@@ -52,8 +52,8 @@ test('forwardToBff preserves binary upload bytes and 204 responses', async () =>
   const bytes = Uint8Array.from([0, 255, 128, 13]);
   let init;
   global.fetch = async (_url, options) => { init = options; return new Response(null, { status: 204 }); };
-  const request = new NextRequest('http://localhost/upload', { method: 'POST', headers: { 'Content-Type': 'multipart/form-data; boundary=test', cookie: 'accessToken=test-session' }, body: bytes });
-  const response = await forwardToBff(request, 'http://bff.example', '/files');
+  const request = new NextRequest('http://localhost/calendar/events', { method: 'POST', headers: { 'Content-Type': 'multipart/form-data; boundary=test', cookie: 'accessToken=test-session' }, body: bytes });
+  const response = await forwardToBff(request, 'http://bff.example', '/calendar/events');
   assert.equal(response.status, 204); assert.equal(await response.text(), '');
   assert.deepEqual(new Uint8Array(init.body), bytes); assert.equal(init.headers.get('Authorization'), 'Bearer test-session');
   assert.equal(init.headers.get('Content-Type'), 'multipart/form-data; boundary=test');
@@ -122,13 +122,13 @@ test('a body sent to an operation without declared requestBody is not forwarded'
   global.fetch = async (_url, options) => { init = options; return new Response(null, { status: 204 }); };
   const response = await proxyBffRequest(new NextRequest('http://localhost/calendar/events/2', { method: 'DELETE', headers: { 'content-type': 'application/json' }, body: '{"cascade":true}' }), context('calendar', 'events', '2'));
   assert.equal(response.status, 204);
-  assert.equal(init.body, undefined);
+  assert.equal(init.body.byteLength, 0);
 });
 
-test('BFF errors and cookie changes are preserved', async () => {
+test('business errors retain their body without allowing BFF cookies to overwrite the shared session', async () => {
   global.fetch = async () => Response.json({ message: 'Denied' }, { status: 403, headers: { 'Set-Cookie': 'accessToken=; Max-Age=0; Path=/; HttpOnly' } });
-  const result = await forwardToBff(new NextRequest('http://localhost/logout', { method: 'POST' }), 'http://bff.example', '/auth/logout');
-  assert.equal(result.status, 403); assert.deepEqual(await result.json(), { message: 'Denied' }); assert.match(result.headers.get('Set-Cookie'), /Max-Age=0/);
+  const result = await forwardToBff(new NextRequest('http://localhost/health'), 'http://bff.example', '/health');
+  assert.equal(result.status, 403); assert.deepEqual(await result.json(), { message: 'Denied' }); assert.equal(result.headers.get('Set-Cookie'), null);
 });
 
 test('unavailable BFF produces a controlled error', async () => {

@@ -44,7 +44,7 @@ const createValues = (overrides = {}) => ({
 });
 
 test('loadCalendarData reads GET /calendar/bootstrap once with the declared from/to and the session cookie as Bearer', async () => {
-  front.calendarBff.on('get', '/calendar/bootstrap', { body: bootstrap() });
+  front.calendarRead({ body: bootstrap() });
 
   const data = await api.loadCalendarData({ from: '2026-08-31', to: '2026-10-04' });
 
@@ -66,12 +66,13 @@ test('loadCalendarData reads GET /calendar/bootstrap once with the declared from
 });
 
 test('loadCalendarData keeps optional bootstrap data as the BFF returns it', async () => {
-  front.calendarBff.on('get', '/calendar/bootstrap', {
+  front.calendarRead({
     body: {
       events: [
         calendarEvent(8, { recurrence: { frequency: 'daily', interval: 1, daysOfWeek: [1, 5] }, approvalStatus: 'approved', endDate: '2026-09-18' }),
         calendarEvent(9, { recurrence: { frequency: 'none' }, approvalStatus: 'rejected', canEdit: false, canDelete: false }),
       ],
+      users: {},
       assignees: [],
       categories: [],
       services: [],
@@ -87,8 +88,26 @@ test('loadCalendarData keeps optional bootstrap data as the BFF returns it', asy
   assert.equal(data.assigneeScope, undefined);
 });
 
+test('MAIR-553: an event member outside the assignable people is resolved from the users index of the bootstrap', async () => {
+  const guest = { id: 'user-12', name: 'Paul Invité', email: 'paul@mairie.test', role: 'User' };
+  const { assignees, ...event } = calendarEvent(5, { assigneeIds: [guest.id, alice.id] });
+  front.calendarRead({
+    body: bootstrap({
+      events: [event],
+      users: Object.fromEntries([admin, alice, marie, guest].map((person) => [person.id, person])),
+      assignees: [admin, alice],
+    }),
+  });
+
+  const data = await api.loadCalendarData({ from: '2026-09-01', to: '2026-09-30' });
+
+  assert.deepEqual(data.events[0].assignees.map((person) => person.id).sort(), [alice.id, guest.id].sort());
+  // The assignable people stay the referential of the forms: the users index does not widen it.
+  assert.deepEqual(data.people, [admin, alice]);
+});
+
 test('a client Authorization header never replaces the HttpOnly session cookie', async () => {
-  front.calendarBff.on('get', '/calendar/bootstrap', { body: bootstrap() });
+  front.calendarRead({ body: bootstrap() });
   window.localStorage.setItem('mairie360.auth.jwt', 'stored-token');
 
   await api.loadCalendarData({ from: '2026-09-01', to: '2026-09-30' });
@@ -177,22 +196,26 @@ for (const [status, operation, call] of [
     assert.ok(error instanceof BffRequestError);
     assert.equal(error.status, status);
     assert.equal(error.message, `Refus ${status}`);
-    assert.deepEqual(error.details, { code: 'ERROR', message: `Refus ${status}` });
+    assert.deepEqual(error.details, apiError('ERROR', `Refus ${status}`));
     assert.equal(api.formatCalendarApiError(error), `Refus ${status}`);
   });
 }
 
-test('a 401 from the BFF ends the session: logout through BFF User, then reload towards Login', async () => {
-  front.calendarBff.on('get', '/calendar/bootstrap', { status: 401, body: apiError('UNAUTHORIZED', 'Session invalide.') });
+test('a final401 returns to Login without revoking the shared session', async () => {
+  front.calendarRead({ status: 401, body: apiError('UNAUTHORIZED', 'Session invalide.') });
   front.userBff.on('post', '/auth/logout', { body: { message: 'Logged out successfully' } });
 
   const error = await api.loadCalendarData({ from: '2026-09-01', to: '2026-09-30' }).catch((reason) => reason);
-  while (window.location.reloads === 0) await new Promise((resolve) => setTimeout(resolve, 5));
+  assert.equal(window.location.assigned.length,1);
 
   assert.ok(error instanceof BffRequestError);
   assert.equal(error.status, 401);
-  assert.deepEqual(front.userBff.sequence(), ['POST /auth/logout']);
-  assert.equal(window.location.reloads, 1);
+  assert.deepEqual(front.userBff.sequence(), []);
+  assert.equal(front.ownerCalls.length,0);
+  assert.equal(window.location.reloads,0);
+  assert.equal(new URL(window.location.assigned[0]).searchParams.get('redirect'),window.location.href);
+  assert.equal(new URL(window.location.assigned[0]).searchParams.has('returnUrl'),false);
+  assert.equal(window.location.reloads, 0);
 });
 
 test('an unreachable BFF surfaces the proxy 502 message', async () => {
@@ -230,4 +253,23 @@ test('HTTP failures without an error body use readable messages', async () => {
   } finally {
     global.fetch = fetchWithContractGuard;
   }
+});
+
+// MAIR-514: a BFF 400 with `error.details[]` is explained per refused field.
+test('formatCalendarApiError lists the refused fields of a BFF 400 and keeps other messages', () => {
+  const body = { error: { code: 'BAD_REQUEST', message: 'Validation failed', details: [
+    { path: 'body.title', message: 'Must not contain < or >' },
+    { path: 'body.recurrence.endsOn', message: 'Invalid date' },
+    { path: 'body.assigneeIds.0', message: 'Required' },
+    { path: 'body.description', message: 'String must contain at most 2000 character(s)' },
+    { message: 'Context only' },
+    'junk',
+  ] } };
+  assert.equal(api.formatCalendarApiError(new BffRequestError(400, 'Validation failed', body)),
+    'Vérifiez les champs signalés : Titre : ne doit pas contenir les caractères < ou > ; Récurrence › Fin de récurrence : Invalid date ; Participants : ne doit pas être vide ; Description : 2000 caractères maximum ; Context only.');
+  assert.equal(api.formatCalendarApiError(new BffRequestError(400, 'Validation failed', { error: { details: [] } })), 'Validation failed');
+  assert.equal(api.formatCalendarApiError(new BffRequestError(400, 'Validation failed', 'not json')), 'Validation failed');
+  assert.equal(api.formatCalendarApiError(new BffRequestError(403, 'Accès refusé', body)), 'Accès refusé');
+  assert.equal(api.describeValidationDetail({ path: 'body', message: 'Unrecognized key' }), 'Unrecognized key');
+  assert.equal(api.describeValidationDetail({ path: 'body.title' }), null);
 });

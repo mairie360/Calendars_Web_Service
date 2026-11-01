@@ -1,9 +1,16 @@
+import { calendarToday } from './date-utils';
+import { subscribePageReturn } from "@/lib/page-return";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { usePageUrlState } from '@/lib/use-page-url-state';
+import { calendarUrlSchema } from './page-query';
+import { type InitialCalendarPage, CALENDAR_INITIAL_UNAVAILABLE } from '@/lib/calendar-bootstrap-receipt';
+import { createCalendarDataCache } from './data-cache';
 import {
+  calendarDataFromReceipt,
   createCalendarEvent,
   deleteCalendarEvent,
   formatCalendarApiError,
-  loadCalendarData,
+  loadCalendarEvent,
   updateCalendarEvent,
   updateCalendarEventApproval,
 } from "./api";
@@ -32,39 +39,85 @@ function calendarDateFromLink(value: string | null): Date | null {
   return formatDateForQuery(date) === value ? date : null;
 }
 
-export function useCalendarPage() {
-  const [view, setView] = useState<CalendarViewMode>("month");
-  const [currentDate, setCurrentDate] = useState<Date>(() => new Date());
+
+export function useCalendarPage(initial?: InitialCalendarPage) {
+  const [initialReceipt] = useState(() => {
+    if (initial?.status !== 'confirmed') return null;
+    try { return { query: initial.query, data: calendarDataFromReceipt(initial.data) }; } catch { return null; }
+  });
+  const seedRange = initialReceipt ? getCalendarPeriodRange(initialReceipt.query.view, initialReceipt.query.date) : null;
+  const initialRangeRef = useRef(seedRange ? `${formatDateForQuery(seedRange.from)}:${formatDateForQuery(seedRange.to)}` : null);
+  const [view, setViewState] = useState<CalendarViewMode>(initialReceipt?.query.view ?? "month");
+  const pageUrl = usePageUrlState(calendarUrlSchema);
+  const [dataCache] = useState(() => createCalendarDataCache({ initial: initialReceipt && seedRange ? { params: { from: formatDateForQuery(seedRange.from), to: formatDateForQuery(seedRange.to) }, value: initialReceipt.data } : undefined }));
+  const prefetchRef = useRef<AbortController | null>(null);
+  const linkInitialized = useRef(Boolean(initialReceipt));
+  const [currentDate, setCurrentDate] = useState<Date>(() => initialReceipt ? parseDateInput(initialReceipt.query.date) : calendarToday());
   // The period title, schedule, statistics and creation default share one date.
   const selectedDate = currentDate;
-  const selectionFollowsToday = useRef(true);
-  const [events, setEvents] = useState<CalendarEventItem[]>([]);
-  const [people, setPeople] = useState<CalendarAssignee[]>([]);
-  const [categories, setCategories] = useState<CalendarReferenceOption[]>([]);
-  const [services, setServices] = useState<CalendarReferenceOption[]>([]);
+  const selectionFollowsToday = useRef(!initialReceipt?.query.linkedDate);
+  const [events, setEvents] = useState<CalendarEventItem[]>(initialReceipt?.data.events ?? []);
+  const [people, setPeople] = useState<CalendarAssignee[]>(initialReceipt?.data.people ?? []);
+  const [categories, setCategories] = useState<CalendarReferenceOption[]>(initialReceipt?.data.categories ?? []);
+  const [services, setServices] = useState<CalendarReferenceOption[]>(initialReceipt?.data.services ?? []);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [createInitialValues, setCreateInitialValues] = useState(() =>
     buildCreateInitialValues(currentDate),
   );
   const [selectedEvent, setSelectedEventState] = useState<CalendarEventItem | null>(null);
   const eventSelectionRevision = useRef(0);
+  const eventDetailRef = useRef<AbortController | null>(null);
   const setSelectedEvent = useCallback((event: CalendarEventItem | null) => {
     eventSelectionRevision.current += 1;
+    // Closing or switching events cancels the previous detail read (MAIR-557).
+    eventDetailRef.current?.abort();
     setSelectedEventState(event);
   }, []);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!initialReceipt);
   const calendarReadRevision = useRef(0);
   const preserveConfirmedMutation = () => {
     // A read started before this confirmation can only describe older data.
+    initialRangeRef.current = null;
     calendarReadRevision.current += 1;
+    dataCache.invalidate();
+    prefetchRef.current?.abort();
+    eventDetailRef.current?.abort();
     setLoading(false);
   };
   const [saving, setSaving] = useState(false);
   const mutationInFlight = useRef(false);
-  const [error, setError] = useState<string | null>(null);
+  // Reads and writes have independent outcomes: a successful bootstrap cannot
+  // acknowledge a refused save, and opening a form cannot repair a failed read.
+  const [readError, setReadError] = useState<string | null>(initial?.status === 'unavailable' ? initial.message : initial && !initialReceipt ? CALENDAR_INITIAL_UNAVAILABLE : null);
+  const [mutationError, setMutationError] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<string | null>(null);
+  const error = mutationError ?? readError;
+  const navigationDateRef = useRef(currentDate);
+  const peopleRef = useRef(people);
+  useEffect(() => { peopleRef.current = people; }, [people]);
+  // MAIR-557: the period lists no longer carry the rights, so an opened event is shown at once
+  // and completed by its detail read. Only the still-selected event receives that answer.
+  const openEvent = useCallback((event: CalendarEventItem) => {
+    // Actions come from the detail read only: rights an older list still carries are not shown before it,
+    // nor kept when it is refused.
+    setSelectedEvent({ ...event, canEdit: undefined, canDelete: undefined, canValidate: undefined });
+    const controller = new AbortController();
+    eventDetailRef.current = controller;
+    const selection = eventSelectionRevision.current;
+    const stillSelected = () => !controller.signal.aborted && eventSelectionRevision.current === selection;
+    loadCalendarEvent(event.id, peopleRef.current, controller.signal).then((detail) => {
+      if (!stillSelected()) return;
+      setSelectedEventState((current) =>
+        String(current?.id) === String(detail.id) ? { ...current, ...detail } : current,
+      );
+    }, (detailError: unknown) => {
+      if (stillSelected()) setMutationError(formatCalendarApiError(detailError));
+    });
+  }, [setSelectedEvent]);
+  useEffect(() => () => eventDetailRef.current?.abort(), []);
   const [link, setLink] = useState<{ ready: boolean; eventId: string | null }>({
-    ready: false,
-    eventId: null,
+    ready: Boolean(initialReceipt),
+    eventId: initialReceipt?.query.eventId ?? null,
   });
 
   const stats = useMemo(() => buildStats(events, selectedDate), [events, selectedDate]);
@@ -77,30 +130,44 @@ export function useCalendarPage() {
   const rangeTo = useMemo(() => formatDateForQuery(periodRange.to), [periodRange.to]);
 
   useEffect(() => {
+    if (!pageUrl.ready) return;
     const params = new URLSearchParams(
       typeof window === "undefined" ? "" : window.location.search,
     );
-    const linkedDate = calendarDateFromLink(params.get("date"));
+    const linkedDate = calendarDateFromLink(pageUrl.state.date || null);
     // Date-dependent UI stays hidden until this browser-local initialization.
     // A server process/module date must not leak into the hydration markup.
-    const openingDate = linkedDate ?? new Date();
+    const openingDate = linkedDate ?? calendarToday();
     selectionFollowsToday.current = !linkedDate;
-    setCurrentDate(openingDate);
-    setLink({ ready: true, eventId: linkedDate ? params.get("event") || null : null });
+    navigationDateRef.current = openingDate;
+    setCurrentDate(current => formatDateForQuery(current) === formatDateForQuery(openingDate) ? current : openingDate);
+    setViewState(pageUrl.state.view as CalendarViewMode);
+    if (!linkInitialized.current) {
+      setLink({ ready: true, eventId: linkedDate ? params.get("event") || null : null });
+      linkInitialized.current = true;
+    }
+  }, [pageUrl.ready, pageUrl.state.date, pageUrl.state.view]);
+
+  const idlePrefetchRef = useRef<{ browser: Window; id: number } | null>(null);
+  const cancelPrefetch = useCallback(() => {
+    prefetchRef.current?.abort();
+    if (idlePrefetchRef.current) { idlePrefetchRef.current.browser.cancelIdleCallback(idlePrefetchRef.current.id); idlePrefetchRef.current = null; }
   }, []);
 
+
   const loadData = useCallback(
-    async (signal?: AbortSignal) => {
+    async (signal?: AbortSignal, refreshContext = false) => {
+      initialRangeRef.current = null;
       const revision = ++calendarReadRevision.current;
       const isCurrent = () => !signal?.aborted && calendarReadRevision.current === revision;
       setLoading(true);
 
       try {
-        const calendarData = await loadCalendarData({
+        const calendarData = await dataCache.read({
           from: rangeFrom,
           to: rangeTo,
           signal,
-        });
+        }, refreshContext);
 
         if (!isCurrent()) return;
 
@@ -108,7 +175,19 @@ export function useCalendarPage() {
         setPeople(calendarData.people);
         setCategories(calendarData.categories);
         setServices(calendarData.services);
-        setError(null);
+        setReadError(null);
+        cancelPrefetch();
+        if (dataCache.canPrefetch() && !mutationInFlight.current && typeof window !== 'undefined' && typeof window.requestIdleCallback === 'function') {
+          const browser = window;
+          idlePrefetchRef.current = { browser, id: browser.requestIdleCallback(() => {
+            idlePrefetchRef.current = null;
+            if (!isCurrent() || document.hidden || mutationInFlight.current) return;
+            const prefetch = new AbortController();
+            prefetchRef.current = prefetch;
+            const adjacent = getCalendarPeriodRange(view, getNextPeriod(parseDateInput(rangeFrom), view));
+            void dataCache.read({ from: formatDateForQuery(adjacent.from), to: formatDateForQuery(adjacent.to), signal: prefetch.signal }).catch(() => undefined);
+          }, { timeout: 1_000 }) };
+        }
       } catch (loadError) {
         if (
           !isCurrent() ||
@@ -117,52 +196,88 @@ export function useCalendarPage() {
           return;
         }
 
-        setError(formatCalendarApiError(loadError));
+        setReadError(formatCalendarApiError(loadError));
       } finally {
         if (isCurrent()) setLoading(false);
       }
     },
-    [rangeFrom, rangeTo],
+    [dataCache, rangeFrom, rangeTo, view, cancelPrefetch],
   );
 
   useEffect(() => {
     if (!link.ready) return;
+    if (initialRangeRef.current !== null) {
+      if (initialRangeRef.current === `${rangeFrom}:${rangeTo}`) return;
+      initialRangeRef.current = null;
+    }
 
     const controller = new AbortController();
     void loadData(controller.signal);
 
     return () => controller.abort();
-  }, [link.ready, loadData]);
+  }, [link.ready, loadData, rangeFrom, rangeTo]);
 
   useEffect(() => {
-    if (loading || error || !link.eventId) return;
+    if (typeof document === 'undefined') return;
+    const page = document;
+    const controller = new AbortController();
+    const refresh = () => { if (link.ready && !page.hidden && !mutationInFlight.current) void loadData(controller.signal, true); };
+    const unsubscribe = subscribePageReturn(refresh);
+    return () => { controller.abort(); unsubscribe(); };
+  }, [link.ready, loadData]);
+  const cacheLifetimeRef = useRef(0);
+  useEffect(() => {
+    const lifetime = ++cacheLifetimeRef.current;
+    return () => {
+      cancelPrefetch();
+      // StrictMode immediately starts the same lifetime again; only a disposed page clears its cache.
+      queueMicrotask(() => { if (cacheLifetimeRef.current === lifetime) dataCache.clear(); });
+    };
+  }, [dataCache, cancelPrefetch]);
+
+  useEffect(() => {
+    if (loading || readError || !link.eventId) return;
 
     const linkedEvent = events.find((event) => String(event.id) === link.eventId);
-    if (linkedEvent) setSelectedEvent(linkedEvent);
+    if (linkedEvent) openEvent(linkedEvent);
     setLink({ ready: true, eventId: null });
-  }, [error, events, link.eventId, loading, setSelectedEvent]);
+  }, [readError, events, link.eventId, loading, openEvent]);
 
   const handlePrevious = () => {
     selectionFollowsToday.current = false;
-    setCurrentDate((date) => getPreviousPeriod(date, view));
+    const date = getPreviousPeriod(navigationDateRef.current, view);
+    navigationDateRef.current = date;
+    setCurrentDate(date);
+    pageUrl.update({ date: formatDateForQuery(date) });
   };
 
   const handleNext = () => {
     selectionFollowsToday.current = false;
-    setCurrentDate((date) => getNextPeriod(date, view));
+    const date = getNextPeriod(navigationDateRef.current, view);
+    navigationDateRef.current = date;
+    setCurrentDate(date);
+    pageUrl.update({ date: formatDateForQuery(date) });
   };
 
   const handleSelectDate = (date: Date) => {
     selectionFollowsToday.current = false;
+    navigationDateRef.current = date;
     setCurrentDate(date);
+    pageUrl.update({ date: formatDateForQuery(date) });
+  };
+
+  const setView = (next: CalendarViewMode) => {
+    setViewState(next);
+    pageUrl.update({ view: next, date: formatDateForQuery(navigationDateRef.current) });
   };
 
   const openCreateModal = (date?: Date, startTime = "09:00") => {
     if (!link.ready) return;
+    setFeedback(null);
     // Refresh an implicit "today" when a tab crosses midnight, but never
     // overwrite a deliberately selected date, deep link or time slot.
-    const creationDate = date ?? (selectionFollowsToday.current ? new Date() : selectedDate);
-    setError(null);
+    const creationDate = date ?? (selectionFollowsToday.current ? calendarToday() : selectedDate);
+    setMutationError(null);
     setCreateInitialValues(buildCreateInitialValues(creationDate, startTime));
     setCreateModalOpen(true);
   };
@@ -177,18 +292,21 @@ export function useCalendarPage() {
     mutationInFlight.current = true;
 
     setSaving(true);
-    setError(null);
+    setMutationError(null);
+    setFeedback(null);
 
     try {
       const createdEvent = await createCalendarEvent(values, people);
 
       preserveConfirmedMutation();
       setEvents((currentEvents) => [...currentEvents, createdEvent]);
+      if (createdEvent.id !== undefined && String(createdEvent.id).trim()) setFeedback(`Événement « ${createdEvent.title} » créé.`);
       setCreateModalOpen(false);
       selectionFollowsToday.current = false;
       setCurrentDate(parseDateInput(createdEvent.date));
+      pageUrl.update({ date: formatDateForQuery(parseDateInput(createdEvent.date)) });
     } catch (createError) {
-      setError(formatCalendarApiError(createError));
+      setMutationError(formatCalendarApiError(createError));
     } finally {
       mutationInFlight.current = false;
       setSaving(false);
@@ -196,8 +314,9 @@ export function useCalendarPage() {
   };
 
   const handleEventClick = (event: unknown) => {
-    setError(null);
-    setSelectedEvent(event as CalendarEventItem);
+    setFeedback(null);
+    setMutationError(null);
+    openEvent(event as CalendarEventItem);
   };
 
   const handleSaveEvent = async (updatedEventPayload: unknown) => {
@@ -208,7 +327,8 @@ export function useCalendarPage() {
     const selection = eventSelectionRevision.current;
 
     setSaving(true);
-    setError(null);
+    setMutationError(null);
+    setFeedback(null);
 
     try {
       const savedEvent = await updateCalendarEvent(updatedEvent, people);
@@ -221,6 +341,7 @@ export function useCalendarPage() {
             : event,
         ),
       );
+      if (String(savedEvent.id) === String(updatedEvent.id)) setFeedback(`Événement « ${savedEvent.title} » enregistré.`);
       const selectionUnchanged = eventSelectionRevision.current === selection;
       if (selectionUnchanged) {
         setSelectedEventState((current) =>
@@ -231,7 +352,7 @@ export function useCalendarPage() {
       // form's write completed; the official event list still receives the result.
       return selectionUnchanged;
     } catch (saveError) {
-      setError(formatCalendarApiError(saveError));
+      setMutationError(formatCalendarApiError(saveError));
       return false;
     } finally {
       mutationInFlight.current = false;
@@ -244,7 +365,8 @@ export function useCalendarPage() {
     mutationInFlight.current = true;
 
     setSaving(true);
-    setError(null);
+    setMutationError(null);
+    setFeedback(null);
 
     try {
       await deleteCalendarEvent(eventToDelete.id);
@@ -252,13 +374,14 @@ export function useCalendarPage() {
       setEvents((currentEvents) =>
         currentEvents.filter((event) => String(event.id) !== String(eventToDelete.id)),
       );
+      setFeedback(`Événement « ${eventToDelete.title} » supprimé.`);
       // A reopened copy of the deleted event is no longer official either.
       // Never close a different event selected in the meantime.
       setSelectedEventState((current) =>
         String(current?.id) === String(eventToDelete.id) ? null : current,
       );
     } catch (deleteError) {
-      setError(formatCalendarApiError(deleteError));
+      setMutationError(formatCalendarApiError(deleteError));
     } finally {
       mutationInFlight.current = false;
       setSaving(false);
@@ -275,7 +398,8 @@ export function useCalendarPage() {
     const selection = eventSelectionRevision.current;
 
     setSaving(true);
-    setError(null);
+    setMutationError(null);
+    setFeedback(null);
 
     try {
       const savedEvent = await updateCalendarEventApproval(
@@ -290,13 +414,16 @@ export function useCalendarPage() {
           String(event.id) === String(savedEvent.id) ? savedEvent : event,
         ),
       );
+      if (String(savedEvent.id) === String(eventToValidate.id) && savedEvent.approvalStatus === approvalStatus) {
+        setFeedback(`Événement « ${savedEvent.title} » ${approvalStatus === 'approved' ? 'approuvé' : 'refusé'}.`);
+      }
       if (eventSelectionRevision.current === selection) {
         setSelectedEventState((current) =>
           String(current?.id) === String(eventToValidate.id) ? savedEvent : current,
         );
       }
     } catch (validationError) {
-      setError(formatCalendarApiError(validationError));
+      setMutationError(formatCalendarApiError(validationError));
     } finally {
       mutationInFlight.current = false;
       setSaving(false);
@@ -320,11 +447,13 @@ export function useCalendarPage() {
     handleSelectSlot,
     handleValidateEvent,
     loading,
+    mutationError,
     openCreateModal,
     people,
     periodTitle,
-    refreshData: loadData,
+    refreshData: () => loadData(undefined, true),
     ready: link.ready,
+    readError,
     selectedDate,
     selectedEvent,
     setCreateModalOpen,
@@ -332,6 +461,8 @@ export function useCalendarPage() {
     setView,
     services,
     saving,
+    feedback,
+    dismissFeedback: () => setFeedback(null),
     stats,
     view,
   };

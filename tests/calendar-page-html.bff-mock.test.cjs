@@ -12,12 +12,13 @@ const { alice, apiError, bootstrap, calendarEvent, installWindow, sessionRespons
 const { router } = installReactRuntime();
 const React = require('react');
 const { renderToStaticMarkup } = require('react-dom/server');
-const Page = loadTs('app/page').default;
-const initialDate = new Date();
+const Page = loadTs('components/CalendarPage/CalendarPage').default;
+const initialDate = loadTs('app/calendar/date-utils').calendarToday();
 const { getPeriodTitle } = loadTs('app/calendar/date-utils');
 
 const front = new FrontHarness();
 let view;
+const isCalendarPending = () => view.hostElements(props => props.role === 'status').some(({ text }) => /Chargement des données du calendrier|Enregistrement en cours/.test(text));
 let window;
 
 before(() => front.start());
@@ -29,16 +30,23 @@ beforeEach(() => {
   front.cookies.set('accessToken', jwtFor(1));
   front.userBff.on('get', '/me', { body: sessionResponse() });
 });
-afterEach(() => {
+afterEach(async () => {
+  await front.settle();
   view?.unmount();
   view = undefined;
   assert.deepEqual(front.allViolations(), []);
 });
 
+// Opening an event shows it at once and completes its actions from GET /calendar/events/{id} (MAIR-557).
+async function openEventDetails(event) {
+  await view.act(() => view.props('MonthGrid').onEventClick(event));
+  await view.waitFor(() => view.props('ValidatedEventDetailsModal')?.event?.canEdit !== undefined);
+}
+
 async function renderLoadedPage(body = bootstrap()) {
-  front.calendarBff.on('get', '/calendar/bootstrap', { body });
+  front.calendarRead({ body });
   view = mount(React.createElement(Page));
-  return view.waitFor((html) => !html.includes('role="status"') && view.find('Header')[0]?.props.user.name !== 'Chargement…');
+  return view.waitFor((html) => !isCalendarPending() && view.find('Header')[0]?.props.user.name !== 'Chargement…');
 }
 
 test('server renders on either side of a month boundary expose no server-local calendar date', () => {
@@ -61,7 +69,7 @@ test('server renders on either side of a month boundary expose no server-local c
 });
 
 test('the first pass renders the loading state, the second the events answered by GET /calendar/bootstrap', async () => {
-  front.calendarBff.on('get', '/calendar/bootstrap', { body: bootstrap() });
+  front.calendarRead({ body: bootstrap() });
   view = mount(React.createElement(Page));
 
   assert.equal(view.passes, 1);
@@ -71,7 +79,7 @@ test('the first pass renders the loading state, the second the events answered b
   assert.equal(view.find('MonthGrid').length, 0);
   assert.doesNotMatch(view.html, />Nouvel événement<\/button>/);
 
-  const html = await view.waitFor((current) => !current.includes('role="status"'));
+  const html = await view.waitFor((current) => !isCalendarPending());
 
   assert.match(html, new RegExp(`<h2[^>]*>${getPeriodTitle('month', initialDate)}</h2>`));
   assert.deepEqual(front.calendarBff.sequence().map((line) => line.split('?')[0]), ['GET /calendar/bootstrap']);
@@ -90,18 +98,18 @@ test('the shell shows the user resolved from BFF User in the header', async () =
 
   assert.match(html, /calendar-scroll-shell/);
   assert.match(html, /class="flex h-screen"/);
-  assert.match(html, /<main class="min-h-0 flex-1 overflow-auto/);
+  assert.match(html, /<main\b[^>]*class="min-h-0 flex-1 overflow-auto/);
   assert.deepEqual(front.userBff.sequence(), ['GET /me']);
-  assert.match(html, /<span data-slot="avatar-fallback"[^>]*>AM<\/span>|<span[^>]*>AM<\/span>/);
+  assert.match(html, /<(?:span|div) data-slot="avatar-fallback"[^>]*>AM<\/(?:span|div)>|<span[^>]*>AM<\/span>/);
   assert.match(html, /<span[^>]*>Admin Mairie<\/span>/);
   assert.match(html, /<footer/);
   const footer = html.match(/<footer\b[^>]*>[\s\S]*?<\/footer>/)?.[0];
   assert.ok(footer);
-  assert.match(html, /<aside\b[^]*?<footer\b[^]*?<\/footer>[^]*?<\/aside>/);
-  assert.doesNotMatch(html, /<\/main>\s*<footer\b/);
+  assert.doesNotMatch(html, /<aside\b[^]*?<footer\b[^]*?<\/footer>[^]*?<\/aside>/);
+  assert.match(html, /<\/main>\s*<footer\b/);
   assert.match(footer.replace(/<[^>]*>/g, ''), new RegExp(`© ${new Date().getFullYear()} Mairie360`));
   assert.doesNotMatch(footer, /Version|<button\b|<a\b/);
-  assert.deepEqual(view.props('Sidebar').isAdmin, true);
+  assert.deepEqual(view.props('Sidebar').isAdmin, false, 'a page mounted without its server provider keeps the least privileged display role');
 });
 
 test('desktop and mobile navigation expose only active modules and keep Settings functional', async () => {
@@ -136,7 +144,7 @@ test('desktop and mobile navigation expose only active modules and keep Settings
         assert.equal(props.activeItem, 'calendar');
       }
       const menus = view.html.match(/<nav\b[^>]*aria-label="Menu principal"[^>]*>[\s\S]*?<\/nav>/g) ?? [];
-      assert.equal(menus.length, sidebars.length);
+      assert.equal(menus.length, sidebars.length + 1);
       for (const menu of menus) {
         assert.doesNotMatch(menu, /E-mails|Fichiers/);
         assert.match(menu, /Paramètres/);
@@ -156,28 +164,108 @@ test('desktop and mobile navigation expose only active modules and keep Settings
 });
 
 test('a BFF error is rendered as an alert with a retry button that reloads the calendar', async () => {
-  front.calendarBff.on('get', '/calendar/bootstrap', { status: 502, body: apiError('BFF_ERROR', 'Calendar API unavailable') });
+  front.calendarRead({ status: 502, body: apiError('BFF_ERROR', 'Calendar API unavailable') });
   view = mount(React.createElement(Page));
   const failed = await view.waitFor((html) => html.includes('role="alert"'));
 
   assert.match(failed, /<span role="alert">Calendrier : Calendar API unavailable<\/span>/);
-  assert.match(failed, /<button type="button"[^>]*>[\s\S]*?<span>Réessayer<\/span><\/button>/);
+  assert.match(failed, /<button type="button"[^>]*>[\s\S]*?Réessayer<\/button>/);
   assert.doesNotMatch(view.text(), /Événement 5/);
 
-  front.calendarBff.on('get', '/calendar/bootstrap', { body: bootstrap() });
+  front.calendarRead({ body: bootstrap() });
   await view.click('Réessayer');
-  const html = await view.waitFor((current) => !current.includes('role="alert"') && !current.includes('role="status"'));
+  const html = await view.waitFor((current) => !current.includes('role="alert"') && !isCalendarPending());
 
   assert.equal(front.calendarBff.requests.length, 2);
   assert.match(view.text(), /Événement 5/);
   assert.doesNotMatch(html, /Réessayer/);
 });
 
+test('opening creation keeps the failed read and its retry, without claiming a refused save in the form', async () => {
+  front.calendarRead({ status: 502, body: apiError('UNAVAILABLE', 'Read unavailable') });
+  view = mount(React.createElement(Page));
+  await view.waitFor(html => html.includes('Read unavailable'));
+  await view.act(() => view.props('CalendarHeader').onCreate());
+  assert.match(view.html, /<span role="alert">Calendrier : Read unavailable<\/span>/);
+  assert.match(view.text(), /Réessayer/);
+  assert.equal(view.props('ValidatedCreateEventModal').error, null);
+  assert.equal(front.calendarBff.requests.length, 1);
+  await view.act(() => view.props('ValidatedCreateEventModal').onCancel());
+  assert.match(view.text(), /Read unavailable/);
+});
+
+test('a successful independent read cannot hide a refused edit or reset its draft', async () => {
+  await renderLoadedPage();
+  await openEventDetails(view.props('MonthGrid').events[0]);
+  await view.click('Modifier');
+  await view.fire(props => props.id === 'event-title', 'onChange', { target: { value: 'Draft retained' } });
+  front.calendarBff.on('patch', '/calendar/events/{id}', { status: 403, body: apiError('FORBIDDEN', 'Edit refused') });
+  // Submit the actual shared form so the wrapper owns the refused draft too.
+  const form = view.hostElements((props, _text, tag) => tag === 'form' && props.onSubmit)[0];
+  await view.act(() => form.props.onSubmit({ preventDefault() {} }));
+  await view.waitFor(html => html.includes('Edit refused'));
+  front.calendarRead({ status: 502, body: apiError('UNAVAILABLE', 'Read unavailable') });
+  await view.act(() => view.props('CalendarToolbar').onViewChange('week'));
+  await view.waitFor(html => html.includes('Read unavailable'));
+  assert.match(view.text(), /Edit refused/);
+  assert.equal(view.props('ValidatedEventDetailsModal').error, 'Edit refused');
+  front.calendarRead({ body: bootstrap() });
+  await view.click('Réessayer');
+  await view.waitFor(html => !html.includes('Read unavailable') && !html.includes('Chargement des données'));
+  assert.equal(view.props('ValidatedEventDetailsModal').error, 'Edit refused');
+  assert.match(view.html, /<span role="alert"[^>]*>Edit refused<\/span>/);
+  assert.equal(view.hostElements(props => props.id === 'event-title')[0].props.value, 'Draft retained');
+  assert.doesNotMatch(view.text(), /Réessayer/);
+  assert.equal(front.calendarBff.calls('/calendar/events/{id}', 'PATCH').length, 1);
+});
+
+test('pending and refused edit keeps its draft through reordered category reads, then confirms only an explicit retry', async () => {
+  await renderLoadedPage();
+  const event = view.props('MonthGrid').events[0];
+  await openEventDetails(event);
+  await view.click('Modifier');
+  await view.fire(props => props.id === 'event-title', 'onChange', { target: { value: 'Combined draft' } });
+  await view.fire(props => props.id === 'event-category', 'onChange', { target: { value: 'other' } });
+  let reply;
+  front.calendarBff.on('patch', '/calendar/events/{id}', () => new Promise(resolve => { reply = resolve; }));
+  const submitEdit = () => view.hostElements((props, _text, tag) => tag === 'form' && props.onSubmit)[0]
+    .props.onSubmit({ preventDefault() {} });
+  await view.act(submitEdit);
+  await view.waitFor(() => Boolean(reply));
+  assert.match(view.html, /<fieldset[^>]*disabled=""[^>]*aria-busy="true"/);
+  const reordered = bootstrap({ categories: [{ label: 'Autre reçue', value: 'other' }, { label: 'Réunion reçue', value: 'meeting' }] });
+  front.calendarRead({ body: reordered });
+  await view.act(() => view.props('CalendarToolbar').onViewChange('week'));
+  await view.waitFor(() => front.calendarBff.calls('/calendar/period', 'GET').length > 0 && view.find('WeekGrid').length > 0);
+  assert.equal(view.props('ValidatedEventDetailsModal').categories[0].value, 'meeting', 'period reads keep the bootstrap categories');
+  assert.equal(view.hostElements(props => props.id === 'event-title')[0].props.value, 'Combined draft');
+  assert.equal(view.hostElements(props => props.id === 'event-category')[0].props.value, 'other');
+  assert.equal(view.props('ValidatedEventDetailsModal').saving, true);
+  await view.act(() => reply({ status: 403, body: apiError('FORBIDDEN', 'Combined edit refused') }));
+  await view.waitFor(html => html.includes('Combined edit refused'));
+  front.calendarRead({ body: bootstrap() });
+  await view.act(() => view.props('CalendarToolbar').onViewChange('day'));
+  await view.waitFor(() => !view.props('ValidatedEventDetailsModal').saving && view.props('ValidatedEventDetailsModal').categories[0].value === 'meeting');
+  assert.equal(view.hostElements(props => props.id === 'event-title')[0].props.value, 'Combined draft');
+  assert.equal(view.hostElements(props => props.id === 'event-category')[0].props.value, 'other');
+  assert.match(view.html.slice(view.html.indexOf('role="dialog"')), /role="alert"[^>]*>Combined edit refused/);
+  assert.equal(front.calendarBff.calls('/calendar/events/{id}', 'PATCH').length, 1);
+  const confirmed = calendarEvent(event.id, { ...event, title: 'Combined draft', category: 'other' });
+  front.calendarBff.on('patch', '/calendar/events/{id}', { body: confirmed });
+  await view.act(submitEdit);
+  await view.waitFor(() => !view.html.includes('Modifier l’événement') && !view.html.includes('Enregistrement en cours'));
+  assert.equal(front.calendarBff.calls('/calendar/events/{id}', 'PATCH').length, 2);
+  assert.equal(view.props('DaySchedule').events[0].title, 'Combined draft');
+  assert.equal(view.props('DaySchedule').events[0].category, 'other');
+  assert.doesNotMatch(view.html, /role="dialog"/);
+  assert.doesNotMatch(view.html, /Combined edit refused/);
+});
+
 test('changing the view re-renders the week grid with the reloaded events', async () => {
   await renderLoadedPage();
 
   await view.act(() => view.props('CalendarToolbar').onViewChange('week'));
-  const html = await view.waitFor(() => front.calendarBff.requests.length === 2 && !view.html.includes('role="status"'));
+  const html = await view.waitFor(() => front.calendarBff.requests.length === 2 && !isCalendarPending());
 
   assert.equal(view.find('WeekGrid').length, 1);
   assert.equal(view.find('MonthGrid').length, 0);
@@ -189,15 +277,15 @@ test('day arrows render the navigated date in the actual schedule, statistics an
   window.location.search = '?date=2026-12-31';
   await renderLoadedPage(bootstrap({ events: [calendarEvent(42, { date: '2027-01-01' })] }));
   await view.act(() => view.props('CalendarToolbar').onViewChange('day'));
-  await view.waitFor(() => !view.html.includes('role="status"'));
+  await view.waitFor(() => !isCalendarPending());
   await view.act(() => view.props('CalendarToolbar').onNext());
-  const html = await view.waitFor(() => !view.html.includes('role="status"') && view.props('CalendarToolbar').title === '1 janvier 2027');
+  const html = await view.waitFor(() => !isCalendarPending() && view.props('CalendarToolbar').title === '1 janvier 2027');
   assert.match(html, /aria-label="1 Janvier 2027 à 09:00"/);
   assert.doesNotMatch(html, /aria-label="31 Décembre 2026 à/);
   assert.equal(view.props('CalendarSidebar').stats[2].value, '1 événement');
-  await view.act(() => view.props('PageTitleBar').onAction());
-  assert.equal(view.props('CreateEventModal').initialValues.date, '01-01-2027');
-  assert.ok(front.calendarBff.sequence().every((call) => call.startsWith('GET /calendar/bootstrap?')));
+  await view.act(() => view.props('CalendarHeader').onCreate());
+  assert.equal(view.props('ValidatedCreateEventModal').initialValues.date, '01-01-2027');
+  assert.ok(front.calendarBff.sequence().every((call) => /^GET \/calendar\/(bootstrap|period)\?/.test(call)));
 });
 
 test('calendar layout uses responsive grids and a bounded sidebar with BFF-backed events', async () => {
@@ -211,7 +299,7 @@ test('calendar layout uses responsive grids and a bounded sidebar with BFF-backe
   assert.deepEqual(front.calendarBff.sequence().map((line) => line.split('?')[0]), ['GET /calendar/bootstrap']);
 
   await view.act(() => view.props('CalendarToolbar').onViewChange('week'));
-  await view.waitFor(() => front.calendarBff.requests.length === 2 && !view.html.includes('role="status"'));
+  await view.waitFor(() => front.calendarBff.requests.length === 2 && !isCalendarPending());
 
   assert.equal(view.props('WeekGrid').className, 'calendar-week-grid');
   assert.match(view.html, /class="calendar-grid-viewport mt-9"/);
@@ -221,20 +309,20 @@ test('the create modal opens from the title bar and the created event appears in
   await renderLoadedPage();
   assert.doesNotMatch(view.html, /Ajoutez une date au calendrier de la mairie\./);
 
-  await view.act(() => view.props('PageTitleBar').onAction());
+  await view.act(() => view.props('CalendarHeader').onCreate());
   assert.match(view.html, /Ajoutez une date au calendrier de la mairie\./);
-  assert.equal(view.props('CreateEventModal').isOpen, true);
+  assert.equal(view.props('ValidatedCreateEventModal').isOpen, true);
 
   const created = calendarEvent(9, { title: 'Conseil municipal', date: '2026-09-18' });
   // Creating in another month reloads that visible range. The mock must return
   // the persisted event too, rather than overwrite it with today's old fixture.
-  front.calendarBff.on('get', '/calendar/bootstrap', { body: bootstrap({ events: [created] }) });
+  front.calendarRead({ body: bootstrap({ events: [created] }) });
   front.calendarBff.on('post', '/calendar/events', { status: 201, body: created });
-  await view.act(() => view.props('CreateEventModal').onCreate({
+  await view.act(() => view.props('ValidatedCreateEventModal').onCreate({
     title: 'Conseil municipal', date: new Date(2026, 8, 18), startTime: '18:00', endTime: '20:00', category: 'meeting', service: 'direction',
     location: 'Salle du conseil', description: '', assigneeIds: [alice.id],
   }));
-  const html = await view.waitFor((current) => current.includes('Conseil municipal') && !current.includes('role="status"'));
+  const html = await view.waitFor((current) => current.includes('Conseil municipal') && !isCalendarPending());
 
   assert.equal(front.calendarBff.sequence().filter((line) => line.startsWith('POST')).length, 1);
   assert.doesNotMatch(html, /Ajoutez une date au calendrier de la mairie\./);
@@ -246,9 +334,9 @@ test('clicking an event opens its details with the BFF permissions', async () =>
   await renderLoadedPage();
   const [event] = view.props('MonthGrid').events;
 
-  await view.act(() => view.props('MonthGrid').onEventClick(event));
+  await openEventDetails(event);
 
-  const details = view.props('EventDetailsModal');
+  const details = view.props('ValidatedEventDetailsModal');
   assert.equal(details.isOpen, true);
   assert.equal(details.event.title, 'Événement 5');
   assert.equal(details.canValidate, true);
@@ -257,12 +345,91 @@ test('clicking an event opens its details with the BFF permissions', async () =>
   assert.match(view.html, />Modifier</);
 });
 
-test('a refused session logs out and reloads instead of rendering the calendar', async () => {
+for (const [label, method, route, approvalStatus] of [
+  ['Supprimer', 'delete', '/calendar/events/{id}', null],
+  ['Valider', 'patch', '/calendar/events/{id}/approval', 'approved'],
+  ['Refuser', 'patch', '/calendar/events/{id}/approval', 'rejected'],
+]) {
+  test(`${label}: pending and refused outcomes are announced inside the real details dialog, then a confirmed retry alone changes the event`, async () => {
+    await renderLoadedPage();
+    const event = view.props('MonthGrid').events[0];
+    await openEventDetails(event);
+    let reply;
+    front.calendarBff.on(method, route, () => new Promise(resolve => { reply = resolve; }));
+    // Delete returns its promise, unlike the void approval handlers. Keep the
+    // click pending so this assertion observes the UI before either response.
+    const pendingClick = view.click(label);
+    await view.waitFor(() => Boolean(reply));
+    let dialog = view.html.slice(view.html.indexOf('role="dialog"'));
+    assert.match(dialog, /role="status"[^>]*>Enregistrement en cours…/);
+    assert.match(view.html, /<fieldset[^>]*disabled=""[^>]*aria-busy="true"/);
+    assert.doesNotMatch(dialog, />Supprimer<|>Valider<|>Refuser<|>Modifier</);
+    assert.equal(view.props('MonthGrid').events[0].approvalStatus, event.approvalStatus);
+    await view.act(() => reply({ status: 403, body: apiError('FORBIDDEN', `${label} refusé`) }));
+    await pendingClick;
+    await view.waitFor(html => html.includes(`${label} refusé`));
+    dialog = view.html.slice(view.html.indexOf('role="dialog"'));
+    assert.match(dialog, new RegExp(`role="alert"[^>]*>${label} refusé`));
+    assert.match(dialog, /Événement 5/);
+    assert.equal(view.props('MonthGrid').events[0].approvalStatus, event.approvalStatus);
+    // A read is not an acknowledgement of this refused detail action.
+    await view.act(() => view.props('CalendarToolbar').onViewChange('week'));
+    // bootstrap, the opened event's detail (MAIR-557), the refused action and the week read.
+    await view.waitFor(() => front.calendarBff.requests.length === 4 && !isCalendarPending());
+    assert.match(view.html.slice(view.html.indexOf('role="dialog"')), new RegExp(`role="alert"[^>]*>${label} refusé`));
+    assert.equal(front.calendarBff.calls(route, method.toUpperCase()).length, 1);
+    front.calendarBff.on(method, route, approvalStatus
+      ? { body: calendarEvent(5, { approvalStatus }) }
+      : { status: 204 });
+    await view.click(label);
+    await view.waitFor(() => !isCalendarPending());
+    assert.equal(front.calendarBff.calls(route, method.toUpperCase()).length, 2);
+    if (approvalStatus) {
+      assert.equal(view.props('WeekGrid').events[0].approvalStatus, approvalStatus);
+      assert.doesNotMatch(view.html.slice(view.html.indexOf('role="dialog"')), /role="alert"/);
+      assert.match(view.html, /role="dialog"/);
+    } else {
+      assert.equal(view.props('WeekGrid').events.some(item => item.id === event.id), false);
+      assert.doesNotMatch(view.html, /role="dialog"/);
+    }
+  });
+}
+
+test('a refused session returns to Login without an automatic logout request', async () => {
   front.userBff.on('get', '/me', { status: 401 });
   front.userBff.on('post', '/auth/logout', { body: { message: 'Logged out successfully' } });
-  front.calendarBff.on('get', '/calendar/bootstrap', { body: bootstrap() });
+  front.calendarRead({ body: bootstrap() });
   view = mount(React.createElement(Page));
 
-  await view.waitFor(() => window.location.reloads === 1);
-  assert.deepEqual(front.userBff.sequence(), ['GET /me', 'POST /auth/logout']);
+  await view.waitFor(() => window.location.assigned.length === 1);
+  assert.deepEqual(front.userBff.sequence(), ['GET /me']);
+  assert.equal(front.ownerCalls.length,0);
+  assert.equal(window.location.reloads,0);
+});
+
+test('MAIR-557: the details dialog offers the actions granted by the event detail, not by the period list', async () => {
+  const full = bootstrap();
+  const listed = full.events.map(({ canEdit, canDelete, canValidate, createdById, description, ...event }) => event);
+  let release;
+  const held = new Promise((resolve) => { release = resolve; });
+  await renderLoadedPage({ ...full, events: listed });
+  front.calendarBff.on('get', '/calendar/events/{id}', async ({ pathParams }) => {
+    await held;
+    return { body: full.events.find((event) => String(event.id) === pathParams.id) };
+  });
+
+  try {
+    await view.act(() => view.props('MonthGrid').onEventClick(view.props('MonthGrid').events[0]));
+    await view.waitFor((html) => html.includes('role="dialog"'));
+    assert.doesNotMatch(view.html.slice(view.html.indexOf('role="dialog"')), />Modifier<|>Supprimer<|>Valider</);
+  } finally {
+    // Released even when an assertion fails, so afterEach's settle() does not wait forever.
+    await view.act(() => release());
+  }
+  await view.waitFor((html) => />Modifier</.test(html.slice(html.indexOf('role="dialog"'))));
+  const dialog = view.html.slice(view.html.indexOf('role="dialog"'));
+  assert.match(dialog, />Supprimer</);
+  assert.match(dialog, />Valider</);
+  assert.match(dialog, /Description 5/);
+  assert.deepEqual(front.calendarBff.calls('/calendar/events/{id}', 'GET').map((call) => call.pathParams.id), ['5']);
 });

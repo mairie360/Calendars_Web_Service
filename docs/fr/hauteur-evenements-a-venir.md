@@ -1,0 +1,11 @@
+# Hauteur de la carte des événements à venir
+
+Sur grand écran, une liste courte d’événements s’étirait sur toute la hauteur de la grille du calendrier. La carte garde désormais la hauteur naturelle de son contenu. Une liste longue est plafonnée à la fois par sa ligne de grille disponible et par la limite existante calculée depuis la fenêtre ; son contenu défile dans la carte. Les statistiques restent avant les événements, et la grille, la largeur latérale et les actions conservent leur agencement.
+
+Les contrôles natifs locaux couvrent les réponses confirmées vide, un événement et trente événements à 1920× 1080, les vues mois/semaine, le défilement clavier de la liste et l’ouverture d’un événement. La carte courte mesure 263,25 px au lieu de 694,5 px ; la carte vide 87 px et la longue 560 px. Les listes longues à 390× 844, 768× 1024, 1280× 720 et 1920× 512 gardent leur défilement et ne débordent horizontalement ni du document ni du vrai main de contenu. Les données synthétiques restent dans une copie locale de recette isolée.
+
+Un ancien test sur les sources imposait les déclarations CSS responsables de l’étirement (`max-height: none` et un enfant flex extensible). Il passait alors que le défaut visuel était présent. Cette assertion est retirée ; les mesures du rendu et les interactions apportent la preuve avant/après pertinente. Les autres tests, frontières de contrat, politiques de sécurité et seuils de couverture restent conservés. Ce remplacement partiel relève de MAIR-437 et ne termine pas l’audit transversal.
+
+Le calendrier local-demo en cache s’est arrêté après démarrage avec une TypeError. Une copie isolée compile correctement. Son Login copié a nécessité le retrait d’un attribut className identique dupliqué avant compilation, puis a encore refusé la réponse de connexion simulée après configuration du cookie local. Les sources et données originales sont préservées ; aucune nouvelle comparaison de référence connectée à 1920 px n’est revendiquée. Le changement ajuste une taille dans sa zone existante sans inventer une disposition. La simulation locale ne certifie ni authentification, droits, échanges BFF ou persistance déployés. Les preuves anciennes gardent leurs dates et commits, distincts des validations main/snapshot/dev ultérieures.
+
+Références : MAIR-215, MAIR-383 et MAIR-437.

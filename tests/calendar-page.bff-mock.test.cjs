@@ -11,7 +11,7 @@ const { alice, apiError, bootstrap, calendarEvent, installWindow } = require('./
 stubModule('react', react);
 const { useCalendarPage } = loadTs('app/calendar/use-calendar-page');
 const { formatDateForQuery, getCalendarPeriodRange } = loadTs('app/calendar/date-utils');
-const initialDate = new Date();
+const initialDate = loadTs('app/calendar/date-utils').calendarToday();
 
 const front = new FrontHarness();
 let page;
@@ -34,7 +34,7 @@ function rangeQuery(view, date) {
 }
 
 async function renderLoadedPage(body = bootstrap()) {
-  front.calendarBff.on('get', '/calendar/bootstrap', { body });
+  front.calendarRead({ body });
   page = renderHook(useCalendarPage);
   return page.waitFor((state) => !state.loading);
 }
@@ -65,7 +65,9 @@ test('a dashboard link loads the linked month and opens its event after bootstra
     assert.equal(formatDateForQuery(state.currentDate), date);
     assert.equal(formatDateForQuery(state.selectedDate), date);
     assert.equal(state.selectedEvent.title, 'Événement 42');
-    assert.deepEqual(front.calendarBff.sequence(), [`GET /calendar/bootstrap?${rangeQuery('month', linkedDate)}`]);
+    // MAIR-557: the opened event is completed by its detail read.
+    await page.waitFor(() => front.calendarBff.calls('/calendar/events/{id}', 'GET').length === 1);
+    assert.deepEqual(front.calendarBff.sequence(), [`GET /calendar/bootstrap?${rangeQuery('month', linkedDate)}`, 'GET /calendar/events/42']);
   } finally {
     delete global.window;
   }
@@ -99,33 +101,19 @@ test('an invalid linked date falls back to the current month without opening an 
   }
 });
 
-test('changing view or period reloads bootstrap with the new range', async () => {
+test('period navigation uses the period contract and a cached return avoids another read', async () => {
   await renderLoadedPage();
-
   page.result.current.setView('week');
-  await page.waitFor(() => front.calendarBff.requests.length === 2);
+  await page.waitFor(state => !state.loading && state.view === 'week');
+  const firstRange = rangeQuery('week', page.result.current.currentDate);
   page.result.current.handleNext();
-  await page.waitFor(() => front.calendarBff.requests.length === 3);
-  const weekDate = page.result.current.currentDate;
+  await page.waitFor(state => !state.loading && front.calendarBff.requests.length === 3);
+  const requests = front.calendarBff.requests.length;
   page.result.current.handlePrevious();
-  await page.waitFor(() => front.calendarBff.requests.length === 4);
-  page.result.current.setView('day');
-  await page.waitFor(() => front.calendarBff.requests.length === 5);
-  const dayDate = page.result.current.currentDate;
-  page.result.current.handleNext();
-  await page.waitFor(() => front.calendarBff.requests.length === 6);
-  page.result.current.handlePrevious();
-  page.result.current.setView('month');
-  page.result.current.handleNext();
-  const state = await page.waitFor((current) => !current.loading && front.calendarBff.requests.length === 7);
-
-  const sequence = front.calendarBff.sequence();
-  assert.equal(sequence[1], `GET /calendar/bootstrap?${rangeQuery('week', initialDate)}`);
-  assert.equal(sequence[2], `GET /calendar/bootstrap?${rangeQuery('week', weekDate)}`);
-  assert.equal(sequence[4], `GET /calendar/bootstrap?${rangeQuery('day', dayDate)}`);
-  assert.equal(sequence[6], `GET /calendar/bootstrap?${rangeQuery('month', state.currentDate)}`);
-  assert.ok(sequence.every((call) => call.startsWith('GET /calendar/bootstrap?')));
-  assert.match(state.periodTitle, /\d{4}$/);
+  const state = await page.waitFor(state => !state.loading && rangeQuery('week', state.currentDate) === firstRange);
+  assert.equal(front.calendarBff.requests.length, requests, 'the previous period was cached');
+  assert.ok(front.calendarBff.sequence()[0].startsWith('GET /calendar/bootstrap?'));
+  assert.ok(front.calendarBff.sequence().slice(1).every(call => call.startsWith('GET /calendar/period?')));
 });
 
 test('refreshData and date selection do not call anything outside the contract', async () => {
@@ -141,7 +129,7 @@ test('refreshData and date selection do not call anything outside the contract',
   state.handleEventClick(state.events[0]);
   state.setSelectedEvent(null);
   await page.waitFor((current) => !current.createModalOpen && current.selectedEvent === null);
-  assert.ok(front.calendarBff.sequence().every((call) => call.startsWith('GET /calendar/bootstrap?')));
+  assert.ok(front.calendarBff.sequence().every((call) => /^GET \/calendar\/(bootstrap|period)\?/.test(call)));
 });
 
 test('day navigation keeps the selected day, statistics, read range and creation date aligned across the year boundary', async () => {
@@ -157,16 +145,16 @@ test('day navigation keeps the selected day, statistics, read range and creation
     assert.equal(formatDateForQuery(state.currentDate), '2027-01-01');
     assert.equal(formatDateForQuery(state.selectedDate), '2027-01-01');
     assert.equal(state.stats[2].value, '1 événement');
-    assert.equal(front.calendarBff.sequence().at(-1), 'GET /calendar/bootstrap?from=2027-01-01&to=2027-01-01');
+    assert.equal(front.calendarBff.sequence().at(-1), 'GET /calendar/period?from=2027-01-01&to=2027-01-01');
     state.openCreateModal();
     state = await page.waitFor((current) => current.createModalOpen);
     assert.equal(state.createInitialValues.date, '01-01-2027');
     state.setCreateModalOpen(false);
     page.result.current.handlePrevious();
-    state = await page.waitFor((current) => !current.loading && front.calendarBff.requests.length === initialRequests + 3);
+    state = await page.waitFor((current) => !current.loading && formatDateForQuery(current.currentDate) === '2026-12-31');
     assert.equal(formatDateForQuery(state.selectedDate), '2026-12-31');
     assert.equal(state.stats[2].value, '0 événement');
-    assert.ok(front.calendarBff.sequence().every((call) => call.startsWith('GET /calendar/bootstrap?')));
+    assert.ok(front.calendarBff.sequence().every((call) => /^GET \/calendar\/(bootstrap|period)\?/.test(call)));
   } finally {
     delete global.window;
   }
@@ -197,7 +185,7 @@ for (const [mode, afterTwo, afterPrevious] of [
       state.openCreateModal();
       state = await page.waitFor((current) => current.createModalOpen);
       assert.equal(formatDateForQuery(state.createInitialValues.date), afterPrevious);
-      assert.ok(front.calendarBff.sequence().every((call) => call.startsWith('GET /calendar/bootstrap?')));
+      assert.ok(front.calendarBff.sequence().every((call) => /^GET \/calendar\/(bootstrap|period)\?/.test(call)));
     } finally {
       delete global.window;
     }
@@ -205,7 +193,7 @@ for (const [mode, afterTwo, afterPrevious] of [
 }
 
 test('a BFF error on load is shown to the user', async () => {
-  front.calendarBff.on('get', '/calendar/bootstrap', { status: 502, body: apiError('BAD_GATEWAY', 'Le service Calendar est indisponible.') });
+  front.calendarRead({ status: 502, body: apiError('BAD_GATEWAY', 'Le service Calendar est indisponible.') });
   page = renderHook(useCalendarPage);
 
   const state = await page.waitFor((current) => !current.loading);
@@ -214,15 +202,94 @@ test('a BFF error on load is shown to the user', async () => {
   assert.deepEqual(state.events, []);
 });
 
-test('a session refused by the BFF logs out and reloads the page', async () => {
+test('opening and closing a form does not clear a failed calendar read without another GET', async () => {
+  front.calendarRead({ status: 502, body: apiError('UNAVAILABLE', 'Read unavailable') });
+  page = renderHook(useCalendarPage);
+  const failed = await page.waitFor(current => !current.loading);
+  failed.openCreateModal();
+  const opened = await page.waitFor(current => current.createModalOpen);
+  assert.equal(opened.error, 'Read unavailable');
+  assert.equal(opened.readError, 'Read unavailable');
+  assert.equal(opened.mutationError, null);
+  opened.setCreateModalOpen(false);
+  const closed = await page.waitFor(current => !current.createModalOpen);
+  assert.equal(closed.readError, 'Read unavailable');
+  assert.equal(front.calendarBff.requests.length, 1);
+});
+
+for (const operation of ['create', 'edit', 'delete', 'approve']) {
+  for (const readFails of [false, true]) {
+    test(`a late ${readFails ? 'failed' : 'successful'} read preserves a refused ${operation}`, async () => {
+      const state = await renderLoadedPage();
+      state.handleEventClick(state.events[0]);
+      await page.waitFor(current => Boolean(current.selectedEvent));
+      let reply;
+      front.calendarRead(() => new Promise(resolve => { reply = resolve; }));
+      const read = page.result.current.refreshData();
+      await page.waitFor(() => Boolean(reply));
+      const refused = { status: 403, body: apiError('FORBIDDEN', `${operation} refused`) };
+      if (operation === 'create') {
+        front.calendarBff.on('post', '/calendar/events', refused);
+        await page.result.current.handleCreateEvent({ title: 'Draft', description: '', date: formatDateForQuery(state.currentDate), endDate: '', category: 'meeting', startTime: '09:00', endTime: '10:00', location: '', assigneeIds: [], recurrence: { frequency: 'none' } });
+      } else if (operation === 'edit') {
+        front.calendarBff.on('patch', '/calendar/events/{id}', refused);
+        await page.result.current.handleSaveEvent({ ...state.events[0], title: 'Unsaved draft' });
+      } else if (operation === 'delete') {
+        front.calendarBff.on('delete', '/calendar/events/{id}', refused);
+        await page.result.current.handleDeleteEvent(state.events[0]);
+      } else {
+        front.calendarBff.on('patch', '/calendar/events/{id}/approval', refused);
+        await page.result.current.handleValidateEvent(state.events[0], 'approved');
+      }
+      assert.equal((await page.waitFor(current => !current.saving)).error, `${operation} refused`);
+      reply(readFails ? { status: 502, body: apiError('UNAVAILABLE', 'Read unavailable') } : { body: bootstrap() });
+      await read;
+      const after = await page.waitFor(current => !current.loading);
+      assert.equal(after.error, `${operation} refused`);
+      assert.equal(after.mutationError, `${operation} refused`);
+      assert.equal(after.readError, readFails ? 'Read unavailable' : null);
+      assert.equal(after.selectedEvent.id, 5);
+      assert.deepEqual(after.events.map(event => event.id), [5, 6]);
+      assert.equal(front.calendarBff.requests.filter(call => call.method !== 'GET').length, 1);
+    });
+  }
+}
+
+test('read retry clears only its error, and an explicit new form clears only the previous mutation error', async () => {
+  const state = await renderLoadedPage();
+  front.calendarRead({ status: 502, body: apiError('UNAVAILABLE', 'Read unavailable') });
+  await state.refreshData();
+  state.handleEventClick(state.events[0]);
+  front.calendarBff.on('patch', '/calendar/events/{id}', { status: 403, body: apiError('FORBIDDEN', 'Edit refused') });
+  await page.result.current.handleSaveEvent({ ...state.events[0], title: 'Unsaved draft' });
+  let failed = await page.waitFor(current => !current.saving);
+  assert.equal(failed.readError, 'Read unavailable');
+  assert.equal(failed.mutationError, 'Edit refused');
+  front.calendarRead({ body: bootstrap() });
+  await failed.refreshData();
+  failed = await page.waitFor(current => !current.loading);
+  assert.equal(failed.readError, null);
+  assert.equal(failed.mutationError, 'Edit refused');
+  assert.equal(front.calendarBff.calls('/calendar/events/{id}', 'PATCH').length, 1);
+  failed.openCreateModal();
+  const opened = await page.waitFor(current => current.createModalOpen);
+  assert.equal(opened.mutationError, null);
+  assert.equal(opened.error, null);
+});
+
+test('a session refused by the BFF navigates to Login without automatic revocation', async () => {
   const window = installWindow();
-  front.calendarBff.on('get', '/calendar/bootstrap', { status: 401, body: apiError('UNAUTHORIZED', 'Session invalide.') });
+  front.calendarRead({ status: 401, body: apiError('UNAUTHORIZED', 'Session invalide.') });
   front.userBff.on('post', '/auth/logout', { body: { message: 'Logged out successfully' } });
   try {
     page = renderHook(useCalendarPage);
-    await page.waitFor(() => window.location.reloads === 1);
+    await page.waitFor(() => window.location.assigned.length === 1);
 
-    assert.deepEqual(front.userBff.sequence(), ['POST /auth/logout']);
+    assert.deepEqual(front.userBff.sequence(), []);
+  assert.equal(front.ownerCalls.length,0);
+  assert.equal(window.location.reloads,0);
+  assert.equal(new URL(window.location.assigned[0]).searchParams.get('redirect'),window.location.href);
+  assert.equal(new URL(window.location.assigned[0]).searchParams.has('returnUrl'),false);
     assert.deepEqual(page.result.current.events, []);
   } finally {
     delete global.window;
@@ -245,7 +312,7 @@ test('handleCreateEvent posts the event, appends it and moves the calendar to it
   assert.equal(state.createModalOpen, false);
   assert.equal(state.error, null);
   assert.equal(formatDateForQuery(state.selectedDate), formatDateForQuery(eventDate));
-  assert.equal(front.calendarBff.sequence().at(-1), `GET /calendar/bootstrap?${rangeQuery('month', eventDate)}`);
+  assert.equal(front.calendarBff.sequence().at(-1), `GET /calendar/period?${rangeQuery('month', eventDate)}`);
 });
 
 test('handleCreateEvent reports a refused creation', async () => {
@@ -339,7 +406,7 @@ test('a confirmed deletion closes even a reopened copy of the deleted event', as
 test('a bootstrap response started before a confirmed edit cannot restore the earlier event', async () => {
   const state = await renderLoadedPage();
   let reply;
-  front.calendarBff.on('get', '/calendar/bootstrap', () => new Promise(resolve => { reply = resolve; }));
+  front.calendarRead(() => new Promise(resolve => { reply = resolve; }));
   const read = state.refreshData();
   await page.waitFor(() => Boolean(reply));
   front.calendarBff.on('patch', '/calendar/events/{id}', ({ pathParams }) => ({
@@ -356,7 +423,7 @@ test('a bootstrap response started before a confirmed edit cannot restore the ea
 test('only the latest retry may update events, errors or the loading state', async () => {
   const state = await renderLoadedPage();
   const replies = [];
-  front.calendarBff.on('get', '/calendar/bootstrap', () => new Promise(resolve => { replies.push(resolve); }));
+  front.calendarRead(() => new Promise(resolve => { replies.push(resolve); }));
   const first = state.refreshData();
   await page.waitFor(() => replies.length === 1);
   const latest = state.refreshData();
@@ -375,7 +442,7 @@ test('only the latest retry may update events, errors or the loading state', asy
 test('an earlier bootstrap cannot erase a confirmed creation and a fresh read remains authoritative', async () => {
   const state = await renderLoadedPage();
   let reply;
-  front.calendarBff.on('get', '/calendar/bootstrap', () => new Promise(resolve => { reply = resolve; }));
+  front.calendarRead(() => new Promise(resolve => { reply = resolve; }));
   const read = state.refreshData();
   await page.waitFor(() => Boolean(reply));
   front.calendarBff.on('post', '/calendar/events', { status: 201, body: calendarEvent(42) });
@@ -384,7 +451,7 @@ test('an earlier bootstrap cannot erase a confirmed creation and a fresh read re
   reply({ body: bootstrap() });
   await read;
   assert.deepEqual((await page.waitFor(current => !current.loading)).events.map(event => event.id), [5, 6, 42]);
-  front.calendarBff.on('get', '/calendar/bootstrap', { body: bootstrap({ events: [calendarEvent(42, { title: 'Fresh official version' })] }) });
+  front.calendarRead({ body: bootstrap({ events: [calendarEvent(42, { title: 'Fresh official version' })] }) });
   await page.result.current.refreshData();
   const after = await page.waitFor(current => !current.loading);
   assert.deepEqual(after.events.map(event => event.id), [42]);
@@ -395,7 +462,7 @@ test('a stale read cannot resurrect a confirmed deletion or undo an approval', a
   for (const operation of ['delete', 'approve']) {
     const state = await renderLoadedPage();
     let reply;
-    front.calendarBff.on('get', '/calendar/bootstrap', () => new Promise(resolve => { reply = resolve; }));
+    front.calendarRead(() => new Promise(resolve => { reply = resolve; }));
     const read = state.refreshData();
     await page.waitFor(() => Boolean(reply));
     state.handleEventClick(state.events[0]);
@@ -505,4 +572,99 @@ test('handleValidateEvent reports a refused approval', async () => {
   await page.result.current.handleValidateEvent(state.events[0], 'approved');
 
   assert.equal((await page.waitFor((current) => !current.saving)).error, 'Validation interdite');
+});
+
+// MAIR-557: BFF_Calendar lists no longer carry the rights, createdById or description of each event.
+const listedWithoutDetail = (event) => {
+  const { canEdit, canDelete, canValidate, createdById, description, ...listed } = event;
+  return listed;
+};
+
+test('MAIR-557: opening an event reads its detail and shows the rights the lists no longer carry', async () => {
+  const full = bootstrap();
+  const state = await renderLoadedPage({ ...full, events: full.events.map(listedWithoutDetail) });
+  front.calendarBff.on('get', '/calendar/events/{id}', ({ pathParams }) => ({ body: full.events.find((event) => String(event.id) === pathParams.id) }));
+
+  state.handleEventClick(state.events[0]);
+  assert.equal((await page.waitFor((current) => current.selectedEvent?.id === 5)).selectedEvent.canEdit, undefined);
+  const opened = await page.waitFor((current) => current.selectedEvent?.canEdit === true);
+
+  assert.deepEqual(front.calendarBff.calls('/calendar/events/{id}', 'GET').map((call) => call.pathParams.id), ['5']);
+  assert.equal(opened.selectedEvent.canDelete, true);
+  assert.equal(opened.selectedEvent.canValidate, true);
+  assert.equal(opened.selectedEvent.description, 'Description 5');
+  assert.equal(opened.selectedEvent.colorClassName, state.events[0].colorClassName);
+  assert.equal(opened.error, null);
+});
+
+test('MAIR-557: a late detail of a previously opened event cannot replace the current selection', async () => {
+  const full = bootstrap();
+  const state = await renderLoadedPage({ ...full, events: full.events.map(listedWithoutDetail) });
+  let releaseFirst;
+  const firstHeld = new Promise((resolve) => { releaseFirst = resolve; });
+  front.calendarBff.on('get', '/calendar/events/{id}', async ({ pathParams }) => {
+    if (pathParams.id === '5') await firstHeld;
+    return { body: full.events.find((event) => String(event.id) === pathParams.id) };
+  });
+
+  state.handleEventClick(state.events[0]);
+  (await page.waitFor((current) => current.selectedEvent?.id === 5)).handleEventClick(state.events[1]);
+  const second = await page.waitFor((current) => current.selectedEvent?.id === 6 && current.selectedEvent.canEdit === true);
+  releaseFirst();
+  await page.waitFor(() => front.calendarBff.calls('/calendar/events/{id}', 'GET').length === 2);
+  await new Promise((resolve) => setTimeout(resolve, 50));
+
+  assert.equal(page.result.current.selectedEvent.id, 6);
+  assert.equal(page.result.current.selectedEvent.canValidate, false);
+  assert.equal(second.error, null);
+});
+
+test('MAIR-557: a refused detail keeps the event visible without actions and reports the error', async () => {
+  const full = bootstrap();
+  const state = await renderLoadedPage({ ...full, events: full.events.map(listedWithoutDetail) });
+  front.calendarBff.on('get', '/calendar/events/{id}', { status: 404, body: apiError('NOT_FOUND', 'Événement introuvable') });
+
+  state.handleEventClick(state.events[0]);
+  const refused = await page.waitFor((current) => current.error !== null);
+
+  assert.equal(refused.error, 'Événement introuvable');
+  assert.equal(refused.selectedEvent.id, 5);
+  assert.equal(refused.selectedEvent.canEdit, undefined);
+});
+
+test('MAIR-557: a detail started before a confirmed approval cannot restore the earlier status', async () => {
+  const full = bootstrap();
+  const state = await renderLoadedPage();
+  let releaseDetail;
+  const detailHeld = new Promise((resolve) => { releaseDetail = resolve; });
+  front.calendarBff.on('get', '/calendar/events/{id}', async () => { await detailHeld; return { body: full.events[0] }; });
+  front.calendarBff.on('patch', '/calendar/events/{id}/approval', ({ body, pathParams }) => ({
+    body: calendarEvent(Number(pathParams.id), { approvalStatus: body.approvalStatus }),
+  }));
+
+  state.handleEventClick(state.events[0]);
+  const opened = await page.waitFor((current) => current.selectedEvent?.id === 5);
+  // The opened event has no rights until its detail answers; this approval is dispatched for the listed event.
+  await opened.handleValidateEvent(state.events[0], 'approved');
+  await page.waitFor((current) => !current.saving && current.selectedEvent?.approvalStatus === 'approved');
+  releaseDetail();
+  await page.waitFor(() => front.calendarBff.calls('/calendar/events/{id}', 'GET').length === 1);
+  await new Promise((resolve) => setTimeout(resolve, 50));
+
+  assert.equal(page.result.current.selectedEvent.approvalStatus, 'approved');
+});
+
+test('MAIR-557: rights an older list still carries are not shown before the detail, nor kept when it is refused', async () => {
+  const state = await renderLoadedPage();
+  front.calendarBff.on('get', '/calendar/events/{id}', { status: 403, body: apiError('FORBIDDEN', 'Accès refusé') });
+
+  state.handleEventClick(state.events[0]);
+  const opened = await page.waitFor((current) => current.selectedEvent?.id === 5);
+  assert.equal(opened.selectedEvent.canEdit, undefined);
+  const refused = await page.waitFor((current) => current.error !== null);
+
+  assert.equal(refused.error, 'Accès refusé');
+  assert.equal(refused.selectedEvent.canEdit, undefined);
+  assert.equal(refused.selectedEvent.canDelete, undefined);
+  assert.equal(refused.selectedEvent.canValidate, undefined);
 });

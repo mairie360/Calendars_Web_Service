@@ -77,7 +77,7 @@ React state manages display and pending operations. This repository defines no b
 
 ## Installation and local startup
 
-Use Node.js 22 to reproduce the contract job and npm with the committed lockfile. Other job and Docker versions are detailed below.
+Use Node.js 24.22.1 (the version pinned in CI and Docker) to reproduce the contract job and npm with the committed lockfile. Other job and Docker versions are detailed below.
 
 Private `@mairie360/*` dependencies require GitHub Packages access. Set `NODE_AUTH_TOKEN` in the environment to a token allowed to read these packages, as configured in `.npmrc`. Do not commit its value.
 
@@ -140,6 +140,7 @@ These data paths are exposed at the same origin through the proxy; Next.js pages
 | GET | `/check_apis` | — | 200, 502 |
 | GET | `/calendar/bootstrap` | `from`, `to` query (optional) | 200, 400, 401, 500, 502 |
 | GET | `/calendar/events` | `from`, `to` query | 200, 400, 401, 500, 502 |
+| GET | `/calendar/events/{id}` | — | 200, 400, 401, 403, 404, 500, 502 |
 | POST | `/calendar/events` | application/json | 201, 400, 401, 403, 500, 502 |
 | PATCH | `/calendar/events/{id}` | application/json | 200, 400, 401, 403, 404, 500, 502 |
 | DELETE | `/calendar/events/{id}` | — | 204, 400, 401, 403, 404, 500, 502 |
@@ -167,6 +168,8 @@ Authenticated `/profile` requests are handled by [frontend middleware](../../src
 
 The `/api/auth/me`, `/api/auth/session` and `/api/user/me` adapters use BFF User for session access; `/api/auth/logout` forwards logout. Both proxies authenticate only with the HttpOnly `accessToken` cookie set by Login, turned into `Authorization: Bearer`; an `Authorization` header sent by the browser is ignored and no token is stored in `localStorage`. Unsafe methods (POST, PUT, PATCH, DELETE) are refused with 403 when `Sec-Fetch-Site` is not `same-origin`, or, without it, when `Origin` does not match the served host (CSRF protection on top of `SameSite=Strict`).
 
+Since MAIR-557 the bootstrap and period lists no longer carry each event's permissions, `createdById` or `description`: opening an event (click or `event` link) shows it at once and reads `GET /calendar/events/{id}`, whose answer completes the details modal. Edit, delete and approval actions therefore appear once that read answers. Closing or switching events cancels the read, a late answer never replaces another selection, a confirmed mutation discards a read started before it, and a refused read keeps the event visible without actions and shows the BFF message.
+
 The front trusts the BFF: permissions (`canEdit`, `canDelete`, `canValidate`), assignable people, payload validation and error messages come from BFF_Calendar and are used as returned. The middleware does not redirect data paths declared in the contract: the BFF answers 401, and the client then logs out through BFF User and reloads the page, which the middleware sends to Login. BFF-side gaps are listed in [BFF.md](../../BFF.md).
 
 The generic proxy returns 400 for an invalid path, 404 for a path outside the contract, 405 for a disallowed method and 502 when the service is unreachable or times out. Upstream responses are preserved, including empty 204/205/304 bodies.
@@ -175,7 +178,7 @@ Every response carries `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff
 
 ## Synchronization and verification
 
-After changing routes or schemas, export the contract in **BFF_Calendar** using `npm run contracts:generate`, then run in this repository:
+The committed contract is the one of the BFF_Calendar `main` commit whose dev package `@mairie360/bff-calendar-openapi@0.0.0-dev.<sha>` is pinned in `package.json` (MAIR-509), or of a release `X.Y.Z` when one exists; the test stacks run the `bff-calendar` image built from that same commit (`dev-<sha7>` or `X.Y.Z`). To adopt a new commit, copy its contract (checkout of BFF_Calendar at that commit, `BFF_CONTRACT_DIR` pointing to its `contracts/`), then run in this repository:
 
 ```bash
 npm run contracts:sync
@@ -187,17 +190,17 @@ npm run build
 
 `contracts:sync` copies the BFF contract and regenerates `src/contracts/bff.d.ts`. `contracts:check` also compares a neighboring BFF when present; in an isolated checkout, it checks types against the local committed snapshot. `test:contracts` runs the Node tests without coverage; `npm test` runs them with the 60% line, branch and function coverage thresholds.
 
-The `tests/*.bff-mock.test.cjs` tests run the real client code (`src/app/calendar/api.ts`, the `useCalendarPage` hook, `useAuthSession`) against a local HTTP server that routes to the real Next.js route handlers, which forward to local BFF mocks. The BFF_Calendar mock is driven by `contracts/openapi.json`: every request (path, method, path and query parameters, undeclared query, JSON body) and every mocked response is validated against the contract, and any deviation fails the test. A guard replaces `fetch`: client code may only call its own origin and the server may only reach the mocked BFFs. The BFF User mock uses `../../BFFs/BFF_user/contracts/openapi.json` (or `BFF_USER_CONTRACT_DIR`) when that checkout exists; otherwise it only declares the three consumed operations, without response schemas. `tests/network-boundary.test.cjs` also checks statically that only `bff-client.ts`, `auth-session.ts`, `logout.ts` and `bff-proxy.ts` emit requests, that no JavaScript-readable credential is used, and that every endpoint used by the calendar client is declared in the contract.
+The `tests/*.bff-mock.test.cjs` tests run the real client code (`src/app/calendar/api.ts`, the `useCalendarPage` hook, `useAuthSession`) against a local HTTP server that routes to the real Next.js route handlers, which forward to local BFF mocks. The BFF_Calendar mock is driven by `contracts/openapi.json`: every request (path, method, path and query parameters, undeclared query, JSON body) and every mocked response is validated against the contract, and any deviation fails the test. A guard replaces `fetch`: client code may only call its own origin and the server may only reach the mocked BFFs. The BFF User mock uses `../../BFFs/BFF_user/contracts/openapi.json` (or `BFF_USER_CONTRACT_DIR`) when that checkout exists; otherwise it only declares the three consumed operations, without response schemas. `tests/network-boundary.test.cjs` also checks statically that only `bff-client.ts`, `auth-session.ts`, `logout.ts` and `bff-proxy.ts` emit requests, that no JavaScript-readable credential is used, and that the calendar client only calls operations of the generated `@mairie360/bff-calendar-openapi` client (no path literal, axios only inside `bff-client.ts`).
 
 The type generator is pinned to `openapi-typescript@7.10.1` in `scripts/contracts.mjs` and runs through npm. For documentation-only changes, check links, accuracy in both languages and `git diff --check`; do not regenerate contracts without changing their source.
 
 ## CI/CD and Docker execution
 
-The `contracts.yml` job uses Node.js 22, `actions/checkout@v7` and `actions/setup-node@v7`. It runs on pushes, pull requests and manual dispatch; it installs with `npm ci`, checks contracts and runs the associated tests.
+The `contracts.yml` job uses Node.js 24.22.1, `actions/checkout@v7` and `actions/setup-node@v7`. It runs on pull requests, manual dispatch and pushes to `main` only (MAIR-436); it installs with `npm ci`, checks contracts and runs the associated tests.
 
-`cicd.yml` calls `mairie360/CICD/.github/workflows/frontend-cicd.yml@v2.3.1`, with `cicd_version: v2.3.1` and `node_version: "23"`. Reusable steps and GitHub environments determine actual checks, publications and deployments.
+`cicd.yml` calls `mairie360/CICD/.github/workflows/frontend-cicd.yml` pinned to a CICD commit, with the same `cicd_version` and `node_version: "24.22.1"`. It runs on pull requests, on manual dispatch and on pushes to `main` only; its token is read-only by default and only the job calling the release pipeline gets `contents`, `packages` and `id-token` write scopes (MAIR-436, `tests/workflow-permissions.test.cjs`). Reusable steps and GitHub environments determine actual checks, publications and deployments.
 
-The Dockerfile defaults to `NODE_VERSION=23.10.0` and the Next.js `standalone` build; the image command is `["node", "server.js"]`. Image ports and Compose mappings can differ from the local port suggested above.
+The Dockerfile pins `NODE_VERSION=24.22.1` (official bookworm-slim image pinned by digest) and the Next.js `standalone` build; the image command is `["node", "server.js"]`. Image ports and Compose mappings can differ from the local port suggested above.
 
 Before running Docker, check service variables, build secrets and networks in the repository files. Green CI validates its jobs; it does not prove business-service availability in a remote environment.
 

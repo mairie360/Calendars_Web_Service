@@ -5,7 +5,7 @@ const { installReactRuntime, mount } = require('./support/server-view.cjs');
 
 installReactRuntime();
 const React = require('react');
-const { CreateEventModal, EventDetailsModal } = loadTs('app/calendar/_components/validated-event-modals');
+const { CreateEventModal, EventDetailsModal } = (() => { const create = loadTs('components/CalendarPage/components/CalendarModals/components/ValidatedCreateEventModal/ValidatedCreateEventModal'); const details = loadTs('components/CalendarPage/components/CalendarModals/components/ValidatedEventDetailsModal/ValidatedEventDetailsModal'); return { ...create, ...details, CreateEventModal: create.ValidatedCreateEventModal, EventDetailsModal: details.ValidatedEventDetailsModal }; })();
 
 const initialValues = {
   date: '16-09-2026',
@@ -205,4 +205,140 @@ test('cancel after refused edit discards draft and reopening uses official value
   assert.match(view.html, /value="Conseil officiel"/);
   assert.doesNotMatch(view.html, /Brouillon abandonné/);
   assert.equal(saved.length, 1);
+});
+
+for (const initiallyLoaded of [false, true]) {
+  test(`category reads preserve the create draft when options ${initiallyLoaded ? 'are reordered' : 'first arrive'}`, async () => {
+    let receiveCategories;
+    const created = [];
+    const opening = { ...initialValues, category: initiallyLoaded ? 'other' : undefined };
+    function Harness() {
+      const [categories, setCategories] = React.useState(initiallyLoaded
+        ? [{ label: 'Autre', value: 'other' }, { label: 'Réunion', value: 'meeting' }] : []);
+      receiveCategories = setCategories;
+      return React.createElement(CreateEventModal, {
+        isOpen: true, initialValues: opening, categories,
+        onCancel() {}, onCreate: value => created.push(value),
+      });
+    }
+    view = mount(React.createElement(Harness));
+    for (const [id, value] of [['event-title', 'Brouillon à conserver'], ['event-description', 'Description conservée'], ['event-location', 'Lieu conservé']]) {
+      await view.fire(props => props.id === id, 'onChange', { target: { value } });
+    }
+    await view.fire(props => props.id === 'event-start-time', 'onChange', { target: { value: '11:15' } });
+    await view.fire(props => props.id === 'event-end-time', 'onChange', { target: { value: '12:45' } });
+    await view.fire(props => props.id === 'event-recurrence', 'onChange', { target: { value: 'weekly' } });
+    await view.act(() => receiveCategories([{ label: 'Réunion reçue', value: 'meeting' }, { label: 'Autre reçue', value: 'other' }]));
+    for (const [id, value] of [['event-title', 'Brouillon à conserver'], ['event-description', 'Description conservée'], ['event-location', 'Lieu conservé']]) {
+      assert.equal(view.hostElements(props => props.id === id)[0].props.value, value, id);
+    }
+    assert.equal(view.hostElements(props => props.id === 'event-category')[0].props.value, initiallyLoaded ? 'other' : '');
+    assert.match(view.text(), /Réunion reçue/);
+    assert.match(view.text(), /Autre reçue/);
+    assert.equal(view.hostElements(props => props.id === 'event-start-time')[0].props.value, '11:15');
+    assert.equal(view.hostElements(props => props.id === 'event-end-time')[0].props.value, '12:45');
+    assert.equal(view.hostElements(props => props.id === 'event-recurrence')[0].props.value, 'weekly');
+    await view.fire(props => props.id === 'event-category', 'onChange', { target: { value: 'meeting' } });
+    await submit({ 'event-date': '16-09-2026', 'event-end-date': '17-09-2026', 'event-start-time': '11:15', 'event-end-time': '12:45', 'event-recurrence': 'weekly' });
+    assert.equal(created.length, 1);
+    assert.equal(created[0].category, 'meeting');
+    assert.equal(created[0].title, 'Brouillon à conserver');
+    assert.equal(created[0].description, 'Description conservée');
+    assert.equal(created[0].location, 'Lieu conservé');
+    assert.equal(created[0].startTime, '11:15');
+    assert.equal(created[0].endTime, '12:45');
+    assert.equal(created[0].recurrence.frequency, 'weekly');
+    assert.equal(created[0].endDate, created[0].date);
+  });
+}
+
+test('category arrival preserves an in-progress details edit and its explicit original category', async () => {
+  let receiveCategories;
+  const event = { id: 7, title: 'Titre officiel', category: 'other', date: '2026-09-16', startTime: '09:00', endTime: '10:00' };
+  function Harness() {
+    const [categories, setCategories] = React.useState([]);
+    receiveCategories = setCategories;
+    return React.createElement(EventDetailsModal, {
+      isOpen: true, canEdit: true, categories,
+      event,
+      onClose() {}, onSave() { return false; },
+    });
+  }
+  view = mount(React.createElement(Harness));
+  await view.click('Modifier');
+  await view.fire(props => props.id === 'event-title', 'onChange', { target: { value: 'Modification conservée' } });
+  await view.act(() => receiveCategories([{ label: 'Réunion', value: 'meeting' }, { label: 'Autre', value: 'other' }]));
+  assert.equal(view.hostElements(props => props.id === 'event-title')[0].props.value, 'Modification conservée');
+  assert.equal(view.hostElements(props => props.id === 'event-category')[0].props.value, 'other');
+});
+
+test('cancel and reopen initialize a fresh creation with the newly loaded default and opening date', async () => {
+  let reopen;
+  let opening = initialValues;
+  const created = [];
+  function Harness() {
+    const [open, setOpen] = React.useState(true);
+    const [categories, setCategories] = React.useState([{ label: 'Réunion', value: 'meeting' }]);
+    reopen = () => {
+      opening = { date: '2026-09-19', startTime: '11:00', endTime: '12:00' };
+      setCategories([{ label: 'Autre', value: 'other' }]);
+      setOpen(true);
+    };
+    return React.createElement(CreateEventModal, {
+      isOpen: open, initialValues: opening, categories,
+      onCancel() { setOpen(false); }, onCreate: value => created.push(value),
+    });
+  }
+  view = mount(React.createElement(Harness));
+  assert.equal(view.hostElements(props => props.id === 'event-category')[0].props.value, 'meeting');
+  await view.fire(props => props.id === 'event-title', 'onChange', { target: { value: 'Brouillon annulé' } });
+  await view.click('Annuler');
+  assert.doesNotMatch(view.html, /role="dialog"/);
+  await view.act(reopen);
+  assert.equal(view.hostElements(props => props.id === 'event-title')[0].props.value, '');
+  assert.equal(view.hostElements(props => props.id === 'event-date')[0].props.value, '19-09-2026');
+  assert.equal(view.hostElements(props => props.id === 'event-start-time')[0].props.value, '11:00');
+  assert.equal(view.hostElements(props => props.id === 'event-category')[0].props.value, 'other');
+  assert.deepEqual(created, []);
+});
+
+// MAIR-514: the texts are checked on the captured submit, before the chronology and before any request.
+test('a title with < or > stays in the modal with an accessible error and is never created', async () => {
+  const created = [];
+  view = mount(React.createElement(CreateEventModal, {
+    isOpen: true,
+    initialValues,
+    onCancel() {},
+    onCreate: (value) => created.push(value),
+  }));
+
+  const event = await submit({
+    'event-title': 'Conseil <municipal>',
+    'event-description': 'Ordre du jour',
+    'event-location': 'Salle A',
+    'event-date': '16-09-2026',
+    'event-end-date': '15-09-2026',
+    'event-start-time': '09:00',
+    'event-end-time': '10:00',
+    'event-recurrence': 'none',
+  });
+
+  assert.equal(event.stopped, true);
+  assert.equal(event.prevented, true);
+  assert.deepEqual(created, []);
+  assert.match(view.html, /role="alert"/);
+  assert.match(view.text(), /Le titre ne doit pas contenir les caractères < ou >\./);
+  assert.doesNotMatch(view.text(), /La date de fin doit être après/);
+
+  const valid = await submit({
+    'event-title': 'Conseil municipal',
+    'event-description': 'Ordre du <jour>',
+    'event-date': '16-09-2026',
+    'event-end-date': '17-09-2026',
+    'event-start-time': '09:00',
+    'event-end-time': '10:00',
+    'event-recurrence': 'none',
+  });
+  assert.equal(valid.stopped, true);
+  assert.match(view.text(), /La description ne doit pas contenir les caractères < ou >\./);
 });

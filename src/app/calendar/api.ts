@@ -1,5 +1,7 @@
+import { parseCalendarBootstrapReceipt } from '@/lib/calendar-bootstrap-receipt';
+import { BffRequestError } from "../../lib/bff-client";
 import type { components } from '@/contracts/bff';
-import { requestBff } from "@/lib/bff-client";
+import { bffCalendar } from "@/lib/bff-client";
 import { getEventColor, resolveAssignees } from "./constants";
 import { formatDateForQuery } from "./date-utils";
 import type {
@@ -30,14 +32,11 @@ export type CalendarData = {
   assigneeScope?: BffCalendarBootstrap['assigneeScope'];
 };
 
-type CalendarLoadParams = {
+export type CalendarLoadParams = {
   from: string;
   to: string;
   signal?: AbortSignal;
 };
-
-const EVENT_ENDPOINT = "/calendar/events";
-const BOOTSTRAP_ENDPOINT = "/calendar/bootstrap";
 
 function toCalendarEventItem(event: BffCalendarEvent, people: CalendarAssignee[]): CalendarEventItem {
   const assigneeIds = event.assigneeIds ?? [];
@@ -75,16 +74,31 @@ function eventBody(event: CreateCalendarEventValues | CalendarEventItem): BffCal
   };
 }
 
-function eventPath(eventId: CalendarAssigneeId, suffix = "") {
-  return `${EVENT_ENDPOINT}/${encodeURIComponent(String(eventId))}${suffix}`;
+/**
+ * People the answer references: the `users` index (event members included, MAIR-525), completed by the
+ * assignable people, each once. An event without `assignees` objects is resolved from it.
+ */
+function peopleOf(bootstrap: BffCalendarBootstrap): CalendarAssignee[] {
+  const byId = new Map<string, CalendarAssignee>();
+  for (const person of [...Object.values(bootstrap.users ?? {}), ...bootstrap.assignees]) {
+    if (!byId.has(String(person.id))) byId.set(String(person.id), person);
+  }
+  return [...byId.values()];
 }
 
 export async function loadCalendarData(params: CalendarLoadParams): Promise<CalendarData> {
-  const query = new URLSearchParams({ from: params.from, to: params.to });
-  const bootstrap = await requestBff<BffCalendarBootstrap>(`${BOOTSTRAP_ENDPOINT}?${query}`, { signal: params.signal });
+  const { data: bootstrap } = await bffCalendar.getCalendarBootstrap(
+    { from: params.from, to: params.to },
+    { signal: params.signal },
+  );
 
+  return calendarDataFromReceipt(bootstrap);
+}
+
+export function calendarDataFromReceipt(value: unknown): CalendarData {
+  const bootstrap = parseCalendarBootstrapReceipt(value);
   return {
-    events: bootstrap.events.map((event) => toCalendarEventItem(event, bootstrap.assignees)),
+    events: bootstrap.events.map((event) => toCalendarEventItem(event, peopleOf(bootstrap))),
     people: bootstrap.assignees,
     categories: bootstrap.categories,
     services: bootstrap.services,
@@ -93,14 +107,32 @@ export async function loadCalendarData(params: CalendarLoadParams): Promise<Cale
   };
 }
 
+export async function loadCalendarPeriodData(params: CalendarLoadParams, context: CalendarData): Promise<CalendarData> {
+  const { data: period } = await bffCalendar.getCalendarPeriod(
+    { from: params.from, to: params.to }, { signal: params.signal },
+  );
+  const people = [...Object.values(period.users ?? {}), ...context.people];
+  return { ...context, events: period.events.map(event => toCalendarEventItem(event, people)) };
+}
+
+/**
+ * Detail of one event. Since MAIR-557 the bootstrap and period lists no longer carry the rights
+ * (`canEdit`/`canDelete`/`canValidate`), `createdById` or `description`: they come from this read.
+ */
+export async function loadCalendarEvent(
+  eventId: CalendarAssigneeId,
+  people: CalendarAssignee[],
+  signal?: AbortSignal,
+) {
+  const { data: event } = await bffCalendar.getCalendarEventsId(encodeURIComponent(String(eventId)), { signal });
+  return toCalendarEventItem(event, people);
+}
+
 export async function createCalendarEvent(
   values: CreateCalendarEventValues,
   people: CalendarAssignee[],
 ) {
-  const event = await requestBff<BffCalendarEvent>(EVENT_ENDPOINT, {
-    method: "POST",
-    body: JSON.stringify(eventBody(values)),
-  });
+  const { data: event } = await bffCalendar.postCalendarEvents(eventBody(values));
   return toCalendarEventItem(event, people);
 }
 
@@ -108,15 +140,12 @@ export async function updateCalendarEvent(
   event: CalendarEventItem,
   people: CalendarAssignee[],
 ) {
-  const savedEvent = await requestBff<BffCalendarEvent>(eventPath(event.id), {
-    method: "PATCH",
-    body: JSON.stringify(eventBody(event)),
-  });
+  const { data: savedEvent } = await bffCalendar.patchCalendarEventsId(encodeURIComponent(String(event.id)), eventBody(event));
   return toCalendarEventItem(savedEvent, people);
 }
 
 export async function deleteCalendarEvent(eventId: CalendarAssigneeId) {
-  await requestBff<void>(eventPath(eventId), { method: "DELETE" });
+  await bffCalendar.deleteCalendarEventsId(encodeURIComponent(String(eventId)));
 }
 
 export async function updateCalendarEventApproval(
@@ -124,14 +153,51 @@ export async function updateCalendarEventApproval(
   approvalStatus: Schemas['UpdateCalendarEventApprovalBody']['approvalStatus'],
   people: CalendarAssignee[],
 ) {
-  const savedEvent = await requestBff<BffCalendarEvent>(eventPath(eventId, "/approval"), {
-    method: "PATCH",
-    body: JSON.stringify({ approvalStatus }),
-  });
+  const { data: savedEvent } = await bffCalendar.patchCalendarEventsIdApproval(encodeURIComponent(String(eventId)), { approvalStatus });
   return toCalendarEventItem(savedEvent, people);
 }
 
+const FIELD_LABELS: Readonly<Record<string, string>> = {
+  title: "Titre",
+  description: "Description",
+  location: "Lieu",
+  service: "Service",
+  category: "Catégorie",
+  date: "Date de début",
+  endDate: "Date de fin",
+  startTime: "Heure de début",
+  endTime: "Heure de fin",
+  assigneeIds: "Participants",
+  recurrence: "Récurrence",
+  endsOn: "Fin de récurrence",
+};
+
+function translateDetail(message: string) {
+  if (/Must not contain < or >/.test(message)) return "ne doit pas contenir les caractères < ou >";
+  const max = message.match(/at most (\d+) character|<=(\d+) characters/);
+  if (max) return `${max[1] ?? max[2]} caractères maximum`;
+  if (/at least 1 character|^Required$/.test(message)) return "ne doit pas être vide";
+  return message;
+}
+
+/** `body.recurrence.endsOn` → `Récurrence › Fin de récurrence : …` (details of a BFF 400, MAIR-514). */
+export function describeValidationDetail(detail: unknown): string | null {
+  if (!detail || typeof detail !== "object") return null;
+  const { path, message } = detail as { path?: unknown; message?: unknown };
+  if (typeof message !== "string") return null;
+  const fields = typeof path === "string"
+    ? path.split(".").filter((part) => part && part !== "body" && !/^\d+$/.test(part)).map((part) => FIELD_LABELS[part] ?? part)
+    : [];
+  const text = translateDetail(message);
+  return fields.length ? `${fields.join(" › ")} : ${text}` : text;
+}
+
 export function formatCalendarApiError(error: unknown) {
+  if (error instanceof BffRequestError && error.status === 400) {
+    const details = (error.details as { error?: { details?: unknown } } | undefined)?.error?.details;
+    const lines = Array.isArray(details) ? [...new Set(details.map(describeValidationDetail).filter((line): line is string => Boolean(line)))] : [];
+    if (lines.length) return `Vérifiez les champs signalés : ${lines.join(" ; ")}.`;
+  }
   if (error instanceof Error && error.message.trim()) return error.message;
   return "Le service calendrier est injoignable.";
 }
