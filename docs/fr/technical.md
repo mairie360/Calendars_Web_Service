@@ -93,7 +93,7 @@ L’état React gère l’affichage et les opérations en cours. Ce dépôt ne d
 
 ## Installation et lancement local
 
-Utiliser Node.js 22 pour reproduire le job de contrats et npm avec le fichier de verrouillage versionné. Les versions des autres jobs et de Docker sont précisées plus bas.
+Utiliser Node.js 24.22.1 (la version épinglée en CI et dans Docker) pour reproduire le job de contrats et npm avec le fichier de verrouillage versionné. Les versions des autres jobs et de Docker sont précisées plus bas.
 
 Les dépendances privées `@mairie360/*` nécessitent un accès GitHub Packages. Configurer `NODE_AUTH_TOKEN` dans l’environnement avec un jeton autorisé à lire ces packages, conformément à `.npmrc`. Ne pas enregistrer la valeur dans Git.
 
@@ -156,6 +156,7 @@ Ces chemins de données sont exposés à la même origine par le proxy; les page
 | GET | `/check_apis` | — | 200, 502 |
 | GET | `/calendar/bootstrap` | query `from`, `to` (optionnels) | 200, 400, 401, 500, 502 |
 | GET | `/calendar/events` | query `from`, `to` | 200, 400, 401, 500, 502 |
+| GET | `/calendar/events/{id}` | — | 200, 400, 401, 403, 404, 500, 502 |
 | POST | `/calendar/events` | application/json | 201, 400, 401, 403, 500, 502 |
 | PATCH | `/calendar/events/{id}` | application/json | 200, 400, 401, 403, 404, 500, 502 |
 | DELETE | `/calendar/events/{id}` | — | 204, 400, 401, 403, 404, 500, 502 |
@@ -183,6 +184,8 @@ Les requêtes authentifiées `/profile` sont traitées par le [middleware du fro
 
 Les adaptateurs `/api/auth/me`, `/api/auth/session` et `/api/user/me` utilisent BFF User pour la session; `/api/auth/logout` relaie la déconnexion. Les deux proxies n’authentifient qu’avec le cookie HttpOnly `accessToken` posé par Login, converti en `Authorization: Bearer`; un en-tête `Authorization` envoyé par le navigateur est ignoré et aucun jeton n’est stocké dans `localStorage`. Les méthodes non sûres (POST, PUT, PATCH, DELETE) sont refusées en 403 lorsque `Sec-Fetch-Site` ne vaut pas `same-origin` ou, en son absence, lorsque `Origin` ne correspond pas à l’hôte servi (protection CSRF en plus de `SameSite=Strict`).
 
+Depuis MAIR-557, les listes du bootstrap et des périodes ne portent plus les droits, `createdById` ni `description` de chaque événement : l’ouverture d’un événement (clic ou lien `event`) l’affiche aussitôt et lit `GET /calendar/events/{id}`, dont la réponse complète la fenêtre de détails. Les actions Modifier, Supprimer et Valider apparaissent donc à la réponse de cette lecture. Fermer ou changer d’événement annule la lecture, une réponse tardive ne remplace jamais une autre sélection, une mutation confirmée écarte une lecture lancée avant elle, et une lecture refusée laisse l’événement visible sans action avec le message du BFF.
+
 Le front fait confiance au BFF: les droits (`canEdit`, `canDelete`, `canValidate`), les personnes assignables, la validation des données et les messages d’erreur viennent de BFF_Calendar et sont utilisés tels quels. Le middleware ne redirige pas les chemins de données déclarés dans le contrat: le BFF répond 401, puis le client se déconnecte via BFF User et recharge la page, que le middleware renvoie vers Login. Les manques côté BFF sont listés dans [BFF.md](../../BFF.md).
 
 Le proxy générique répond 400 pour un chemin invalide, 404 pour un chemin hors contrat, 405 pour une méthode interdite et 502 si le service est injoignable ou dépasse le délai. Les réponses amont sont conservées, y compris les corps vides 204/205/304.
@@ -191,7 +194,7 @@ Toutes les réponses portent `X-Frame-Options: DENY`, `X-Content-Type-Options: n
 
 ## Synchronisation et vérifications
 
-Après une modification de routes ou de schémas, exporter le contrat dans **BFF_Calendar** avec `npm run contracts:generate`, puis exécuter dans ce dépôt:
+Le contrat versionné est celui du commit du `main` de BFF_Calendar dont le paquet dev `@mairie360/bff-calendar-openapi@0.0.0-dev.<sha>` est épinglé dans `package.json` (MAIR-509), ou d’une release `X.Y.Z` quand elle existe ; les stacks de test démarrent l’image `bff-calendar` construite depuis ce même commit (`dev-<sha7>` ou `X.Y.Z`). Pour adopter un nouveau commit, copier son contrat (checkout de BFF_Calendar positionné dessus, `BFF_CONTRACT_DIR` vers son `contracts/`), puis exécuter dans ce dépôt:
 
 ```bash
 npm run contracts:sync
@@ -203,17 +206,17 @@ npm run build
 
 `contracts:sync` copie le contrat BFF et régénère `src/contracts/bff.d.ts`. `contracts:check` compare aussi le BFF voisin lorsqu’il est présent; dans un checkout isolé, il vérifie les types contre la copie locale versionnée. `test:contracts` exécute les tests Node sans couverture; `npm test` les exécute avec les seuils de couverture de 60 % (lignes, branches, fonctions).
 
-Les tests `tests/*.bff-mock.test.cjs` exécutent le vrai code client (`src/app/calendar/api.ts`, le hook `useCalendarPage`, `useAuthSession`) contre un serveur HTTP local qui route vers les vrais route handlers Next.js, lesquels relaient vers des BFF simulés localement. Le mock BFF_Calendar est piloté par `contracts/openapi.json`: chaque requête (chemin, méthode, paramètres de chemin et de query, query non déclarée, corps JSON) et chaque réponse simulée est validée contre le contrat, et tout écart fait échouer le test. Un garde remplace `fetch`: le code client ne peut appeler que sa propre origine et le serveur ne peut joindre que les BFF simulés. Le mock BFF User utilise `../../BFFs/BFF_user/contracts/openapi.json` (ou `BFF_USER_CONTRACT_DIR`) lorsque ce checkout existe; sinon il déclare seulement les trois opérations consommées, sans schéma de réponse. `tests/network-boundary.test.cjs` vérifie aussi statiquement que seuls `bff-client.ts`, `auth-session.ts`, `logout.ts` et `bff-proxy.ts` émettent des requêtes, qu’aucun identifiant lisible par JavaScript n’est utilisé, et que chaque endpoint du client calendrier est déclaré dans le contrat.
+Les tests `tests/*.bff-mock.test.cjs` exécutent le vrai code client (`src/app/calendar/api.ts`, le hook `useCalendarPage`, `useAuthSession`) contre un serveur HTTP local qui route vers les vrais route handlers Next.js, lesquels relaient vers des BFF simulés localement. Le mock BFF_Calendar est piloté par `contracts/openapi.json`: chaque requête (chemin, méthode, paramètres de chemin et de query, query non déclarée, corps JSON) et chaque réponse simulée est validée contre le contrat, et tout écart fait échouer le test. Un garde remplace `fetch`: le code client ne peut appeler que sa propre origine et le serveur ne peut joindre que les BFF simulés. Le mock BFF User utilise `../../BFFs/BFF_user/contracts/openapi.json` (ou `BFF_USER_CONTRACT_DIR`) lorsque ce checkout existe; sinon il déclare seulement les trois opérations consommées, sans schéma de réponse. `tests/network-boundary.test.cjs` vérifie aussi statiquement que seuls `bff-client.ts`, `auth-session.ts`, `logout.ts` et `bff-proxy.ts` émettent des requêtes, qu’aucun identifiant lisible par JavaScript n’est utilisé, et que le client calendrier n’appelle que des opérations du client généré `@mairie360/bff-calendar-openapi` (aucun chemin littéral, axios uniquement dans `bff-client.ts`).
 
 Le générateur de types est fixé à `openapi-typescript@7.10.1` dans `scripts/contracts.mjs` et s’exécute via npm. Pour une modification uniquement documentaire, vérifier les liens, l’exactitude des deux langues et `git diff --check`; ne pas régénérer les contrats sans modification de leur source.
 
 ## CI/CD et exécution Docker
 
-Le job `contracts.yml` utilise Node.js 22, `actions/checkout@v7` et `actions/setup-node@v7`. Il s’exécute sur push, pull request et lancement manuel; il installe avec `npm ci`, contrôle les contrats et lance les tests dédiés.
+Le job `contracts.yml` utilise Node.js 24.22.1, `actions/checkout@v7` et `actions/setup-node@v7`. Il s’exécute sur pull request, lancement manuel et push vers `main` uniquement (MAIR-436); il installe avec `npm ci`, contrôle les contrats et lance les tests dédiés.
 
-`cicd.yml` appelle `mairie360/CICD/.github/workflows/frontend-cicd.yml@v2.3.1`, avec `cicd_version: v2.3.1` et `node_version: "23"`. Les étapes réutilisables et les environnements GitHub déterminent les contrôles, publications et déploiements effectifs.
+`cicd.yml` appelle `mairie360/CICD/.github/workflows/frontend-cicd.yml` épinglé sur un commit CICD, avec le même `cicd_version` et `node_version: "24.22.1"`. Il s’exécute sur les pull requests, au déclenchement manuel et sur les push vers `main` uniquement ; son jeton est en lecture seule par défaut et seul le job qui appelle le pipeline de release reçoit les droits d’écriture `contents`, `packages` et `id-token` (MAIR-436, `tests/workflow-permissions.test.cjs`). Les étapes réutilisables et les environnements GitHub déterminent les contrôles, publications et déploiements effectifs.
 
-Le Dockerfile utilise par défaut `NODE_VERSION=23.10.0` et le build Next.js `standalone`; la commande de l’image est `["node", "server.js"]`. Le port de l’image et les mappings Compose peuvent différer du port local proposé plus haut.
+Le Dockerfile épingle `NODE_VERSION=24.22.1` (image officielle bookworm-slim épinglée par digest) et le build Next.js `standalone` ; la commande de l’image est `["node", "server.js"]`. Le port de l’image et les mappings Compose peuvent différer du port local proposé plus haut.
 
 Avant un lancement Docker, vérifier les variables de service, les secrets de build et les réseaux dans les fichiers du dépôt. Une CI verte valide ses jobs; elle ne prouve pas la disponibilité des services métier dans un environnement distant.
 

@@ -10,6 +10,12 @@ utilisateur fournie par le BFF. Son contenu défile sans déplacer l'en-tête ni
 le pied de page. Les pièces jointes et documents métier des modules actifs ne
 sont pas supprimés.
 
+Les styles limités à Calendars conservent les cibles de navigation de 44px et
+l'ombre de séparation de la référence. La sidebar mobile reste sous le bouton
+Fermer publié ; la fermeture clavier et la gestion du focus restent assurées
+par le composant partagé. Aucune identité, notification ou préférence du
+prototype n'est recopiée.
+
 ## Un seul espace compte
 
 Le profil est désormais ouvert dans **Paramètres (Settings)**. Les anciens liens
@@ -60,6 +66,23 @@ réouverture reprend les données officielles. Validation chronologique,
 récurrences et permissions publiées restent inchangées. Ce correctif résout
 un défaut hérité du prototype sans changer bibliothèque, API/BFF ni données.
 
+Les erreurs de lecture et les refus d’écriture gardent des retours distincts.
+Un bootstrap tardif ou relancé ne masque ni le refus d’enregistrement ni son
+message dans le formulaire ; ouvrir un formulaire n’efface pas une lecture
+échouée. **Réessayer** recharge uniquement les données, sans rejouer d’écriture.
+Les deux erreurs restent affichées si elles coexistent ; seule la lecture
+réussie correspondante, une nouvelle tentative d’écriture ou un nouveau
+formulaire explicite remet à zéro son propre retour. Les gardes de brouillon
+et de dernière lecture restent préservées.
+
+Les états de suppression et de validation/refus sont également annoncés **dans
+la fenêtre de détail**, via le titre public du composant partagé. Les contrôles
+restent verrouillés pendant l’écriture ; un refus conserve l’événement officiel
+et les actions autorisées pour une nouvelle tentative explicite. Une lecture
+réussie n’efface pas ce refus. Seule la réponse de mutation existante confirme
+la suppression ou le nouveau statut. Composant partagé, droits et détails sont
+inchangés.
+
 [Documentation technique](technical.md) · [English](../en/module.md) · [README](../../README.md)
 
 Afficher et piloter le calendrier municipal dans le navigateur, avec événements, affectations et validations fournis par BFF Calendar.
@@ -76,8 +99,19 @@ Domaine fonctionnel: Calendrier.
 - Ouverture de la date et des détails d’un événement depuis le Tableau de bord.
 - Création, modification et suppression des événements selon les permissions.
 - Sélection des personnes, catégories et services; affichage de la validation et de la récurrence.
+- Les textes d’un événement (titre, description, lieu) refusent `<` et `>` avant la requête, avec un message en français par champ (MAIR-514) ; un refus du BFF détaillant les champs est listé champ par champ.
 
 ## Parcours type
+
+Chaque dialogue conserve son brouillon jusqu'à confirmation
+de l'opération existante ou annulation. Une lecture concurrente des catégories
+ne réinitialise pas les champs ni le message de refus. Les commandes restent
+désactivées pendant l'écriture ; après refus, seule une nouvelle tentative
+explicite soumet à nouveau. La correction dédiée au focus des dialogues
+(MAIR-318/#208) est reportée avec le RGAA et n'est pas incluse dans cette
+composition fonctionnelle seule ; l'ancienne recette clavier ne la certifie pas.
+Ces comportements frontend ne certifient
+ni les droits/persistances déployés ni l'accessibilité globale, à vérifier séparément.
 
 1. Charger le calendrier sur une période avec `/calendar/bootstrap`, dont le mois indiqué par un lien valide.
 2. Créer ou modifier un événement et choisir les personnes autorisées.
@@ -100,3 +134,8 @@ Le fonctionnement dépend d’identifiants utilisateurs cohérents entre Core et
 ## Pour développer ou exploiter ce module
 
 Le [guide technique](technical.md) détaille architecture, configuration, routes, session, persistance, tests et CI/CD. Il décrit les sources de vérité et les étapes de synchronisation des contrats avec les dépôts associés.
+
+
+## Direction visuelle commune — MAIR-547
+
+DA claire option 1 : tokens et police communs, navigation accessible et contenu métier conservé. Voir la [recette visuelle](../qa/design-qa.md) pour les preuves, vérifications et limites RGAA.

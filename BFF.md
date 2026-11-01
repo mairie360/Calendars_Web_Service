@@ -22,7 +22,7 @@ Les chemins sont relatifs au BFF. Le proxy du front ne relaie que ces opération
 
 ## Mise à jour et validation
 
-Dans le BFF associé, exécuter `npm run contracts:generate`. Dans ce web service, exécuter `npm run contracts:sync`, puis `npm run contracts:check` et `npm run test:contracts`. Les dépôts peuvent être voisins ; sinon `BFF_CONTRACT_DIR` indique le répertoire `contracts` du BFF. La CI vérifie que les types correspondent au document livré, même sans checkout du dépôt voisin.
+La copie suit le commit du `main` de BFF_Calendar dont le paquet dev `@mairie360/bff-calendar-openapi@0.0.0-dev.<sha>` est épinglé dans `package.json` (MAIR-509), ou une release `X.Y.Z` quand elle existe ; les stacks démarrent l’image `bff-calendar` construite depuis le même commit (`dev-<sha7>` ou `X.Y.Z`). Dans ce web service, copier le contrat de ce commit (`BFF_CONTRACT_DIR=../../BFFs/BFF_Calendar/contracts npm run contracts:sync` depuis un checkout positionné dessus), puis `npm run contracts:check` et `npm run test:contracts`. Les dépôts peuvent être voisins ; sinon `BFF_CONTRACT_DIR` indique le répertoire `contracts` du BFF. La CI vérifie que les types correspondent au document livré, même sans checkout du dépôt voisin.
 
 Le générateur de types est fixé à `openapi-typescript@7.10.1`. Il est exécuté via npm ; aucun jeton privé ne figure dans les contrats.
 

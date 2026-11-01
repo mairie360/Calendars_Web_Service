@@ -8,8 +8,8 @@
 --   3  Rgaa Writer       User         only for the writing state (create-event-saved)
 --   4  Rgaa Responsable  Responsable  validates the pending event of user 2 (same group)
 INSERT INTO users (id, first_name, last_name, email, password, status) VALUES
-    (3, 'Rgaa', 'Writer', 'rgaa-writer@mairie360.fr', 'dummy', 'active'),
-    (4, 'Rgaa', 'Responsable', 'rgaa-responsable@mairie360.fr', 'dummy', 'active')
+    (3, 'Rgaa', 'Writer', 'rgaa-writer@mairie360.fr', NULL, 'active'),
+    (4, 'Rgaa', 'Responsable', 'rgaa-responsable@mairie360.fr', NULL, 'active')
 ON CONFLICT (id) DO NOTHING;
 INSERT INTO user_roles (user_id, role_id)
 SELECT 3, r.id FROM roles r WHERE r.name = 'User'

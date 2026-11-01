@@ -1,8 +1,8 @@
 # Stack de test de sécurité dynamique (DAST) ISOLÉE pour le front Calendars (Calendars_Web_Service).
 #
-#   ./security_test.sh (local: builds the front when IMAGE_REF is empty,
-#                       NODE_AUTH_TOKEN exported for the build)
-#   IMAGE_REF=<image>:dev-<sha> ./security_test.sh   (CI, MAIR-317: the published image)
+#   ./security_test.sh            (local, NODE_AUTH_TOKEN exporté pour le build)
+#   docker compose -f docker-compose-security.yml up --build \
+#       --abort-on-container-exit --exit-code-from security-scan   (CI)
 #
 # security-scan (OWASP ZAP baseline) explore l'application Next.js servie par
 # l'image de production (Dockerfile, sortie standalone) avec un cookie de session
@@ -37,7 +37,7 @@ x-api-env: &api-env
 
 services:
   postgres:
-    image: ${DB_IMAGE:-ghcr.io/mairie360/database:1.3.0}
+    image: ${DB_IMAGE:-ghcr.io/mairie360/database:3.3.0}
     container_name: calendar-front-sec-db
     environment:
       POSTGRES_USER: postgres
@@ -56,7 +56,7 @@ services:
       retries: 10
 
   liquibase:
-    image: ${LIQUIBASE_IMAGE:-ghcr.io/mairie360/liquibase-migrations:1.3.0}
+    image: ${LIQUIBASE_IMAGE:-ghcr.io/mairie360/liquibase-migrations:3.3.0}
     container_name: calendar-front-sec-liquibase
     depends_on:
       postgres:
@@ -66,9 +66,12 @@ services:
       LIQUIBASE_COMMAND_USERNAME: postgres
       LIQUIBASE_COMMAND_PASSWORD: password
       LIQUIBASE_SEARCH_PATH: /migrations
+    # Database >= MAIR-413 only seeds the template admin (users.id = 1) with -Dallow_template_admin=true;
+    # without it the migration fails on a fresh database. Test / dev stacks only.
     command: >
       --changelog-file=changelog.xml
       update
+      -Dallow_template_admin=true
     networks:
       - backend
 
@@ -103,7 +106,7 @@ services:
       retries: 5
 
   core-api:
-    image: ${CORE_API_IMAGE:-ghcr.io/mairie360/core-api:1.2.0}
+    image: ${CORE_API_IMAGE:-ghcr.io/mairie360/core-api:2.2.0}
     container_name: calendar-front-sec-core-api
     depends_on:
       liquibase:
@@ -114,6 +117,15 @@ services:
       <<: *api-env
       PORT: 3000
       PUBLIC_URL: http://core-api:3000
+      # Core refuses to start without its Resend configuration (MAIR-522). No page of this front sends an
+      # e-mail through these stacks, so the key is fake and the URL never called.
+      RESEND_API_KEY: "re_fake_local"
+      RESEND_BASE_URL: "http://fake-resend.invalid"
+      EMAIL_DOMAIN: "mairie360.local"
+      # API >= api_lib 3.0 refuses the weak shared test secret unless this flag is set (MAIR-428),
+      # and rate-limits each account (MAIR-425): the scan / load test hammer it as one user.
+      JWT_ALLOW_WEAK_SECRET: "true"
+      RATE_LIMIT_ENABLED: "false"
     expose:
       - "3000"
     networks:
@@ -134,7 +146,7 @@ services:
       - backend
 
   calendar-api:
-    image: ${CALENDAR_API_IMAGE:-ghcr.io/mairie360/calendar-api:0.6.1}
+    image: ${CALENDAR_API_IMAGE:-ghcr.io/mairie360/calendar-api:1.2.0}
     container_name: calendar-front-sec-calendar-api
     depends_on:
       liquibase:
@@ -145,6 +157,13 @@ services:
       <<: *api-env
       PORT: 3002
       PUBLIC_URL: http://calendar-api:3002
+      # API >= api_lib 3.0 refuses the weak shared test secret unless this flag is set (MAIR-428),
+      # and rate-limits each account (MAIR-425): the scan / load test hammer it as one user.
+      JWT_ALLOW_WEAK_SECRET: "true"
+      RATE_LIMIT_ENABLED: "false"
+      # Calendar API also throttles each client IP with a token bucket (actix-governor, 10 req/s, burst 50):
+      # "0" disables it, otherwise the k6 load test turns into 429s relayed as 502 by the BFF.
+      RATE_LIMIT_PER_SECOND: "0"
     expose:
       - "3002"
     networks:
@@ -165,7 +184,7 @@ services:
       - backend
 
   bff-user:
-    image: ${BFF_USER_IMAGE:-ghcr.io/mairie360/bff-user:0.5.0}
+    image: ${BFF_USER_IMAGE:-ghcr.io/mairie360/bff-user:1.1.0}
     container_name: calendar-front-sec-bff-user
     depends_on:
       seeder:
@@ -179,6 +198,9 @@ services:
       REDIS_URL: redis://redis:6379
       JWT_SECRET: 'b"secret"'
       CORE_API_URL: http://core-api:3000
+      # The scanners replay the auth routes from one IP with invalid credentials on purpose: the
+      # auth rate limits of BFF User (MAIR-226) would answer 429 and hide the real responses.
+      AUTH_RATE_LIMIT_ENABLED: "false"
     expose:
       - "4000"
     networks:
@@ -197,7 +219,7 @@ services:
       - backend
 
   bff-calendar:
-    image: ${BFF_CALENDAR_IMAGE:-ghcr.io/mairie360/bff-calendar:0.4.0}
+    image: ${BFF_CALENDAR_IMAGE:-ghcr.io/mairie360/bff-calendar:1.1.0}
     container_name: calendar-front-sec-bff-calendar
     depends_on:
       seeder:
@@ -214,6 +236,8 @@ services:
       CORE_API_URL: core-api
       CORE_API_PORT: 3000
       CALENDAR_API_URL: calendar-api
+      # Same secret as the APIs: BFF_Calendar verifies the session tokens with it and refuses to start without it.
+      JWT_SECRET: 'b"secret"'
       CALENDAR_API_PORT: 3002
       # Racine du service : le client Orval (@mairie360/calendar-api-openapi) préfixe
       # déjà ses routes par /api/v1, un CALENDAR_API_BASE_PATH se terminant par /api
@@ -237,9 +261,14 @@ services:
       - backend
 
   calendar-front:
-    # Published image (dev-<sha> in the CI, MAIR-317); the test script builds one locally.
-    image: ${IMAGE_REF:?IMAGE_REF must name the front image to test}
+    image: ${TARGET_IMAGE:-calendar-front:security}
     container_name: calendar-front-sec-front
+    # Image de production (Next.js standalone), identique à celle publiée par la CI.
+    build:
+      context: .
+      dockerfile: Dockerfile
+      secrets:
+        - node_auth_token
     depends_on:
       bff-user-ready:
         condition: service_completed_successfully
@@ -248,8 +277,9 @@ services:
     environment:
       HOSTNAME: "0.0.0.0"
       PORT: 5002
-      # The unauthenticated health probe expects a redirect, not a missing-login 503.
+      # Readiness resumes on this isolated frontend origin without following Login.
       LOGIN_FRONT_URL: "${LOGIN_FRONT_URL:-http://login-front.invalid/}"
+      CALENDAR_FRONT_URL: http://calendar-front:5002/
       BFF_CALENDAR_BASE_URL: http://bff-calendar:4002
       USER_BFF_URL: http://bff-user:4000
     expose:
@@ -257,7 +287,7 @@ services:
     networks:
       - backend
     # curl est installé dans l'image runner. Sans cookie, le middleware répond 307
-    # (redirection Login) : curl -f l'accepte, seul un statut >= 400 échoue.
+    # (reprise locale) : curl -f l'accepte, seul un statut >= 400 échoue.
     healthcheck:
       test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://localhost:5002/"]
       interval: 10s
@@ -273,8 +303,11 @@ services:
         condition: service_healthy
     volumes:
       - ./.zap/rules.tsv:/zap/wrk/rules.tsv:ro
-    # zap-baseline.py : spider + scan passif (adapté à une interface web, là où
-    #   les BFFs rejouent leur OpenAPI avec zap-api-scan.py).
+    # zap-baseline.py: spider + passive scan (fit for a web UI, where the BFFs replay
+    #   their OpenAPI with zap-api-scan.py).
+    # -j: the AJAX spider renders the page in a headless browser and follows the fetch()
+    #   calls of the client bundle, so the /* routes the UI really uses are scanned
+    #   too; the classic spider only sees server-rendered links (MAIR-516).
     # -c rules.tsv : les alertes informatives sont passées à IGNORE, toute autre
     #   alerte (WARN/FAIL) fait sortir zap-baseline.py en code != 0.
     # -z ... replacer : injecte le cookie accessToken (JWT HS256 statique sub=2,
@@ -286,9 +319,14 @@ services:
       - http://calendar-front:5002/
       - -m
       - "3"
+      - -j
       - -c
       - rules.tsv
       - -z
       - "-config replacer.full_list(0).description=auth -config replacer.full_list(0).enabled=true -config replacer.full_list(0).matchtype=REQ_HEADER -config replacer.full_list(0).matchstr=Cookie -config replacer.full_list(0).regex=false -config replacer.full_list(0).replacement=accessToken=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIyIiwicm9sZSI6InVzZXIiLCJleHAiOjQxMDI0NDQ4MDB9.qjXr3pV4v8hvkbv_ufmNqaPqhDTbOGfTUeEXxa1z70U"
     networks:
       - backend
+
+secrets:
+  node_auth_token:
+    environment: NODE_AUTH_TOKEN

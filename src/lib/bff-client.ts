@@ -1,4 +1,7 @@
-import { logoutAndReload } from "./logout";
+import { sessionFetch } from '@mairie360/lib-components/browser';
+import axios, { type AxiosAdapter } from "axios";
+import { getBffCalendar } from "@mairie360/bff-calendar-openapi/endpoints/bffCalendar";
+import { navigateToLogin } from "./logout";
 
 export class BffRequestError extends Error {
   constructor(
@@ -23,7 +26,8 @@ async function readResponseBody(response: Response) {
   }
 }
 
-// Erreurs du BFF (`ApiError` : { code, message }) ou du proxy du front ({ error: { message } }).
+// Erreurs du BFF (`ErrorResponse` : { error: { code, message, details } }, enveloppe commune des BFFs) ou du proxy du
+// front ({ error: { message } }) ; l'ancien format plat { code, message } reste lu en repli.
 function getErrorMessage(status: number, body: unknown) {
   if (body && typeof body === "object") {
     const record = body as Record<string, unknown>;
@@ -52,7 +56,7 @@ export async function requestBff<T>(path: string, init: RequestInit = {}) {
   headers.set("Accept", "application/json");
   if (init.body !== undefined) headers.set("Content-Type", "application/json");
 
-  const response = await fetch(path, {
+  const response = await sessionFetch(path, {
     ...init,
     headers,
     cache: "no-store",
@@ -61,7 +65,7 @@ export async function requestBff<T>(path: string, init: RequestInit = {}) {
 
   if (!response.ok) {
     const body = await readResponseBody(response);
-    if (response.status === 401) void logoutAndReload();
+    if (response.status === 401) navigateToLogin();
     throw new BffRequestError(response.status, getErrorMessage(response.status, body), body);
   }
 
@@ -69,3 +73,23 @@ export async function requestBff<T>(path: string, init: RequestInit = {}) {
 
   return (await readResponseBody(response)) as T;
 }
+
+// The generated operations of the published BFF Calendar contract own every path: axios only carries the
+// request through requestBff, which keeps the same-origin cookie and 401 handling and the error class.
+const contractAdapter: AxiosAdapter = async (config) => {
+  const data = await requestBff<unknown>(axios.getUri(config), {
+    method: (config.method ?? "get").toUpperCase(),
+    headers: config.headers.toJSON() as Record<string, string>,
+    body: typeof config.data === "string" ? config.data : undefined,
+    signal: (config.signal as AbortSignal | undefined) ?? undefined,
+  });
+  return {
+    data,
+    status: data === undefined ? 204 : 200,
+    statusText: data === undefined ? "No Content" : "OK",
+    headers: {},
+    config,
+  };
+};
+
+export const bffCalendar = getBffCalendar(axios.create({ adapter: contractAdapter, headers: { Accept: "application/json" } }));

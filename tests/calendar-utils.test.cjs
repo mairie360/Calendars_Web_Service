@@ -99,3 +99,20 @@ test('event colours and assignee resolution', () => {
   const people = [{ id: 7, name: 'Alice' }, { id: 'user-3', name: 'Marie' }];
   assert.deepEqual(resolveAssignees(['7', 'user-3', 'missing'], people), people);
 });
+
+test('addDays crosses leap years and calendar boundaries without changing the source date', () => {
+  const source = new Date(2024, 1, 28, 23, 30);
+  const next = dates.addDays(source, 1);
+  assert.deepEqual([next.getFullYear(), next.getMonth(), next.getDate(), next.getHours()], [2024, 1, 29, 0]);
+  assert.equal(source.getDate(), 28); assert.equal(source.getHours(), 23);
+  const previous = dates.addDays('2026-01-01', -1);
+  assert.deepEqual([previous.getFullYear(), previous.getMonth(), previous.getDate()], [2025, 11, 31]);
+});
+test('addMonths anchors navigation on the first day across year and short-month boundaries', () => {
+  const source = new Date(2024, 0, 31);
+  const next = dates.addMonths(source, 1);
+  assert.deepEqual([next.getFullYear(), next.getMonth(), next.getDate()], [2024, 1, 1]);
+  assert.equal(source.getDate(), 31);
+  const previous = dates.addMonths('2026-01-31', -13);
+  assert.deepEqual([previous.getFullYear(), previous.getMonth(), previous.getDate()], [2024, 11, 1]);
+});

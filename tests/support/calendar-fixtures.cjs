@@ -5,11 +5,10 @@ const alice = { id: 'user-7', name: 'Alice Martin', email: 'alice@mairie.test', 
 const marie = { id: 'user-3', name: 'Marie Responsable', email: 'marie@mairie.test', role: 'Responsable' };
 const admin = { id: 'user-1', name: 'Admin Mairie', email: 'admin@mairie.test', role: 'Admin' };
 
-// Aligned with the page's per-mount browser date (new Date()), so fixture events
-// always fall on "today" and stay inside the visible month / upcoming-events window regardless of
-// when the suite runs — see CLAUDE.md "Tests that depend on 'today'".
+// Follow the same instance civil day as the page, including when host and instance
+// dates differ around midnight. This fixture does not select the host time zone.
 function todayYmd() {
-  const now = new Date();
+  const now = require('./load-ts.cjs').loadTs('app/calendar/date-utils').calendarToday();
   const pad = (value) => String(value).padStart(2, '0');
   return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
 }
@@ -40,6 +39,7 @@ function bootstrap(overrides = {}) {
   return {
     events: [calendarEvent(5), calendarEvent(6, { title: 'Permanence', category: 'other', assignees: undefined, assigneeIds: [marie.id], canValidate: false })]
       .map((event) => JSON.parse(JSON.stringify(event))),
+    users: Object.fromEntries([admin, alice, marie].map((person) => [person.id, person])),
     assignees: [admin, alice, marie],
     categories: [{ label: 'Réunion', value: 'meeting' }, { label: 'Autre', value: 'other' }],
     services: [{ label: 'Direction générale', value: 'direction' }],
@@ -49,7 +49,11 @@ function bootstrap(overrides = {}) {
   };
 }
 
-const apiError = (code, message) => ({ code, message });
+/** Codes publiés par ErrorResponseErrorCode (enveloppe d'erreur commune des BFFs, MAIR-234). */
+const ERROR_CODES = new Set(['BAD_REQUEST', 'UNAUTHORIZED', 'FORBIDDEN', 'NOT_FOUND', 'CONFLICT', 'PAYLOAD_TOO_LARGE', 'UNPROCESSABLE_ENTITY', 'TOO_MANY_REQUESTS', 'INTERNAL_ERROR', 'BAD_GATEWAY', 'SERVICE_UNAVAILABLE', 'GATEWAY_TIMEOUT']);
+const LEGACY_CODES = { UNAVAILABLE: 'SERVICE_UNAVAILABLE', BFF_UNAVAILABLE: 'SERVICE_UNAVAILABLE', ERROR: 'INTERNAL_ERROR', BFF_ERROR: 'BAD_GATEWAY' };
+/** Erreur BFF_Calendar (schéma ErrorResponse : { error: { code, message, details } }), le code dans l'enum publié. */
+const apiError = (code, message, details = []) => ({ error: { code: ERROR_CODES.has(code) ? code : (LEGACY_CODES[code] ?? 'INTERNAL_ERROR'), message, details } });
 
 /** Session BFF User conforme à `SessionResponse`. */
 function sessionResponse(overrides = {}) {
@@ -70,9 +74,11 @@ function installWindow() {
       removeItem: (key) => store.delete(key),
       clear: () => store.clear(),
     },
-    location: { reloads: 0, assigned: [], reload() { this.reloads += 1; }, assign(href) { this.assigned.push(href); } },
+    location: { href: new URL(process.env.CALENDAR_FRONT_URL ?? 'http://calendar.mairie.test/').href, reloads: 0, assigned: [], reload() { this.reloads += 1; }, assign(href) { this.assigned.push(href); } },
   };
   global.window = window;
+  const { loadTs } = require('./load-ts.cjs');
+  loadTs('lib/front-urls').setBrowserFrontUrls({ LOGIN_FRONT_URL: process.env.LOGIN_FRONT_URL ?? 'https://login.mairie.test', CALENDAR_FRONT_URL: process.env.CALENDAR_FRONT_URL ?? 'http://calendar.mairie.test/' });
   return window;
 }
 

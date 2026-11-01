@@ -9,6 +9,11 @@ AppShell with the existing BFF-backed user session. Its main viewport scrolls
 without moving the header or footer. Attachments and business documents inside
 active modules are not removed.
 
+Calendar-scoped styles preserve the reference sidebar's 44px navigation targets
+and separating shadow. The mobile sidebar stays below the published Close
+control; keyboard dismissal and focus management remain owned by the shared
+component. No prototype identity, notifications or appearance data are copied.
+
 ## One account destination
 
 Profile access now opens **Settings**. Existing `/profile` bookmarks and subpaths
@@ -55,6 +60,20 @@ reopening starts from official event data. Chronology/recurrence validation and
 published permissions are unchanged. This corrects a defect inherited from the
 preserved prototype, without changing the shared package, API/BFF or data.
 
+Read failures and refused writes keep separate feedback. A late or retried
+bootstrap cannot clear a refused save or its in-form message; opening a form
+cannot clear a failed read. The calendar's **Retry** only reloads data, never
+replays an event write. Both failures remain visible when they coexist; only
+the corresponding successful read, a new write attempt or an explicit new
+form resets its own feedback. Existing draft and latest-read guards are preserved.
+
+Delete and approve/reject outcomes are also announced **inside the event details
+dialog**, through the shared component's public title slot. Pending controls stay
+locked; a refused operation keeps the official event and authorized actions
+available for an explicit retry. A successful read cannot erase that refusal.
+Only the existing mutation response confirms removal or a changed approval status.
+The shared component, permissions and details content remain unchanged.
+
 ## Confirmed results and delayed reads (MAIR-447)
 
 A calendar read started before a confirmed create, edit, delete or approval
@@ -83,8 +102,18 @@ Business domain: Calendar.
 - Follow a Dashboard event link to its date and details.
 - Create, edit and delete events according to permissions.
 - Select people, categories and services; display approval and recurrence.
+- Event texts (title, description, location) refuse `<` and `>` before the request, with a French message per field (MAIR-514); a BFF refusal with field details is listed per field.
 
 ## Typical workflow
+
+Event dialogs own their draft until the existing operation
+confirms the write or the user cancels. A concurrent category read cannot reset
+entered fields or clear a refused-write message. Pending controls stay disabled;
+after refusal, only an explicit retry submits again. The dedicated dialog-focus
+correction (MAIR-318/#208) is postponed with RGAA and is not included in this
+functional-only composition. Historical focus evidence does not certify it.
+These frontend behaviors do not imply deployed permission/persistence or full
+accessibility certification; those require their own acceptance evidence.
 
 1. Load a date range through `/calendar/bootstrap`, including the month in a valid event link.
 2. Create or update an event and choose authorized assignees.
@@ -107,3 +136,8 @@ Operation depends on consistent user identifiers between Core and Calendar and t
 ## Developing or operating this module
 
 The [technical guide](technical.md) covers architecture, configuration, routes, session handling, persistence, tests and CI/CD. It describes sources of truth and contract synchronization with associated repositories.
+
+
+## Shared visual direction — MAIR-547
+
+Approved light option 1: shared tokens and font, accessible navigation, and preserved business layouts. See the [visual QA](../qa/design-qa.md) for evidence, checks, and RGAA limitations.
