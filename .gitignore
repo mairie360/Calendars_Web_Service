@@ -52,3 +52,4 @@ next-env.d.ts
 /cicd-repo/
 /rgaa-report/
 /.rgaa-ai-cache/
+/.rgaa-run.lock
