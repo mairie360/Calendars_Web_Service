@@ -1,47 +1,37 @@
 # Journal des releases — Calendars_Web_Service
 
-<!-- release-journal-state {"dev": "c82f8ab292e5d39e58d60e8bb9b8427b4c48a980", "prod": "c4beb3aaa105badfa3bed14d91c40d9a5de34b2b", "prod_tag": "v0.5.0", "staging": "c4beb3aaa105badfa3bed14d91c40d9a5de34b2b", "updated": {"dev": "2026-11-02 18:21 UTC", "prod": "2026-10-21 11:08 UTC", "staging": "2026-10-21 11:05 UTC"}} -->
+<!-- release-journal-state {"dev": "e928c4ffd40493ef463a4b4c8e2092fd50625520", "prod": "c4beb3aaa105badfa3bed14d91c40d9a5de34b2b", "prod_tag": "v0.5.0", "staging": "c4beb3aaa105badfa3bed14d91c40d9a5de34b2b", "updated": {"dev": "2026-11-02 19:55 UTC", "prod": "2026-10-21 11:08 UTC", "staging": "2026-10-21 11:05 UTC"}} -->
 > Tenu à jour par la CI (`mairie360/CICD`, action `release/release-journal`) à chaque passage en dev, staging et prod. Ne pas modifier à la main : le fichier est réécrit au passage suivant.
 
 | Environnement | Version | Commit | Mis à jour |
 | --- | --- | --- | --- |
 | prod | v0.5.0 | `c4beb3a` | 2026-10-21 11:08 UTC |
 | staging | — | `c4beb3a` | 2026-10-21 11:05 UTC |
-| dev | — | `c82f8ab` | 2026-11-02 18:21 UTC |
+| dev | — | `e928c4f` | 2026-11-02 19:55 UTC |
 
 ## Ajouté sur main depuis la dernière release prod (v0.5.0)
 
 #### Changements de comportement
-- Les fenêtres de création et de détail d'événement utilisent désormais le composant `Modal` de la lib `@mairie360/lib-components` (piège de focus, Escape, titre et description). Depuis l'éditeur de détails, Escape, le clic sur le fond et le bouton de fermeture ferment toute la fenêtre ; « Annuler » revient aux détails. (MAIR-608, [#287](https://github.com/mairie360/Calendars_Web_Service/pull/287))
-
-#### Corrections
-- `follow-redirects` est passé de 1.16.0–1.16.1 (via `axios`) à 1.16.2 : les identifiants personnalisés ne sont plus transmis aux redirections cross-origin (GHSA-mrwp-f3q8-3g9p), ce qui faisait échouer `npm audit --omit=dev`. (sans clé Jira, [#307](https://github.com/mairie360/Calendars_Web_Service/pull/307))
+- La fenêtre d'événement s'appuie désormais sur le composant Modal de la lib (piège de focus, titre et description). La barre latérale et l'en-tête viennent du shell partagé de la lib (AccessibleShell) : la navigation locale et la préférence de barre latérale sont retirées. (MAIR-608, [#287](https://github.com/mairie360/Calendars_Web_Service/pull/287))
 
 #### Technique
-- Calendrier : les composants calendrier sortent de la lib pour vivre dans `src/components/CalendarPage/` (un dossier par composant, tests co-localisés), la lib passe à 1.0.3, le shell local est remplacé par `AccessibleShell` de la lib, et Vitest et Testing Library sont ajoutés (MAIR-607, MAIR-608, [#287](https://github.com/mairie360/Calendars_Web_Service/pull/287)).
-- Sécurité Zod : Zod 3 est vendorisé dans `vendor/zod` avec un backport de validation bornée des collections ; `prebuild`, `pretest` et `postinstall` vérifient ce backport, et les locks sont réparés (MAIR-? sans clé Jira, [#299](https://github.com/mairie360/Calendars_Web_Service/pull/299)). Le diff est tronqué : les limites exactes ne sont pas visibles.
-- Node 24.22.1 dans le Dockerfile, les workflows et la doc, Next.js et `eslint-config-next` en 16.4.2 selon la description, jsdom 30.1.3 et playwright-core 1.64.1 (sans clé Jira, [#298](https://github.com/mairie360/Calendars_Web_Service/pull/298) et [#297](https://github.com/mairie360/Calendars_Web_Service/pull/297)).
-- CICD est épinglé à v4.5.0 puis à v4.12.0 (sans clé Jira, [#296](https://github.com/mairie360/Calendars_Web_Service/pull/296) et [#301](https://github.com/mairie360/Calendars_Web_Service/pull/301)). `promote-prod.yml` passe désormais `ANTHROPIC_WORKSPACE_ID` au pré-audit IA RGAA (MAIR-316, [#218](https://github.com/mairie360/Calendars_Web_Service/pull/218)).
-- Accessibilité RGAA : nouvelle stack de test (`accessibility_test.sh`, `docker-compose-accessibility.yml`, `rgaa.yaml`, `init-accessibility.sql`) séparée de la stack ZAP, avec son propre nom de projet et des boucles de readiness bornées (MAIR-316, [#218](https://github.com/mairie360/Calendars_Web_Service/pull/218)). Le script vide `rgaa-report/` à chaque run, prend un verrou `.rgaa-run.lock`, et s'arrête au lieu de supprimer un `cicd-repo/` non récupéré par lui (MAIR-768, [#305](https://github.com/mairie360/Calendars_Web_Service/pull/305)).
-- Checklist RGPD : nouveau workflow `gdpr-pr.yml` qui vérifie la section « Personal data » de chaque PR, et règle Renovate pour le tag CICD de ce workflow (MAIR-295, [#223](https://github.com/mairie360/Calendars_Web_Service/pull/223)). Le check doit être rendu obligatoire dans la protection de `main`.
-- Performance : la source map n'est générée que dans le build CI isolé, et la baseline reçoit une provenance de lock archivée (sans clé Jira, [#299](https://github.com/mairie360/Calendars_Web_Service/pull/299)).
+- Installation et build : `postinstall`, `prebuild` et `pretest` ne interrogent plus le service d'avis npm ; cette vérification passe par `npm run audit:upstream` et un workflow quotidien. (MAIR-744, [#310](https://github.com/mairie360/Calendars_Web_Service/pull/310))
+- Stack d'accessibilité RGAA (`docker-compose-accessibility.yml`, `accessibility_test.sh`, `rgaa.yaml`, `init-accessibility.sql`) avec engine CICD v5.1.0, verrou de run et readiness bornées. (MAIR-316, [#218](https://github.com/mairie360/Calendars_Web_Service/pull/218) ; MAIR-768, [#305](https://github.com/mairie360/Calendars_Web_Service/pull/305))
+- Workflow `gdpr-pr.yml` de contrôle RGPD sur les PR. (MAIR-295, [#223](https://github.com/mairie360/Calendars_Web_Service/pull/223))
+- Dépendances : `follow-redirects` 1.16.2 (GHSA-mrwp-f3q8-3g9p) ([#307](https://github.com/mairie360/Calendars_Web_Service/pull/307)), CICD v4.4.3 à v4.12.0 puis v5.1.0 ([#301](https://github.com/mairie360/Calendars_Web_Service/pull/301), [#296](https://github.com/mairie360/Calendars_Web_Service/pull/296), [#218](https://github.com/mairie360/Calendars_Web_Service/pull/218)), `jsdom` et `playwright-core` ([#297](https://github.com/mairie360/Calendars_Web_Service/pull/297)), Node 24.22.1 et Next.js 16.4.2 ([#298](https://github.com/mairie360/Calendars_Web_Service/pull/298)).
+- Zod 3 vendorisé avec backport de validation bornée des collections, et provenance des bundles en CI ([#299](https://github.com/mairie360/Calendars_Web_Service/pull/299)).
 
 ## Différence dev → staging (en dev, pas encore en staging)
 
 #### Changements de comportement
-- Les fenêtres de création et de détail d'événement utilisent désormais le composant `Modal` de la lib `@mairie360/lib-components` (piège de focus, Escape, titre et description). Depuis l'éditeur de détails, Escape, le clic sur le fond et le bouton de fermeture ferment toute la fenêtre ; « Annuler » revient aux détails. (MAIR-608, [#287](https://github.com/mairie360/Calendars_Web_Service/pull/287))
-
-#### Corrections
-- `follow-redirects` est passé de 1.16.0–1.16.1 (via `axios`) à 1.16.2 : les identifiants personnalisés ne sont plus transmis aux redirections cross-origin (GHSA-mrwp-f3q8-3g9p), ce qui faisait échouer `npm audit --omit=dev`. (sans clé Jira, [#307](https://github.com/mairie360/Calendars_Web_Service/pull/307))
+- La fenêtre d'événement s'appuie désormais sur le composant Modal de la lib (piège de focus, titre et description). La barre latérale et l'en-tête viennent du shell partagé de la lib (AccessibleShell) : la navigation locale et la préférence de barre latérale sont retirées. (MAIR-608, [#287](https://github.com/mairie360/Calendars_Web_Service/pull/287))
 
 #### Technique
-- Calendrier : les composants calendrier sortent de la lib pour vivre dans `src/components/CalendarPage/` (un dossier par composant, tests co-localisés), la lib passe à 1.0.3, le shell local est remplacé par `AccessibleShell` de la lib, et Vitest et Testing Library sont ajoutés (MAIR-607, MAIR-608, [#287](https://github.com/mairie360/Calendars_Web_Service/pull/287)).
-- Sécurité Zod : Zod 3 est vendorisé dans `vendor/zod` avec un backport de validation bornée des collections ; `prebuild`, `pretest` et `postinstall` vérifient ce backport, et les locks sont réparés (sans clé Jira, [#299](https://github.com/mairie360/Calendars_Web_Service/pull/299)). Le diff est tronqué : les limites exactes ne sont pas visibles.
-- Node 24.22.1 dans le Dockerfile, les workflows et la doc, Next.js et `eslint-config-next` en 16.4.2 selon la description, jsdom 30.1.3 et playwright-core 1.64.1 (sans clé Jira, [#298](https://github.com/mairie360/Calendars_Web_Service/pull/298) et [#297](https://github.com/mairie360/Calendars_Web_Service/pull/297)).
-- CICD est épinglé à v4.5.0 puis à v4.12.0 (sans clé Jira, [#296](https://github.com/mairie360/Calendars_Web_Service/pull/296) et [#301](https://github.com/mairie360/Calendars_Web_Service/pull/301)). `promote-prod.yml` passe désormais `ANTHROPIC_WORKSPACE_ID` au pré-audit IA RGAA (MAIR-316, [#218](https://github.com/mairie360/Calendars_Web_Service/pull/218)).
-- Accessibilité RGAA : nouvelle stack de test (`accessibility_test.sh`, `docker-compose-accessibility.yml`, `rgaa.yaml`, `init-accessibility.sql`) séparée de la stack ZAP, avec son propre nom de projet et des boucles de readiness bornées (MAIR-316, [#218](https://github.com/mairie360/Calendars_Web_Service/pull/218)). Le script vide `rgaa-report/` à chaque run, prend un verrou `.rgaa-run.lock`, et s'arrête au lieu de supprimer un `cicd-repo/` non récupéré par lui (MAIR-768, [#305](https://github.com/mairie360/Calendars_Web_Service/pull/305)).
-- Checklist RGPD : nouveau workflow `gdpr-pr.yml` qui vérifie la section « Personal data » de chaque PR, et règle Renovate pour le tag CICD de ce workflow (MAIR-295, [#223](https://github.com/mairie360/Calendars_Web_Service/pull/223)). Le check doit être rendu obligatoire dans la protection de `main`.
-- Performance : la source map n'est générée que dans le build CI isolé, et la baseline reçoit une provenance de lock archivée (sans clé Jira, [#299](https://github.com/mairie360/Calendars_Web_Service/pull/299)).
+- Installation et build : `postinstall`, `prebuild` et `pretest` ne interrogent plus le service d'avis npm ; cette vérification passe par `npm run audit:upstream` et un workflow quotidien. (MAIR-744, [#310](https://github.com/mairie360/Calendars_Web_Service/pull/310))
+- Stack d'accessibilité RGAA (`docker-compose-accessibility.yml`, `accessibility_test.sh`, `rgaa.yaml`, `init-accessibility.sql`) avec engine CICD v5.1.0, verrou de run et readiness bornées. (MAIR-316, [#218](https://github.com/mairie360/Calendars_Web_Service/pull/218) ; MAIR-768, [#305](https://github.com/mairie360/Calendars_Web_Service/pull/305))
+- Workflow `gdpr-pr.yml` de contrôle RGPD sur les PR. (MAIR-295, [#223](https://github.com/mairie360/Calendars_Web_Service/pull/223))
+- Dépendances : `follow-redirects` 1.16.2 (GHSA-mrwp-f3q8-3g9p) ([#307](https://github.com/mairie360/Calendars_Web_Service/pull/307)), CICD v4.4.3 à v4.12.0 puis v5.1.0 ([#301](https://github.com/mairie360/Calendars_Web_Service/pull/301), [#296](https://github.com/mairie360/Calendars_Web_Service/pull/296), [#218](https://github.com/mairie360/Calendars_Web_Service/pull/218)), `jsdom` et `playwright-core` ([#297](https://github.com/mairie360/Calendars_Web_Service/pull/297)), Node 24.22.1 et Next.js 16.4.2 ([#298](https://github.com/mairie360/Calendars_Web_Service/pull/298)).
+- Zod 3 vendorisé avec backport de validation bornée des collections, et provenance des bundles en CI ([#299](https://github.com/mairie360/Calendars_Web_Service/pull/299)).
 
 ## Différence staging → prod (en staging, pas encore en prod)
 
@@ -52,6 +42,7 @@ _Rien._
 <!-- release-journal-history:start -->
 | Date | Environnement | Version | Commit | Run |
 | --- | --- | --- | --- | --- |
+| 2026-11-02 19:55 UTC | dev | — | `e928c4f` | [run](https://github.com/mairie360/Calendars_Web_Service/actions/runs/41513000368) |
 | 2026-11-02 18:21 UTC | dev | — | `c82f8ab` | [run](https://github.com/mairie360/Calendars_Web_Service/actions/runs/41470499855) |
 | 2026-10-23 13:29 UTC | dev | — | `bbd2aa8` | [run](https://github.com/mairie360/Calendars_Web_Service/actions/runs/39960628876) |
 | 2026-10-21 18:00 UTC | dev | — | `55a2624` | [run](https://github.com/mairie360/Calendars_Web_Service/actions/runs/39647828387) |
