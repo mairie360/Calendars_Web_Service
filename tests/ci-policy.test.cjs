@@ -82,7 +82,7 @@ test('consumer CI retains blocking security defaults and explicit named secrets'
 
 const workflow = () => yaml.load(read('.github/workflows/cicd.yml'));
 const checkout = 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1';
-const scannerCommit = 'e314bc0c41ed45157cdd928c25358fee82b0c4f6';
+const scannerCommit = '9804aed718d436254e96a5d51cc23e8dd9dec1ca';
 
 test('the exact required legacy status executes both real blocking scanners without extra access', () => {
   assert.deepEqual(workflow().jobs.required_security_scan, {
