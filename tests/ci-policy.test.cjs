@@ -184,7 +184,7 @@ test('MAIR-316: promote-prod passes the secrets of the RGAA AI pre-audit by name
   }
 });
 
-test('MAIR-316: a local engine copy is fetched again when the cicd_version pin changes', () => {
+test('MAIR-316 / MAIR-768: a local engine copy is fetched again when the cicd_version pin changes', () => {
   const { mkdtempSync, mkdirSync, writeFileSync, readFileSync: readAbs, existsSync, rmSync } = require('node:fs');
   const { execFileSync } = require('node:child_process');
   const { tmpdir } = require('node:os');
@@ -235,4 +235,11 @@ test('MAIR-316: the RGAA stack has its own project name and bounded readiness lo
   for (const [, loop] of compose.matchAll(/sh -c '(i=0; until curl[\s\S]*?)'\n/g)) {
     assert.match(loop, /if \[ \$\$i -ge \d+ \]; then echo "[^"]+"; exit 1; fi;/);
   }
+});
+
+test('MAIR-768: each accessibility run starts from an empty report', () => {
+  const shell = read('accessibility_test.sh');
+  const clear = shell.indexOf('rm -rf rgaa-report\n');
+  assert.ok(clear >= 0, 'accessibility_test.sh clears rgaa-report/');
+  assert.ok(clear < shell.indexOf('docker compose -f "$COMPOSE_FILE" up'), 'before the stack starts');
 });
