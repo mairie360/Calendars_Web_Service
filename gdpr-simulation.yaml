@@ -1,0 +1,32 @@
+# GDPR usage simulation of the calendars front (MAIR-497), played by mairie360/CICD
+# tests/gdpr/simulation on the test stack only (docker-compose-gdpr-simulation.yml,
+# gdpr_simulation_test.sh; format: CICD README, "GDPR simulation").
+#
+# Fictitious personas with unique values go through gdpr-journey.yaml (BFF_Calendar's journey) on the
+# front's origin: their names, e-mails and phone numbers are written in events, query strings and
+# deliberate errors. Their event is then opened in the browser (month, week and day views of its
+# date, the event dialog): the browser console and storage, the requests and cookies of the pages,
+# the logs of every container, the Redis keys and the database after the purge are then checked and
+# reviewed (CICD analyze.mjs). The erased persona's event is deleted after its pages.
+version: 1
+journey: gdpr-journey.yaml
+personas: 4
+erased: 1
+erase:
+  - name: delete the persona's event
+    request: {method: DELETE, path: "/calendar/events/{{event_id}}", headers: &session {Cookie: "accessToken={{env.ADMIN_JWT}}", Origin: "http://calendar-front:5002"}}
+    expect: [204]
+  - name: the persona's event is gone
+    request: {method: GET, path: "/calendar/events/{{event_id}}", headers: *session}
+    expect: [404]
+browser:
+  target: http://calendar-front:5002
+  # Session of the journey: the front relays it to its BFF as a Bearer token.
+  cookies: {accessToken: "{{env.ADMIN_JWT}}"}
+  pages:
+    - name: month of the persona's event
+      path: "/?view=month&date=2030-06-15"
+    - name: week of the persona's event
+      path: "/?view=week&date=2030-06-15"
+    - name: the persona's event
+      path: "/?view=day&date=2030-06-15&event={{event_id}}"
