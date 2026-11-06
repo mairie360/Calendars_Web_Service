@@ -76,7 +76,7 @@ services:
       - backend
 
   seeder:
-    image: postgres:18-alpine
+    image: postgres:18-alpine@sha256:123b17998ccaf47e53b502e8c6a1e79afd8f579c6f3eec83c563da026f957395
     container_name: calendar-front-sec-seeder
     depends_on:
       liquibase:
@@ -91,7 +91,7 @@ services:
       - backend
 
   redis:
-    image: redis:8.4.0-bookworm
+    image: redis:8.4.0-bookworm@sha256:c22af04bb576503bf16b3e34a1fd2fd82de0f765afd866d2e380145e0af30d78
     container_name: calendar-front-sec-redis
     expose:
       - "6379"
@@ -134,7 +134,7 @@ services:
     # sondée depuis le conteneur core-api-ready ci-dessous.
 
   core-api-ready:
-    image: curlimages/curl:latest
+    image: curlimages/curl:latest@sha256:3fb7e13e5d179a845c97d78204f3f1064d1907037f26a3ebf91710571151fd93
     container_name: calendar-front-sec-core-api-ready
     depends_on:
       core-api:
@@ -172,7 +172,7 @@ services:
     # sondée depuis le conteneur calendar-api-ready ci-dessous.
 
   calendar-api-ready:
-    image: curlimages/curl:latest
+    image: curlimages/curl:latest@sha256:3fb7e13e5d179a845c97d78204f3f1064d1907037f26a3ebf91710571151fd93
     container_name: calendar-front-sec-calendar-api-ready
     depends_on:
       calendar-api:
@@ -207,7 +207,7 @@ services:
       - backend
 
   bff-user-ready:
-    image: curlimages/curl:latest
+    image: curlimages/curl:latest@sha256:3fb7e13e5d179a845c97d78204f3f1064d1907037f26a3ebf91710571151fd93
     container_name: calendar-front-sec-bff-user-ready
     depends_on:
       bff-user:
@@ -249,7 +249,7 @@ services:
       - backend
 
   bff-calendar-ready:
-    image: curlimages/curl:latest
+    image: curlimages/curl:latest@sha256:3fb7e13e5d179a845c97d78204f3f1064d1907037f26a3ebf91710571151fd93
     container_name: calendar-front-sec-bff-calendar-ready
     depends_on:
       bff-calendar:
@@ -296,7 +296,7 @@ services:
       start_period: 30s
 
   security-scan:
-    image: zaproxy/zap-stable
+    image: zaproxy/zap-stable@sha256:9624669db72f54d86c4b46a7064518bd9bf79d8c61a4c31befa9923489f328af
     container_name: calendar-front-sec-zap
     depends_on:
       calendar-front:
