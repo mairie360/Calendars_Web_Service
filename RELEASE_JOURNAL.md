@@ -1,63 +1,68 @@
 # Journal des releases — Calendars_Web_Service
 
-<!-- release-journal-state {"dev": "0258cdd04ecdab485f8caaf405c38dbb90ea0057", "prod": "c4beb3aaa105badfa3bed14d91c40d9a5de34b2b", "prod_tag": "v0.5.0", "staging": "c4beb3aaa105badfa3bed14d91c40d9a5de34b2b", "updated": {"dev": "2026-11-04 21:29 UTC", "prod": "2026-10-21 11:08 UTC", "staging": "2026-10-21 11:05 UTC"}} -->
+<!-- release-journal-state {"dev": "91a5fa6a17a39d9e19db30bc9b20f9fddd01275a", "prod": "c4beb3aaa105badfa3bed14d91c40d9a5de34b2b", "prod_tag": "v0.5.0", "staging": "c4beb3aaa105badfa3bed14d91c40d9a5de34b2b", "updated": {"dev": "2026-11-12 17:06 UTC", "prod": "2026-10-21 11:08 UTC", "staging": "2026-10-21 11:05 UTC"}} -->
 > Tenu à jour par la CI (`mairie360/CICD`, action `release/release-journal`) à chaque passage en dev, staging et prod. Ne pas modifier à la main : le fichier est réécrit au passage suivant.
 
 | Environnement | Version | Commit | Mis à jour |
 | --- | --- | --- | --- |
 | prod | v0.5.0 | `c4beb3a` | 2026-10-21 11:08 UTC |
 | staging | — | `c4beb3a` | 2026-10-21 11:05 UTC |
-| dev | — | `0258cdd` | 2026-11-04 21:29 UTC |
+| dev | — | `91a5fa6` | 2026-11-12 17:06 UTC |
 
 ## Ajouté sur main depuis la dernière release prod (v0.5.0)
 
-#### Changements de comportement
-- Les dialogues d'événement (création et détail) utilisent désormais le `Modal` de la lib : focus piégé, fermeture par Escape, titre et description. Depuis l'éditeur de détail, Escape, le fond ou la fermeture ferment toute la fenêtre ; « Annuler » revient au détail. (MAIR-608, [#287](https://github.com/mairie360/Calendars_Web_Service/pull/287))
-
-#### Corrections
-- Avant : le `postinstall` interrogeait le service d'avis npm, donc `npm ci` (local, CI, build Docker) échouait hors ligne ou pendant une panne. Maintenant : `postinstall`, `prebuild` et `pretest` ne vérifient que l'intégrité locale ; la vérification amont passe par `npm run audit:upstream`, lancée chaque jour par `upstream-advisories.yml`. (MAIR-744, [#310](https://github.com/mairie360/Calendars_Web_Service/pull/310))
-
-#### Technique
-- Composants calendrier déplacés de la lib vers `src/components/CalendarPage/`, shell pris dans la lib, `@mairie360/lib-components` passé de 0.10.2 à 1.0.3 (MAIR-607, MAIR-608, [#287](https://github.com/mairie360/Calendars_Web_Service/pull/287)).
-- Validation Zod : backport des collections bornées dans `vendor/zod`, locks réparés, gardes d'intégrité (MAIR-? , [#299](https://github.com/mairie360/Calendars_Web_Service/pull/299)).
-- Node.js 24.22.1 dans les Dockerfiles et la CI, Next.js et eslint-config-next en 16.4.2 (MAIR-? , [#298](https://github.com/mairie360/Calendars_Web_Service/pull/298)).
-- `follow-redirects` 1.16.2 dans le lock (GHSA-mrwp-f3q8-3g9p, [#307](https://github.com/mairie360/Calendars_Web_Service/pull/307)).
-- Mises à jour Renovate : CICD v4.5.0, puis v4.12.0, typings et tests (jsdom 30.1.3, playwright-core 1.64.1, vitest) ([#296](https://github.com/mairie360/Calendars_Web_Service/pull/296), [#297](https://github.com/mairie360/Calendars_Web_Service/pull/297), [#301](https://github.com/mairie360/Calendars_Web_Service/pull/301)).
-- Pins CICD v5.2.2 à v5.5.0 dans les workflows, garde RGPD de la PR (`gdpr-pr.yml`, checklist « Données personnelles ») (MAIR-295, MAIR-771, [#223](https://github.com/mairie360/Calendars_Web_Service/pull/223), [#311](https://github.com/mairie360/Calendars_Web_Service/pull/311)).
-- Stack RGAA (`accessibility_test.sh`, états de `rgaa.yaml`, verrou, rapport vidé à chaque run) (MAIR-316, MAIR-768, [#218](https://github.com/mairie360/Calendars_Web_Service/pull/218), [#305](https://github.com/mairie360/Calendars_Web_Service/pull/305)).
-- Simulation RGPD d'usage avant prod (`gdpr_simulation_test.sh`, `docker-compose-gdpr-simulation.yml`) (MAIR-497, [#313](https://github.com/mairie360/Calendars_Web_Service/pull/313), [#314](https://github.com/mairie360/Calendars_Web_Service/pull/314)).
-- Politique Gitleaks du front (`.gitleaks.toml`, retrait de `.gitleaksignore`) (MAIR-743, [#316](https://github.com/mairie360/Calendars_Web_Service/pull/316)).
-- Tests E2E Playwright des parcours (`e2e/`, `e2e_test.sh`, `docker-compose-e2e.yml`) (MAIR-603, [#295](https://github.com/mairie360/Calendars_Web_Service/pull/295)).
+- fix: MAIR-816 Release dev: align internal versions and deploy ([#320](https://github.com/mairie360/Calendars_Web_Service/pull/320))
+- chore(deps): update dependency mairie360/cicd to v5.6.0 (#318) ([#318](https://github.com/mairie360/Calendars_Web_Service/pull/318))
+- feat: MAIR-603 E2E - Parcours utilisateurs Playwright des fronts (#295) ([#295](https://github.com/mairie360/Calendars_Web_Service/pull/295))
+- fix: MAIR-743 [Audit 30/10] Login, Calendars, Elearning, Projects: branch Gitleaks fingerprints invalid after squash, main likely red (N1) (#316) ([#316](https://github.com/mairie360/Calendars_Web_Service/pull/316))
+- fix: MAIR-497 GDPR - Usage simulation and AI review of logs and database before prod ([#314](https://github.com/mairie360/Calendars_Web_Service/pull/314))
+- feat: MAIR-497 RGPD - Simulation d'usage et revue IA des logs et de la base avant la prod ([#313](https://github.com/mairie360/Calendars_Web_Service/pull/313))
+- ci: MAIR-771 APIs, BFFs, Database : monter CICD en v5.2.2 pour activer les contrôles RGPD (#311) ([#311](https://github.com/mairie360/Calendars_Web_Service/pull/311))
+- fix: MAIR-744 [Audit 30/10] Login, Calendars, Elearning, Projects : le postinstall interroge le service d'avis npm, npm ci dépend du réseau (N2) (#310) ([#310](https://github.com/mairie360/Calendars_Web_Service/pull/310))
+- fix(deps): bump follow-redirects to 1.16.2 (GHSA-mrwp-f3q8-3g9p) ([#307](https://github.com/mairie360/Calendars_Web_Service/pull/307))
+- fix: MAIR-768 RGAA - Aligner les stacks d'accessibilité des fronts mergés en premier ([#305](https://github.com/mairie360/Calendars_Web_Service/pull/305))
+- feat: MAIR-316 RGAA - Périmètre et états des pages par front (#218) ([#218](https://github.com/mairie360/Calendars_Web_Service/pull/218))
+- ci: MAIR-295 Ajouter une checklist RGPD aux PR et des rappels d'échéances automatiques (#223) ([#223](https://github.com/mairie360/Calendars_Web_Service/pull/223))
+- chore(deps): update dependency mairie360/cicd to v4.12.0 (#301) ([#301](https://github.com/mairie360/Calendars_Web_Service/pull/301))
+- fix(security): repair dependency locks and bound Zod validation (#299) ([#299](https://github.com/mairie360/Calendars_Web_Service/pull/299))
+- chore(deps): update dependency mairie360/cicd to v4.5.0 (#296) ([#296](https://github.com/mairie360/Calendars_Web_Service/pull/296))
+- chore(deps): update typescript dependencies (#297) ([#297](https://github.com/mairie360/Calendars_Web_Service/pull/297))
+- fix(security): patch Node.js and Next.js (#298) ([#298](https://github.com/mairie360/Calendars_Web_Service/pull/298))
+- feat!: MAIR-608 Lib UI - Normaliser la charte, les tailles et les composants partagés des fronts ([#287](https://github.com/mairie360/Calendars_Web_Service/pull/287))
 
 ## Différence dev → staging (en dev, pas encore en staging)
 
-#### Changements de comportement
-- Les dialogues d'événement (création et détail) utilisent désormais le `Modal` de la lib : focus piégé, fermeture par Escape, titre et description. Depuis l'éditeur de détail, Escape, le fond ou la fermeture ferment toute la fenêtre ; « Annuler » revient au détail. (MAIR-608, [#287](https://github.com/mairie360/Calendars_Web_Service/pull/287))
-
-#### Corrections
-- Avant : le `postinstall` interrogeait le service d'avis npm, donc `npm ci` (local, CI, build Docker) échouait hors ligne ou pendant une panne. Maintenant : `postinstall`, `prebuild` et `pretest` ne vérifient que l'intégrité locale ; la vérification amont passe par `npm run audit:upstream`, lancée chaque jour par `upstream-advisories.yml`. (MAIR-744, [#310](https://github.com/mairie360/Calendars_Web_Service/pull/310))
-
-#### Technique
-- Composants calendrier déplacés de la lib vers `src/components/CalendarPage/`, shell pris dans la lib, `@mairie360/lib-components` passé de 0.10.2 à 1.0.3 (MAIR-607, MAIR-608, [#287](https://github.com/mairie360/Calendars_Web_Service/pull/287)).
-- Validation Zod : backport des collections bornées dans `vendor/zod`, locks réparés, gardes d'intégrité (MAIR-? , [#299](https://github.com/mairie360/Calendars_Web_Service/pull/299)).
-- Node.js 24.22.1 dans les Dockerfiles et la CI, Next.js et eslint-config-next en 16.4.2 (MAIR-? , [#298](https://github.com/mairie360/Calendars_Web_Service/pull/298)).
-- `follow-redirects` 1.16.2 dans le lock (GHSA-mrwp-f3q8-3g9p, [#307](https://github.com/mairie360/Calendars_Web_Service/pull/307)).
-- Mises à jour Renovate : CICD v4.5.0, puis v4.12.0, typings et tests (jsdom 30.1.3, playwright-core 1.64.1, vitest) ([#296](https://github.com/mairie360/Calendars_Web_Service/pull/296), [#297](https://github.com/mairie360/Calendars_Web_Service/pull/297), [#301](https://github.com/mairie360/Calendars_Web_Service/pull/301)).
-- Pins CICD v5.2.2 à v5.5.0 dans les workflows, garde RGPD de la PR (`gdpr-pr.yml`, checklist « Données personnelles ») (MAIR-295, MAIR-771, [#223](https://github.com/mairie360/Calendars_Web_Service/pull/223), [#311](https://github.com/mairie360/Calendars_Web_Service/pull/311)).
-- Stack RGAA (`accessibility_test.sh`, états de `rgaa.yaml`, verrou, rapport vidé à chaque run) (MAIR-316, MAIR-768, [#218](https://github.com/mairie360/Calendars_Web_Service/pull/218), [#305](https://github.com/mairie360/Calendars_Web_Service/pull/305)).
-- Simulation RGPD d'usage avant prod (`gdpr_simulation_test.sh`, `docker-compose-gdpr-simulation.yml`) (MAIR-497, [#313](https://github.com/mairie360/Calendars_Web_Service/pull/313), [#314](https://github.com/mairie360/Calendars_Web_Service/pull/314)).
-- Politique Gitleaks du front (`.gitleaks.toml`, retrait de `.gitleaksignore`) (MAIR-743, [#316](https://github.com/mairie360/Calendars_Web_Service/pull/316)).
-- Tests E2E Playwright des parcours (`e2e/`, `e2e_test.sh`, `docker-compose-e2e.yml`) (MAIR-603, [#295](https://github.com/mairie360/Calendars_Web_Service/pull/295)).
+- fix: MAIR-816 Release dev: align internal versions and deploy ([#320](https://github.com/mairie360/Calendars_Web_Service/pull/320))
+- chore(deps): update dependency mairie360/cicd to v5.6.0 (#318) ([#318](https://github.com/mairie360/Calendars_Web_Service/pull/318))
+- feat: MAIR-603 E2E - Parcours utilisateurs Playwright des fronts (#295) ([#295](https://github.com/mairie360/Calendars_Web_Service/pull/295))
+- fix: MAIR-743 [Audit 30/10] Login, Calendars, Elearning, Projects: branch Gitleaks fingerprints invalid after squash, main likely red (N1) (#316) ([#316](https://github.com/mairie360/Calendars_Web_Service/pull/316))
+- fix: MAIR-497 GDPR - Usage simulation and AI review of logs and database before prod ([#314](https://github.com/mairie360/Calendars_Web_Service/pull/314))
+- feat: MAIR-497 RGPD - Simulation d'usage et revue IA des logs et de la base avant la prod ([#313](https://github.com/mairie360/Calendars_Web_Service/pull/313))
+- ci: MAIR-771 APIs, BFFs, Database : monter CICD en v5.2.2 pour activer les contrôles RGPD (#311) ([#311](https://github.com/mairie360/Calendars_Web_Service/pull/311))
+- fix: MAIR-744 [Audit 30/10] Login, Calendars, Elearning, Projects : le postinstall interroge le service d'avis npm, npm ci dépend du réseau (N2) (#310) ([#310](https://github.com/mairie360/Calendars_Web_Service/pull/310))
+- fix(deps): bump follow-redirects to 1.16.2 (GHSA-mrwp-f3q8-3g9p) ([#307](https://github.com/mairie360/Calendars_Web_Service/pull/307))
+- fix: MAIR-768 RGAA - Aligner les stacks d'accessibilité des fronts mergés en premier ([#305](https://github.com/mairie360/Calendars_Web_Service/pull/305))
+- feat: MAIR-316 RGAA - Périmètre et états des pages par front (#218) ([#218](https://github.com/mairie360/Calendars_Web_Service/pull/218))
+- ci: MAIR-295 Ajouter une checklist RGPD aux PR et des rappels d'échéances automatiques (#223) ([#223](https://github.com/mairie360/Calendars_Web_Service/pull/223))
+- chore(deps): update dependency mairie360/cicd to v4.12.0 (#301) ([#301](https://github.com/mairie360/Calendars_Web_Service/pull/301))
+- fix(security): repair dependency locks and bound Zod validation (#299) ([#299](https://github.com/mairie360/Calendars_Web_Service/pull/299))
+- chore(deps): update dependency mairie360/cicd to v4.5.0 (#296) ([#296](https://github.com/mairie360/Calendars_Web_Service/pull/296))
+- chore(deps): update typescript dependencies (#297) ([#297](https://github.com/mairie360/Calendars_Web_Service/pull/297))
+- fix(security): patch Node.js and Next.js (#298) ([#298](https://github.com/mairie360/Calendars_Web_Service/pull/298))
+- feat!: MAIR-608 Lib UI - Normaliser la charte, les tailles et les composants partagés des fronts ([#287](https://github.com/mairie360/Calendars_Web_Service/pull/287))
 
 ## Différence staging → prod (en staging, pas encore en prod)
 
 _Rien._
+
+> Résumé Claude indisponible pour ce passage : listes brutes des commits.
 
 ## Historique des passages
 
 <!-- release-journal-history:start -->
 | Date | Environnement | Version | Commit | Run |
 | --- | --- | --- | --- | --- |
+| 2026-11-12 17:06 UTC | dev | — | `91a5fa6` | [run](https://github.com/mairie360/Calendars_Web_Service/actions/runs/43264169756) |
 | 2026-11-04 21:29 UTC | dev | — | `0258cdd` | [run](https://github.com/mairie360/Calendars_Web_Service/actions/runs/41915252162) |
 | 2026-11-04 18:27 UTC | dev | — | `d6cadfa` | [run](https://github.com/mairie360/Calendars_Web_Service/actions/runs/41884178574) |
 | 2026-11-04 18:21 UTC | dev | — | `94812cf` | [run](https://github.com/mairie360/Calendars_Web_Service/actions/runs/41883110375) |
