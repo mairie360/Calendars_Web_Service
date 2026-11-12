@@ -1,12 +1,12 @@
 # Journal des releases — Calendars_Web_Service
 
-<!-- release-journal-state {"dev": "91a5fa6a17a39d9e19db30bc9b20f9fddd01275a", "prod": "c4beb3aaa105badfa3bed14d91c40d9a5de34b2b", "prod_tag": "v0.5.0", "staging": "c4beb3aaa105badfa3bed14d91c40d9a5de34b2b", "updated": {"dev": "2026-11-12 17:06 UTC", "prod": "2026-10-21 11:08 UTC", "staging": "2026-10-21 11:05 UTC"}} -->
+<!-- release-journal-state {"dev": "91a5fa6a17a39d9e19db30bc9b20f9fddd01275a", "prod": "c4beb3aaa105badfa3bed14d91c40d9a5de34b2b", "prod_tag": "v0.5.0", "staging": "91a5fa6a17a39d9e19db30bc9b20f9fddd01275a", "updated": {"dev": "2026-11-12 17:06 UTC", "prod": "2026-10-21 11:08 UTC", "staging": "2026-11-12 20:50 UTC"}} -->
 > Tenu à jour par la CI (`mairie360/CICD`, action `release/release-journal`) à chaque passage en dev, staging et prod. Ne pas modifier à la main : le fichier est réécrit au passage suivant.
 
 | Environnement | Version | Commit | Mis à jour |
 | --- | --- | --- | --- |
 | prod | v0.5.0 | `c4beb3a` | 2026-10-21 11:08 UTC |
-| staging | — | `c4beb3a` | 2026-10-21 11:05 UTC |
+| staging | — | `91a5fa6` | 2026-11-12 20:50 UTC |
 | dev | — | `91a5fa6` | 2026-11-12 17:06 UTC |
 
 ## Ajouté sur main depuis la dernière release prod (v0.5.0)
@@ -32,6 +32,10 @@
 
 ## Différence dev → staging (en dev, pas encore en staging)
 
+_Rien._
+
+## Différence staging → prod (en staging, pas encore en prod)
+
 - fix: MAIR-816 Release dev: align internal versions and deploy ([#320](https://github.com/mairie360/Calendars_Web_Service/pull/320))
 - chore(deps): update dependency mairie360/cicd to v5.6.0 (#318) ([#318](https://github.com/mairie360/Calendars_Web_Service/pull/318))
 - feat: MAIR-603 E2E - Parcours utilisateurs Playwright des fronts (#295) ([#295](https://github.com/mairie360/Calendars_Web_Service/pull/295))
@@ -51,10 +55,6 @@
 - fix(security): patch Node.js and Next.js (#298) ([#298](https://github.com/mairie360/Calendars_Web_Service/pull/298))
 - feat!: MAIR-608 Lib UI - Normaliser la charte, les tailles et les composants partagés des fronts ([#287](https://github.com/mairie360/Calendars_Web_Service/pull/287))
 
-## Différence staging → prod (en staging, pas encore en prod)
-
-_Rien._
-
 > Résumé Claude indisponible pour ce passage : listes brutes des commits.
 
 ## Historique des passages
@@ -62,6 +62,7 @@ _Rien._
 <!-- release-journal-history:start -->
 | Date | Environnement | Version | Commit | Run |
 | --- | --- | --- | --- | --- |
+| 2026-11-12 20:50 UTC | staging | — | `91a5fa6` | [run](https://github.com/mairie360/Calendars_Web_Service/actions/runs/43285908015) |
 | 2026-11-12 17:06 UTC | dev | — | `91a5fa6` | [run](https://github.com/mairie360/Calendars_Web_Service/actions/runs/43264169756) |
 | 2026-11-04 21:29 UTC | dev | — | `0258cdd` | [run](https://github.com/mairie360/Calendars_Web_Service/actions/runs/41915252162) |
 | 2026-11-04 18:27 UTC | dev | — | `d6cadfa` | [run](https://github.com/mairie360/Calendars_Web_Service/actions/runs/41884178574) |
