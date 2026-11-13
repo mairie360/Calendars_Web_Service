@@ -175,7 +175,9 @@ test('MAIR-1003: the RGAA seed puts user 2 back on the User role so event 901 wa
   const strip = (sql) => sql.replace(/--[^\n]*/g, '');
   assert.match(strip(read('init-test.sql')), /UPDATE user_roles SET role_id = \(SELECT id FROM roles WHERE name = 'Admin'\) WHERE user_id = 2;/);
   assert.match(strip(read('init-accessibility.sql')), /UPDATE user_roles SET role_id = \(SELECT id FROM roles WHERE name = 'User'\) WHERE user_id = 2;/);
-  assert.match(read('rgaa.yaml'), /agent:\s*\n\s*id: 2\s*\n\s*role: user/);
+  const { agent } = require('js-yaml').load(read('rgaa.yaml')).users;
+  assert.equal(agent.id, 2);
+  assert.equal(agent.role, 'user');
 });
 
 test('MAIR-316: accessibility_test.sh fetches the RGAA engine at a pinned commit SHA, not only a tag', () => {
