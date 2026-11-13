@@ -1,31 +1,34 @@
 # Journal des releases — Calendars_Web_Service
 
-<!-- release-journal-state {"dev": "de2f0c4c2b3a97257c53cb334b8535b261e0e334", "prod": "de2f0c4c2b3a97257c53cb334b8535b261e0e334", "prod_tag": "v0.6.0", "staging": "de2f0c4c2b3a97257c53cb334b8535b261e0e334", "updated": {"dev": "2026-11-13 02:08 UTC", "prod": "2026-11-13 02:36 UTC", "staging": "2026-11-13 02:13 UTC"}} -->
+<!-- release-journal-state {"dev": "cd3f00429c82065d9bc20a36734a7f29a6655343", "prod": "de2f0c4c2b3a97257c53cb334b8535b261e0e334", "prod_tag": "v0.6.0", "staging": "de2f0c4c2b3a97257c53cb334b8535b261e0e334", "updated": {"dev": "2026-11-13 09:13 UTC", "prod": "2026-11-13 02:36 UTC", "staging": "2026-11-13 02:13 UTC"}} -->
 > Tenu à jour par la CI (`mairie360/CICD`, action `release/release-journal`) à chaque passage en dev, staging et prod. Ne pas modifier à la main : le fichier est réécrit au passage suivant.
 
 | Environnement | Version | Commit | Mis à jour |
 | --- | --- | --- | --- |
 | prod | v0.6.0 | `de2f0c4` | 2026-11-13 02:36 UTC |
 | staging | — | `de2f0c4` | 2026-11-13 02:13 UTC |
-| dev | — | `de2f0c4` | 2026-11-13 02:08 UTC |
+| dev | — | `cd3f004` | 2026-11-13 09:13 UTC |
 
 ## Ajouté sur main depuis la dernière release prod (v0.6.0)
 
-_Rien._
+- chore(deps): update ghcr.io/mairie360/bff-calendar docker tag to v1.2.0 (#324) ([#324](https://github.com/mairie360/Calendars_Web_Service/pull/324))
 
 ## Différence dev → staging (en dev, pas encore en staging)
 
-_Rien._
+- chore(deps): update ghcr.io/mairie360/bff-calendar docker tag to v1.2.0 (#324) ([#324](https://github.com/mairie360/Calendars_Web_Service/pull/324))
 
 ## Différence staging → prod (en staging, pas encore en prod)
 
 _Rien._
+
+> Résumé Claude indisponible pour ce passage : listes brutes des commits.
 
 ## Historique des passages
 
 <!-- release-journal-history:start -->
 | Date | Environnement | Version | Commit | Run |
 | --- | --- | --- | --- | --- |
+| 2026-11-13 09:13 UTC | dev | — | `cd3f004` | [run](https://github.com/mairie360/Calendars_Web_Service/actions/runs/43398461825) |
 | 2026-11-13 02:36 UTC | prod | v0.6.0 | `de2f0c4` | [run](https://github.com/mairie360/Calendars_Web_Service/actions/runs/43350743085) |
 | 2026-11-13 02:13 UTC | staging | — | `de2f0c4` | [run](https://github.com/mairie360/Calendars_Web_Service/actions/runs/43350091915) |
 | 2026-11-13 02:08 UTC | dev | — | `de2f0c4` | [run](https://github.com/mairie360/Calendars_Web_Service/actions/runs/43349190262) |
