@@ -17,6 +17,10 @@ ON CONFLICT DO NOTHING;
 INSERT INTO user_roles (user_id, role_id)
 SELECT 4, r.id FROM roles r WHERE r.name = 'Responsable'
 ON CONFLICT DO NOTHING;
+-- init-test.sql gives user 2 the Admin role for the E2E journeys (MAIR-603). An event created by an
+-- Admin needs no approval, so the Responsable could not validate event 901 (state event-to-validate,
+-- MAIR-1003): the RGAA states run user 2 as a plain User, as rgaa.yaml declares.
+UPDATE user_roles SET role_id = (SELECT id FROM roles WHERE name = 'User') WHERE user_id = 2;
 SELECT setval(pg_get_serial_sequence('users', 'id'), GREATEST((SELECT max(id) FROM users), 1000));
 
 -- One service shared by users 2 and 4: an event of user 2 with user 4 assigned needs his approval.

@@ -167,6 +167,17 @@ test('MAIR-316: the RGAA seed users have no plaintext password (chk_users_passwo
   }
 });
 
+test('MAIR-1003: the RGAA seed puts user 2 back on the User role so event 901 waits for approval', () => {
+  // init-test.sql gives user 2 the Admin role for the E2E journeys (MAIR-603). An event created by
+  // an Admin needs no approval: Calendar API then answers can_validate=false to the Responsable and
+  // the state event-to-validate never shows "Valider". The accessibility seed, loaded after it,
+  // must reset user 2 to User, as rgaa.yaml declares.
+  const strip = (sql) => sql.replace(/--[^\n]*/g, '');
+  assert.match(strip(read('init-test.sql')), /UPDATE user_roles SET role_id = \(SELECT id FROM roles WHERE name = 'Admin'\) WHERE user_id = 2;/);
+  assert.match(strip(read('init-accessibility.sql')), /UPDATE user_roles SET role_id = \(SELECT id FROM roles WHERE name = 'User'\) WHERE user_id = 2;/);
+  assert.match(read('rgaa.yaml'), /agent:\s*\n\s*id: 2\s*\n\s*role: user/);
+});
+
 test('MAIR-316: accessibility_test.sh fetches the RGAA engine at a pinned commit SHA, not only a tag', () => {
   const shell = read('accessibility_test.sh');
   // `git clone --branch` refuses a SHA, and cicd.yml pins mairie360/CICD by SHA.
