@@ -1,22 +1,24 @@
 # Journal des releases — Calendars_Web_Service
 
-<!-- release-journal-state {"dev": "0459bcd73530d756391a32584368ba9e041d713a", "prod": "de2f0c4c2b3a97257c53cb334b8535b261e0e334", "prod_tag": "v0.6.0", "staging": "de2f0c4c2b3a97257c53cb334b8535b261e0e334", "updated": {"dev": "2026-11-14 06:38 UTC", "prod": "2026-11-13 02:36 UTC", "staging": "2026-11-13 02:13 UTC"}} -->
+<!-- release-journal-state {"dev": "3be41db571c548954e5d46f6e58b1839fdc7652d", "prod": "de2f0c4c2b3a97257c53cb334b8535b261e0e334", "prod_tag": "v0.6.0", "staging": "de2f0c4c2b3a97257c53cb334b8535b261e0e334", "updated": {"dev": "2026-11-14 15:47 UTC", "prod": "2026-11-13 02:36 UTC", "staging": "2026-11-13 02:13 UTC"}} -->
 > Tenu à jour par la CI (`mairie360/CICD`, action `release/release-journal`) à chaque passage en dev, staging et prod. Ne pas modifier à la main : le fichier est réécrit au passage suivant.
 
 | Environnement | Version | Commit | Mis à jour |
 | --- | --- | --- | --- |
 | prod | v0.6.0 | `de2f0c4` | 2026-11-13 02:36 UTC |
 | staging | — | `de2f0c4` | 2026-11-13 02:13 UTC |
-| dev | — | `0459bcd` | 2026-11-14 06:38 UTC |
+| dev | — | `3be41db` | 2026-11-14 15:47 UTC |
 
 ## Ajouté sur main depuis la dernière release prod (v0.6.0)
 
+- chore(deps): update ghcr.io/mairie360/core-api docker tag to v2.3.0 (#327) ([#327](https://github.com/mairie360/Calendars_Web_Service/pull/327))
 - chore(deps): update ghcr.io/mairie360/calendar-api docker tag to v1.3.0 (#326) ([#326](https://github.com/mairie360/Calendars_Web_Service/pull/326))
 - chore(deps): update ghcr.io/mairie360/bff-user docker tag to v1.2.0 (#325) ([#325](https://github.com/mairie360/Calendars_Web_Service/pull/325))
 - chore(deps): update ghcr.io/mairie360/bff-calendar docker tag to v1.2.0 (#324) ([#324](https://github.com/mairie360/Calendars_Web_Service/pull/324))
 
 ## Différence dev → staging (en dev, pas encore en staging)
 
+- chore(deps): update ghcr.io/mairie360/core-api docker tag to v2.3.0 (#327) ([#327](https://github.com/mairie360/Calendars_Web_Service/pull/327))
 - chore(deps): update ghcr.io/mairie360/calendar-api docker tag to v1.3.0 (#326) ([#326](https://github.com/mairie360/Calendars_Web_Service/pull/326))
 - chore(deps): update ghcr.io/mairie360/bff-user docker tag to v1.2.0 (#325) ([#325](https://github.com/mairie360/Calendars_Web_Service/pull/325))
 - chore(deps): update ghcr.io/mairie360/bff-calendar docker tag to v1.2.0 (#324) ([#324](https://github.com/mairie360/Calendars_Web_Service/pull/324))
@@ -32,6 +34,7 @@ _Rien._
 <!-- release-journal-history:start -->
 | Date | Environnement | Version | Commit | Run |
 | --- | --- | --- | --- | --- |
+| 2026-11-14 15:47 UTC | dev | — | `3be41db` | [run](https://github.com/mairie360/Calendars_Web_Service/actions/runs/43611411341) |
 | 2026-11-14 06:38 UTC | dev | — | `0459bcd` | [run](https://github.com/mairie360/Calendars_Web_Service/actions/runs/43566665933) |
 | 2026-11-13 22:39 UTC | dev | — | `95f973d` | [run](https://github.com/mairie360/Calendars_Web_Service/actions/runs/43520027346) |
 | 2026-11-13 09:13 UTC | dev | — | `cd3f004` | [run](https://github.com/mairie360/Calendars_Web_Service/actions/runs/43398461825) |
