@@ -45,6 +45,7 @@ name: calendars-e2e
 services:
   postgres:
     image: ${DB_IMAGE:-ghcr.io/mairie360/database:${UPSTREAM_TAG:-dev}}
+    pull_policy: ${UPSTREAM_PULL_POLICY:-always}
     container_name: calendar-front-e2e-db
     environment:
       POSTGRES_USER: postgres
@@ -64,6 +65,7 @@ services:
 
   liquibase:
     image: ${LIQUIBASE_IMAGE:-ghcr.io/mairie360/liquibase-migrations:${UPSTREAM_TAG:-dev}}
+    pull_policy: ${UPSTREAM_PULL_POLICY:-always}
     container_name: calendar-front-e2e-liquibase
     depends_on:
       postgres:
@@ -114,6 +116,7 @@ services:
 
   core-api:
     image: ${CORE_API_IMAGE:-ghcr.io/mairie360/core-api:${UPSTREAM_TAG:-dev}}
+    pull_policy: ${UPSTREAM_PULL_POLICY:-always}
     container_name: calendar-front-e2e-core-api
     depends_on:
       liquibase:
@@ -155,6 +158,7 @@ services:
 
   calendar-api:
     image: ${CALENDAR_API_IMAGE:-ghcr.io/mairie360/calendar-api:${UPSTREAM_TAG:-dev}}
+    pull_policy: ${UPSTREAM_PULL_POLICY:-always}
     container_name: calendar-front-e2e-calendar-api
     depends_on:
       liquibase:
@@ -194,6 +198,7 @@ services:
 
   bff-user:
     image: ${BFF_USER_IMAGE:-ghcr.io/mairie360/bff-user:${UPSTREAM_TAG:-dev}}
+    pull_policy: ${UPSTREAM_PULL_POLICY:-always}
     container_name: calendar-front-e2e-bff-user
     depends_on:
       seeder:
@@ -230,6 +235,7 @@ services:
 
   bff-calendar:
     image: ${BFF_CALENDAR_IMAGE:-ghcr.io/mairie360/bff-calendar:${UPSTREAM_TAG:-dev}}
+    pull_policy: ${UPSTREAM_PULL_POLICY:-always}
     container_name: calendar-front-e2e-bff-calendar
     depends_on:
       seeder:

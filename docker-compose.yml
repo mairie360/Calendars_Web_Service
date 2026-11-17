@@ -38,6 +38,7 @@ x-service: &service-template
 services:
   postgres:
     image: ghcr.io/mairie360/database:${UPSTREAM_TAG:-dev}
+    pull_policy: ${UPSTREAM_PULL_POLICY:-always}
     restart: always
     container_name: mairie360-db-calendar-front #change front name
     environment:
@@ -58,6 +59,7 @@ services:
 
   liquibase:
     image: ghcr.io/mairie360/liquibase-migrations:${UPSTREAM_TAG:-dev}
+    pull_policy: ${UPSTREAM_PULL_POLICY:-always}
     container_name: mairie360-liquibase-calendar-front #change front name
     depends_on:
       postgres:
@@ -111,6 +113,7 @@ services:
   core:
     container_name: core-calendar-front-developpement
     image: ghcr.io/mairie360/core-api:${UPSTREAM_TAG:-dev}
+    pull_policy: ${UPSTREAM_PULL_POLICY:-always}
     ports:
       - "3000:3000"
     networks:
@@ -163,6 +166,7 @@ services:
   calendar-api:
     container_name: calendar-api-front-calendar-developpement
     image: ghcr.io/mairie360/calendar-api:${UPSTREAM_TAG:-dev}
+    pull_policy: ${UPSTREAM_PULL_POLICY:-always}
     ports:
       - "3002:3002"
     networks:
@@ -213,6 +217,7 @@ services:
   bff-user:
     container_name: bff-user-calendar-front
     image: ghcr.io/mairie360/bff-user:${UPSTREAM_TAG:-dev}
+    pull_policy: ${UPSTREAM_PULL_POLICY:-always}
     ports:
       - "4000:4000"
     networks:
@@ -247,6 +252,7 @@ services:
   bff-calendar:
     container_name: bff-calendar-calendar-front
     image: ghcr.io/mairie360/bff-calendar:${UPSTREAM_TAG:-dev}
+    pull_policy: ${UPSTREAM_PULL_POLICY:-always}
     ports:
       - "4002:4002"
     networks:
