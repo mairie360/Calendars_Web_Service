@@ -15,7 +15,7 @@ npm ci
 npm run dev -- --port 5002         # needs the BFF(s) reachable, see "BFF URL" below
 npm run build && npm run start -- --port 5002
 npm run lint                             # next lint (next/core-web-vitals + next/typescript)
-npm test                                 # node:test on tests/*.test.cjs, then the Vitest component tests + lcov in coverage/lcov.info (what CI runs)
+npm test                                 # node:test on tests/*.test.cjs (lcov in coverage/lcov.info), then the Vitest component tests (what CI runs)
 npm run test:contracts                   # node:test files only, no coverage
 npm run test:components                  # Vitest + jsdom component tests only
 node --test --test-name-pattern="<name>" tests/calendar-api.bff-mock.test.cjs   # single test
