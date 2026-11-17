@@ -6,9 +6,12 @@ SERVICE_NAME="security-scan"
 echo "==> [1/4] Démarrage de la stack et lancement du scan ZAP..."
 # TARGET_IMAGE (CI, MAIR-516): test the published front image instead of rebuilding it here.
 # `up --build` would rebuild and retag it locally, so the build is skipped and the image pulled.
+# The upstream images (core-api, database...) follow the moving stage tag and are pulled on every
+# run (`pull_policy: ${UPSTREAM_PULL_POLICY:-always}`): to use a locally built CORE_API_IMAGE /
+# DB_IMAGE override, run `UPSTREAM_PULL_POLICY=never ./security_test.sh` (MAIR-998).
 if [ -n "${TARGET_IMAGE:-}" ]; then
   echo "Image sous test : $TARGET_IMAGE (pas de build local)."
-  docker compose -f "$COMPOSE_FILE" up -d --no-build --pull missing
+  docker compose -f "$COMPOSE_FILE" up -d --no-build
 else
   docker compose -f "$COMPOSE_FILE" up -d --build
 fi
