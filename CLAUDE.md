@@ -15,12 +15,15 @@ npm ci
 npm run dev -- --port 5002         # needs the BFF(s) reachable, see "BFF URL" below
 npm run build && npm run start -- --port 5002
 npm run lint                             # next lint (next/core-web-vitals + next/typescript)
-npm test                                 # node:test on tests/*.test.cjs + lcov in coverage/lcov.info (what CI runs)
-npm run test:contracts                   # same tests, no coverage
+npm test                                 # node:test on tests/*.test.cjs, then the Vitest component tests + lcov in coverage/lcov.info (what CI runs)
+npm run test:contracts                   # node:test files only, no coverage
+npm run test:components                  # Vitest + jsdom component tests only
 node --test --test-name-pattern="<name>" tests/calendar-api.bff-mock.test.cjs   # single test
 ```
 
-Tests are plain CommonJS `node:test` files (`tests/*.test.cjs`, one process per file). No Jest/Vitest, no DOM, no extra dependencies. Shared helpers live in `tests/support/*.cjs` (not matched by the glob):
+Tests are plain CommonJS `node:test` files (`tests/*.test.cjs`, one process per file). No Jest and no DOM in these files, no extra dependencies. Shared helpers live in `tests/support/*.cjs` (not matched by the glob):
+
+Component tests are separate and run by `npm test` after the node tests (`npm run test:components`): Vitest + jsdom + Testing Library (`vitest run`), co-located `Name.test.tsx` files under `src/` (see *Component tree convention*), configured by `vitest.config.mjs` with `tests/component/setup.js`.
 
 - `load-ts.cjs` — `loadTs('lib/bff-client')` transpiles `src/**/*.ts` on the fly, resolves the `@/*` alias and emits inline source maps (`npm test` passes `--enable-source-maps`, so coverage lines are TS lines). Use it rather than a hand-rolled `require.extensions` hook: every test must transpile a given file the same way or merged coverage is wrong. `stubModule('react', …)` swaps a package before loading.
 - The harness browser `fetch` sends `Sec-Fetch-Site: same-origin` like a real browser; pass another value to exercise the CSRF refusal. `logoutAndReload` memoises its promise per process, so only one 401→logout per test file observes a new logout call.
