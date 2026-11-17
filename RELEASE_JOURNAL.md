@@ -1,16 +1,17 @@
 # Journal des releases — Calendars_Web_Service
 
-<!-- release-journal-state {"dev": "c7eff5a26a04bfbab08871ee68bb2affeda56eb9", "prod": "de2f0c4c2b3a97257c53cb334b8535b261e0e334", "prod_tag": "v0.6.0", "staging": "de2f0c4c2b3a97257c53cb334b8535b261e0e334", "updated": {"dev": "2026-11-17 13:01 UTC", "prod": "2026-11-13 02:36 UTC", "staging": "2026-11-13 02:13 UTC"}} -->
+<!-- release-journal-state {"dev": "49521851cf51953eada5e10e19dfed56af50b12c", "prod": "de2f0c4c2b3a97257c53cb334b8535b261e0e334", "prod_tag": "v0.6.0", "staging": "de2f0c4c2b3a97257c53cb334b8535b261e0e334", "updated": {"dev": "2026-11-17 14:31 UTC", "prod": "2026-11-13 02:36 UTC", "staging": "2026-11-13 02:13 UTC"}} -->
 > Tenu à jour par la CI (`mairie360/CICD`, action `release/release-journal`) à chaque passage en dev, staging et prod. Ne pas modifier à la main : le fichier est réécrit au passage suivant.
 
 | Environnement | Version | Commit | Mis à jour |
 | --- | --- | --- | --- |
 | prod | v0.6.0 | `de2f0c4` | 2026-11-13 02:36 UTC |
 | staging | — | `de2f0c4` | 2026-11-13 02:13 UTC |
-| dev | — | `c7eff5a` | 2026-11-17 13:01 UTC |
+| dev | — | `4952185` | 2026-11-17 14:31 UTC |
 
 ## Ajouté sur main depuis la dernière release prod (v0.6.0)
 
+- feat: MAIR-998 Test stacks follow the moving upstream tag of the stage (#332) ([#332](https://github.com/mairie360/Calendars_Web_Service/pull/332))
 - ci: MAIR-1008 Nightly rehearsal of the promotion gates (#330) ([#330](https://github.com/mairie360/Calendars_Web_Service/pull/330))
 - chore(deps): update dependency mairie360/cicd to v5.6.1 (#334) ([#334](https://github.com/mairie360/Calendars_Web_Service/pull/334))
 - chore(deps): update mairie360 database schema to v3.4.0 (#328) ([#328](https://github.com/mairie360/Calendars_Web_Service/pull/328))
@@ -21,6 +22,7 @@
 
 ## Différence dev → staging (en dev, pas encore en staging)
 
+- feat: MAIR-998 Test stacks follow the moving upstream tag of the stage (#332) ([#332](https://github.com/mairie360/Calendars_Web_Service/pull/332))
 - ci: MAIR-1008 Nightly rehearsal of the promotion gates (#330) ([#330](https://github.com/mairie360/Calendars_Web_Service/pull/330))
 - chore(deps): update dependency mairie360/cicd to v5.6.1 (#334) ([#334](https://github.com/mairie360/Calendars_Web_Service/pull/334))
 - chore(deps): update mairie360 database schema to v3.4.0 (#328) ([#328](https://github.com/mairie360/Calendars_Web_Service/pull/328))
@@ -40,6 +42,7 @@ _Rien._
 <!-- release-journal-history:start -->
 | Date | Environnement | Version | Commit | Run |
 | --- | --- | --- | --- | --- |
+| 2026-11-17 14:31 UTC | dev | — | `4952185` | [run](https://github.com/mairie360/Calendars_Web_Service/actions/runs/44100564445) |
 | 2026-11-17 13:01 UTC | dev | — | `c7eff5a` | [run](https://github.com/mairie360/Calendars_Web_Service/actions/runs/44086760231) |
 | 2026-11-17 06:37 UTC | dev | — | `d1d8f1c` | [run](https://github.com/mairie360/Calendars_Web_Service/actions/runs/44031769368) |
 | 2026-11-14 21:18 UTC | dev | — | `907c91d` | [run](https://github.com/mairie360/Calendars_Web_Service/actions/runs/43641387866) |
