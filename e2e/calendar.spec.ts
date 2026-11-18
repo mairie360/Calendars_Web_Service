@@ -74,8 +74,12 @@ test('the administrator deletes the event', async ({ page, context, baseURL }) =
   // The creator gets the actions the invited agent does not.
   await expect(details.getByRole('button', { name: 'Modifier', exact: true })).toBeVisible();
   await details.getByRole('button', { name: 'Supprimer', exact: true }).click();
+  // MAIR-931: nothing is deleted before the confirmation.
+  const confirm = page.getByRole('alertdialog', { name: 'Supprimer cet événement ?' });
+  await expect(confirm).toContainText(`« ${title} » sera retiré du calendrier`);
+  await confirm.getByRole('button', { name: 'Confirmer la suppression' }).click();
 
-  await expect(page.getByRole('region', { name: 'Notifications du calendrier' }).getByText(`Événement « ${title} » supprimé.`)).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Notifications du calendrier' }).getByText('Événement supprimé', { exact: true })).toBeVisible();
   await expect(page.getByText(title, { exact: true })).toHaveCount(0);
 });
 

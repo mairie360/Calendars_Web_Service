@@ -179,3 +179,8 @@ The calendar follows the agreed V2 mockup ([Figma, journeys F1–F9](https://www
   link and the approve / reject actions of pending events follow. Footer: « Supprimer » on the left,
   « Fermer » and « Modifier » on the right, each only when allowed. Saving and refusals no longer show in the
   title: the dialog is busy while saving and the outcome goes to the toasts.
+- **Deletion (MAIR-931).** « Supprimer » opens a danger confirmation (« Supprimer cet événement ? », « « <titre> »
+  sera retiré du calendrier[, avec toutes ses répétitions]. Cette action est définitive. »). « Annuler », ✕ or
+  Escape return to the details with focus on « Supprimer »; « Confirmer la suppression » loads during the call.
+  Success closes every dialog and toasts « Événement supprimé »; a refusal returns to the details and toasts
+  « Suppression impossible — <raison> ».

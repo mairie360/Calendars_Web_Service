@@ -129,9 +129,31 @@ test('deleting the event does not attempt to restore focus onto its disconnected
   dom.front.calendarBff.on('delete', '/calendar/events/{id}', { status: 204 });
   const remove = [...dialog(dom).querySelectorAll('button')].find(node => node.textContent.trim() === 'Supprimer');
   assert.ok(remove); remove.focus(); await dom.click(remove);
+  // MAIR-931: the deletion waits for the nested confirmation.
+  assert.equal(dom.front.calendarBff.calls('/calendar/events/{id}', 'DELETE').length, 0);
+  await dom.click(dom.button('Confirmer la suppression'));
   await dom.waitFor(() => dialog(dom) === null);
   assert.equal(opener.isConnected, false); assert.equal(restore.mock.callCount(), 0);
   assert.equal(dom.front.calendarBff.calls('/calendar/events/{id}', 'DELETE').length, 1);
+});
+
+test('MAIR-931: cancelling the delete confirmation (Annuler or Escape) returns to the details with focus on « Supprimer »', async t => {
+  const dom = await calendarDom(t); await openEvent(dom);
+  const remove = () => [...dialog(dom).querySelectorAll('button')].find(node => node.textContent.trim() === 'Supprimer');
+  for (const leave of ['Annuler', 'Escape']) {
+    remove().focus(); await dom.click(remove());
+    const confirm = dom.document.querySelector('[role="alertdialog"]');
+    assert.ok(confirm, 'the confirmation is an alertdialog');
+    assert.match(confirm.textContent, /Supprimer cet événement \?/);
+    assert.match(confirm.textContent, /« Événement 5 » sera retiré du calendrier\. Cette action est définitive\./);
+    assert.equal(dom.document.activeElement.textContent.trim(), 'Annuler', 'the safe choice has the focus');
+    if (leave === 'Annuler') await dom.click([...confirm.querySelectorAll('button')].find(node => node.textContent.trim() === 'Annuler'));
+    else await React.act(async () => dom.document.activeElement.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
+    await dom.waitFor(() => !dom.document.querySelector('[role="alertdialog"]'));
+    assert.ok(dialog(dom), 'the details stay open');
+    assert.equal(dom.document.activeElement, remove(), `${leave} returns the focus to « Supprimer »`);
+  }
+  assert.equal(dom.front.calendarBff.calls('/calendar/events/{id}', 'DELETE').length, 0, 'no deletion without confirmation');
 });
 
 const settleMutation = async mutate => React.act(async () => { mutate(); await new Promise(resolve => setTimeout(resolve, 0)); });

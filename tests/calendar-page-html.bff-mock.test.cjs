@@ -458,6 +458,28 @@ test('MAIR-929 F5: the details dialog is titled with the event, shows its catego
   await view.waitFor(() => view.props('ValidatedEventDetailsModal').isOpen === false);
 });
 
+test('MAIR-931 F7: a confirmed deletion closes every dialog, updates the page and toasts « Événement supprimé »; a recurring event mentions its repetitions', async () => {
+  await renderLoadedPage(bootstrap({ events: [calendarEvent(5, { recurrence: { frequency: 'daily', interval: 1, daysOfWeek: [] } }), calendarEvent(6, { title: 'Permanence', category: 'other' })] }));
+  await openEventDetails(view.props('MonthGrid').events[0]);
+  const exact = (name) => (props, text, tag) => tag === 'button' && text === name;
+  await view.click(exact('Supprimer'));
+  assert.match(view.html, /role="alertdialog"/);
+  assert.match(view.text(), /« Événement 5 » sera retiré du calendrier, avec toutes ses répétitions\. Cette action est définitive\./);
+  assert.equal(front.calendarBff.calls('/calendar/events/{id}', 'DELETE').length, 0);
+  let reply;
+  front.calendarBff.on('delete', '/calendar/events/{id}', () => new Promise(resolve => { reply = resolve; }));
+  const confirming = view.click(exact('Confirmer la suppression'));
+  await view.waitFor(() => Boolean(reply));
+  assert.ok(view.find('ConfirmModal').some(({ props }) => props.open && props.busy), 'the confirm button loads during the call');
+  await view.act(() => reply({ status: 204 }));
+  await confirming;
+  await view.waitFor(() => view.props('ValidatedEventDetailsModal').isOpen === false && toastTexts().includes('Événement supprimé'));
+  assert.doesNotMatch(view.html, /role="alertdialog"|role="dialog"/);
+  assert.deepEqual(view.props('MonthGrid').events.map((event) => event.id), [6]);
+  assert.equal(view.props('CalendarSidebar').stats.total > 0, true);
+  assert.equal(view.props('CalendarSidebar').upcoming.some(({ event }) => event.id === 5), false);
+});
+
 for (const [label, method, route, approvalStatus] of [
   ['Supprimer', 'delete', '/calendar/events/{id}', null],
   ['Valider', 'patch', '/calendar/events/{id}/approval', 'approved'],
@@ -471,7 +493,14 @@ for (const [label, method, route, approvalStatus] of [
     front.calendarBff.on(method, route, () => new Promise(resolve => { reply = resolve; }));
     // Delete returns its promise, unlike the void approval handlers. Keep the
     // click pending so this assertion observes the UI before either response.
-    const pendingClick = view.click(label);
+    const exact = (name) => (props, text, tag) => tag === 'button' && text === name;
+    // MAIR-931: a deletion goes through the confirmation first.
+    const act = async () => {
+      if (label !== 'Supprimer') return view.click(exact(label));
+      await view.click(exact(label));
+      return view.click(exact('Confirmer la suppression'));
+    };
+    const pendingClick = act();
     await view.waitFor(() => Boolean(reply));
     let dialog = dialogHtml();
     // MAIR-929 C4: no saving status in the title any more; the dialog is disabled and busy.
@@ -480,7 +509,9 @@ for (const [label, method, route, approvalStatus] of [
     assert.equal(view.props('MonthGrid').events[0].approvalStatus, event.approvalStatus);
     await view.act(() => reply({ status: 403, body: apiError('FORBIDDEN', `${label} refusé`) }));
     await pendingClick;
-    await view.waitFor(() => toastTexts().includes(`${label} refusé`));
+    const refusal = label === 'Supprimer' ? `Suppression impossible — ${label} refusé` : `${label} refusé`;
+    await view.waitFor(() => toastTexts().includes(refusal));
+    if (label === 'Supprimer') assert.doesNotMatch(view.html, /role="alertdialog"/, 'a refused deletion returns to the details');
     dialog = dialogHtml();
     assert.doesNotMatch(dialog, new RegExp(`${label} refusé`), 'the refusal is a toast, not a title status');
     assert.match(dialog, /Événement 5/);
@@ -495,7 +526,7 @@ for (const [label, method, route, approvalStatus] of [
       ? { body: calendarEvent(5, { approvalStatus }) }
       : { status: 204 });
     // The error toast also contains « <label> refusé »: target the dialog button by its exact text.
-    await view.click((props, text, tag) => tag === 'button' && text === label);
+    await act();
     await view.waitFor(() => !isCalendarPending() && front.calendarBff.calls(route, method.toUpperCase()).length === 2 && !view.props('ValidatedEventDetailsModal')?.saving);
     if (approvalStatus) {
       assert.equal(view.props('WeekGrid').events[0].approvalStatus, approvalStatus);

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Modal, StatusPill } from '@mairie360/lib-components/primitives';
+import { ConfirmModal, Modal, StatusPill } from '@mairie360/lib-components/primitives';
 import { getEventTone } from '@/app/calendar/constants';
 
 import { CreateEventModal } from '../CreateEventModal';
@@ -23,8 +23,18 @@ const approvalTones = { pending: 'warning', approved: 'success', rejected: 'dang
 export const EventDetailsModal = ({
   isOpen, extraContent, event, people = [], categories = defaultEventCategories, canEdit, canDelete = false, canValidate = false, canCreateRecurringEvents = true,
   title, closeLabel = 'Fermer', editLabel = 'Modifier', deleteLabel = 'Supprimer', approveLabel = 'Valider', rejectLabel = 'Refuser',
-  cancelLabel = 'Annuler', saveLabel = 'Enregistrer', onClose, onSave, onDelete, onApprove, onReject,
+  cancelLabel = 'Annuler', saveLabel = 'Enregistrer', onClose, onSave, onDelete, onApprove, onReject, saving = false,
 }: EventDetailsModalProps) => {
+  // MAIR-931: « Supprimer » asks first; cancelling (or a refused deletion) comes back to « Supprimer ».
+  const [confirmingDelete, setConfirmingDelete] = React.useState(false);
+  const deleteRef = React.useRef<HTMLButtonElement>(null);
+  const focusDelete = React.useRef(false);
+  React.useEffect(() => {
+    if (confirmingDelete || !focusDelete.current) return;
+    focusDelete.current = false;
+    deleteRef.current?.focus();
+  });
+  const backToDetails = () => { focusDelete.current = true; setConfirmingDelete(false); };
   const [editing, setEditing] = React.useState(false);
   const [values, setValues] = React.useState<CreateCalendarEventValues>(() => event ? eventValues(event) : defaultEventValues(undefined, categories[0]?.value || ''));
   const eventId = event ? String(event.id) : null;
@@ -74,7 +84,8 @@ export const EventDetailsModal = ({
     <Modal open title={title ?? event.title} size="m" closeLabel="Fermer la fenêtre" onClose={onClose}
       footer={<EventDetailsActions event={event} labels={{ close: closeLabel, edit: editLabel, delete: deleteLabel, approve: approveLabel, reject: rejectLabel }}
         showValidation={canValidate && event.approvalStatus === 'pending'} canDelete={canDelete} canEdit={resolvedCanEdit}
-        onClose={onClose} onEdit={() => { setValues(eventValues(event)); setEditing(true); }} onDelete={onDelete} onApprove={onApprove} onReject={onReject} />}>
+        onClose={onClose} onEdit={() => { setValues(eventValues(event)); setEditing(true); }} onDelete={onDelete ? () => setConfirmingDelete(true) : undefined}
+        deleteRef={deleteRef} onApprove={onApprove} onReject={onReject} />}>
       <div className="space-y-4">
         <div className="space-y-2">
           <div className="flex flex-wrap items-center gap-2">
@@ -90,6 +101,11 @@ export const EventDetailsModal = ({
         <EventApprovalActions event={event} labels={{ close: closeLabel, edit: editLabel, delete: deleteLabel, approve: approveLabel, reject: rejectLabel }}
           showValidation={canValidate && event.approvalStatus === 'pending'} onApprove={onApprove} onReject={onReject} />
       </div>
+      {/* Nested in the details dialog: the lib gives its keys and focus scope to the topmost dialog. */}
+      <ConfirmModal open={confirmingDelete} role="alertdialog" title="Supprimer cet événement ?" busy={saving}
+        message={`« ${event.title} » sera retiré du calendrier${event.recurrence && event.recurrence.frequency !== 'none' ? ', avec toutes ses répétitions' : ''}. Cette action est définitive.`}
+        onCancel={backToDetails} initialFocus="cancel"
+        onConfirm={async () => { if (await onDelete?.(event) === false) backToDetails(); }} />
     </Modal>
   );
 };
