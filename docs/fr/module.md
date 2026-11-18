@@ -154,3 +154,6 @@ Le calendrier suit la maquette V2 validée ([Figma, parcours F1–F9](https://ww
   affichent « Calendrier indisponible. » (avec l'erreur et « Réessayer »), une alerte « Service
   indisponible » avec « Réessayer » et « Statistiques indisponibles. ». L'ancienne barre d'état disparaît :
   les erreurs d'écriture restent dans les fenêtres et les toasts.
+- **En-tête de page (MAIR-884).** Sous-titre « Planifiez et organisez les activités de la mairie » ; actions
+  « Actualiser » (relit la période affichée, désactivé tant qu'une lecture court) puis « Créer » (ouvre
+  « Nouvel événement », visible dès que les données sont prêtes).

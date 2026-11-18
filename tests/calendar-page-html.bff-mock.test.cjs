@@ -62,7 +62,7 @@ test('server renders on either side of a month boundary expose no server-local c
       // Real SSR has no effects: this is not the effect-running mount harness.
       const html = renderToStaticMarkup(React.createElement(Page));
       assert.match(html, /role="status"[^>]*>(?:<[^>]*>)*Chargement des données du calendrier…/);
-      assert.doesNotMatch(html, /calendar-month-grid|calendar-week-grid|Sélectionner le|>Nouvel événement<\/button>/);
+      assert.doesNotMatch(html, /calendar-month-grid|calendar-week-grid|Sélectionner le|>Créer<\/button>/);
       assert.deepEqual(front.calendarBff.sequence(), []);
     }
   } finally {
@@ -82,7 +82,7 @@ test('the first pass renders the loading state, the second the events answered b
   assert.doesNotMatch(view.text(), /Événement 5/);
   assert.doesNotMatch(view.html, new RegExp(`<h2[^>]*>${getPeriodTitle('month', initialDate)}</h2>`), 'do not expose server-local date markup before client initialization');
   assert.equal(view.find('MonthGrid').length, 0);
-  assert.doesNotMatch(view.html, />Nouvel événement<\/button>/);
+  assert.doesNotMatch(view.html, />Créer<\/button>/);
 
   const html = await view.waitFor((current) => !isCalendarPending());
 
@@ -166,6 +166,26 @@ test('desktop and mobile navigation expose only active modules and keep Settings
     setBrowserFrontUrls({});
     global.window.location.assign = originalAssign;
   }
+});
+
+test('MAIR-884 F9: « Actualiser » rereads the displayed period through skeletons and is disabled meanwhile', async () => {
+  await renderLoadedPage();
+  await view.act(() => view.props('CalendarToolbar').onNext());
+  await view.waitFor(() => !isCalendarPending() && front.calendarBff.requests.length === 2);
+  const title = view.props('CalendarToolbar').title;
+  const reads = front.calendarBff.requests.length;
+  let reply;
+  front.calendarBff.on('get', '/calendar/bootstrap', () => new Promise(resolve => { reply = resolve; }));
+  await view.click('Actualiser');
+  await view.waitFor(() => Boolean(reply));
+  assert.equal(view.props('RefreshButton').disabled, true, '« Actualiser » cannot be pressed twice');
+  assert.equal(view.find('MonthGrid').length, 0, 'the panels show their skeletons');
+  assert.match(view.html, /role="status"[^>]*>(?:<[^>]*>)*Chargement des statistiques…/);
+  await view.act(() => reply({ body: bootstrap() }));
+  await view.waitFor(() => !isCalendarPending() && view.find('MonthGrid').length === 1);
+  assert.equal(front.calendarBff.requests.length, reads + 1);
+  assert.equal(view.props('CalendarToolbar').title, title, 'the period does not change');
+  assert.equal(view.props('RefreshButton').disabled, false);
 });
 
 test('a BFF error is rendered as an alert with a retry button that reloads the calendar', async () => {
