@@ -158,3 +158,7 @@ The calendar follows the agreed V2 mockup ([Figma, journeys F1–F9](https://www
 - **Page header (MAIR-884).** Subtitle « Planifiez et organisez les activités de la mairie »; actions
   « Actualiser » (rereads the displayed period, disabled while a read runs) then « Créer » (opens « Nouvel
   événement », shown once the data is ready).
+- **Calendar panel (MAIR-893).** The calendar sits in a lib `Panel` titled with the displayed period
+  (« Novembre 2026 », « 9 – 15 novembre 2026 », « Jeudi 12 novembre 2026 »). Toolbar: lib Précédent /
+  Suivant (one month, week or day), « Aujourd’hui » (back to the period holding today) and the view choice
+  as a lib `SegmentedControl` (Mois / Semaine / Jour, arrow keys). The URL keeps following `view` and `date`.

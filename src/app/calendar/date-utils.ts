@@ -104,13 +104,26 @@ export function getCalendarPeriodRange(view: CalendarViewMode, date: CalendarDat
   };
 }
 
+const capitalize = (text: string) => text.charAt(0).toLocaleUpperCase("fr-FR") + text.slice(1);
+const dayMonth = (date: Date) => new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "long" }).format(date);
+
+/**
+ * MAIR-893: title of the calendar panel, as in the mockup — « Novembre 2026 », « 9 – 15 novembre 2026 »
+ * (« 30 novembre – 6 décembre 2026 », « 28 décembre 2026 – 3 janvier 2027 » across months and years),
+ * « Jeudi 12 novembre 2026 ».
+ */
 export function getPeriodTitle(view: CalendarViewMode, date: CalendarDateInput) {
   if (view === "week") {
-    return `Semaine du ${formatFullDate(startOfWeek(date))}`;
+    const start = startOfWeek(date);
+    const end = endOfWeek(date);
+    if (start.getFullYear() !== end.getFullYear()) return `${formatFullDate(start)} – ${formatFullDate(end)}`;
+    if (start.getMonth() !== end.getMonth()) return `${dayMonth(start)} – ${formatFullDate(end)}`;
+    return `${start.getDate()} – ${formatFullDate(end)}`;
   }
 
   if (view === "day") {
-    return formatFullDate(date);
+    const parsed = parseDateInput(date);
+    return capitalize(`${new Intl.DateTimeFormat("fr-FR", { weekday: "long" }).format(parsed)} ${formatFullDate(parsed)}`);
   }
 
   return formatMonthYear(date);

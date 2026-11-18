@@ -157,3 +157,8 @@ Le calendrier suit la maquette V2 validée ([Figma, parcours F1–F9](https://ww
 - **En-tête de page (MAIR-884).** Sous-titre « Planifiez et organisez les activités de la mairie » ; actions
   « Actualiser » (relit la période affichée, désactivé tant qu'une lecture court) puis « Créer » (ouvre
   « Nouvel événement », visible dès que les données sont prêtes).
+- **Panneau calendrier (MAIR-893).** Le calendrier est dans un `Panel` de la lib dont le titre est la
+  période affichée (« Novembre 2026 », « 9 – 15 novembre 2026 », « Jeudi 12 novembre 2026 »). Barre
+  d'outils : Précédent / Suivant de la lib (un mois, une semaine ou un jour), « Aujourd’hui » (retour à la
+  période du jour) et le choix de vue en `SegmentedControl` de la lib (Mois / Semaine / Jour, flèches du
+  clavier). L'URL suit toujours `view` et `date`.

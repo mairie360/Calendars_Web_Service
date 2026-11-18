@@ -92,8 +92,9 @@ test('the first pass renders the loading state, the second the events answered b
   assert.match(view.text(), /Événement 5/);
   assert.match(view.text(), /Permanence/);
   assert.match(view.text(), /Description 5/);
-  assert.match(html, /<button type="button" role="tab" aria-selected="true"[^>]*>Mois<\/button>/);
-  assert.match(html, /<button type="button" role="tab" aria-selected="false"[^>]*>Semaine<\/button>/);
+  assert.match(html, /role="radiogroup" aria-label="Changer de vue"/);
+  assert.match(html, /<button type="button" role="radio" aria-checked="true"[^>]*>Mois<\/button>/);
+  assert.match(html, /<button type="button" role="radio" aria-checked="false"[^>]*>Semaine<\/button>/);
   assert.equal(view.find('MonthGrid').length, 1);
   assert.equal(view.find('WeekGrid').length, 0);
 });
@@ -300,7 +301,7 @@ test('changing the view re-renders the week grid with the reloaded events', asyn
 
   assert.equal(view.find('WeekGrid').length, 1);
   assert.equal(view.find('MonthGrid').length, 0);
-  assert.match(html, /<button type="button" role="tab" aria-selected="true"[^>]*>Semaine<\/button>/);
+  assert.match(html, /<button type="button" role="radio" aria-checked="true"[^>]*>Semaine<\/button>/);
   assert.match(view.text(), /Événement 5/);
 });
 
@@ -310,7 +311,8 @@ test('day arrows render the navigated date in the actual schedule, statistics an
   await view.act(() => view.props('CalendarToolbar').onViewChange('day'));
   await view.waitFor(() => !isCalendarPending());
   await view.act(() => view.props('CalendarToolbar').onNext());
-  const html = await view.waitFor(() => !isCalendarPending() && view.props('CalendarToolbar').title === '1 janvier 2027');
+  const html = await view.waitFor(() => !isCalendarPending() && view.props('CalendarToolbar').title === 'Vendredi 1 janvier 2027');
+  assert.ok(view.find('Panel').some(({ props }) => props.title === 'Vendredi 1 janvier 2027'), 'MAIR-893: the period is the title of the calendar panel');
   assert.match(html, /aria-label="1 Janvier 2027 à 09:00"/);
   assert.doesNotMatch(html, /aria-label="31 Décembre 2026 à/);
   assert.equal(view.props('CalendarSidebar').stats[2].value, '1 événement');
@@ -318,6 +320,32 @@ test('day arrows render the navigated date in the actual schedule, statistics an
   assert.equal(view.props('ValidatedCreateEventModal').initialValues.date, '01-01-2027');
   assert.ok(front.calendarBff.sequence().every((call) => /^GET \/calendar\/(bootstrap|period)\?/.test(call)));
 });
+
+for (const mode of ['month', 'week', 'day']) {
+  test(`MAIR-893 F3 (${mode}): Précédent / Suivant move one period, « Aujourd’hui » comes back, the panel title follows`, async () => {
+    await renderLoadedPage();
+    if (mode !== 'month') {
+      await view.act(() => view.props('SegmentedControl').onChange(mode));
+      await view.waitFor(() => !isCalendarPending() && view.props('CalendarToolbar').view === mode);
+    }
+    const today = getPeriodTitle(mode, initialDate);
+    const panelTitles = () => view.find('Panel').map(({ props }) => props.title);
+    assert.ok(panelTitles().includes(today));
+    const iconButton = (name) => (props) => props['aria-label'] === name;
+    await view.click(iconButton('Période suivante'));
+    await view.click(iconButton('Période suivante'));
+    await view.waitFor(() => !isCalendarPending() && view.props('CalendarToolbar').title !== today);
+    const ahead = view.props('CalendarToolbar').title;
+    assert.ok(panelTitles().includes(ahead));
+    assert.equal(view.html.includes('aria-current="date"'), false, 'today is not highlighted outside its period');
+    await view.click(iconButton('Période précédente'));
+    await view.waitFor(() => !isCalendarPending() && view.props('CalendarToolbar').title !== ahead);
+    await view.click('Aujourd’hui');
+    await view.waitFor(() => !isCalendarPending() && view.props('CalendarToolbar').title === today);
+    assert.ok(panelTitles().includes(today));
+    assert.ok(front.calendarBff.sequence().every((call) => /^GET \/calendar\/(bootstrap|period)\?/.test(call)));
+  });
+}
 
 test('calendar layout uses responsive grids and a bounded sidebar with BFF-backed events', async () => {
   const monthHtml = await renderLoadedPage();

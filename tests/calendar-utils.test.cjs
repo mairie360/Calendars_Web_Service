@@ -43,8 +43,12 @@ test('period navigation and titles follow the view', () => {
   assert.equal(ymd(dates.getNextPeriod('2026-12-31', 'day')), '2027-01-01');
   assert.equal(ymd(dates.getPreviousPeriod('2026-03-01', 'day')), '2026-02-28');
   assert.equal(dates.getPeriodTitle('month', '2026-09-16'), 'Septembre 2026');
-  assert.equal(dates.getPeriodTitle('week', '2026-09-16'), 'Semaine du 14 septembre 2026');
-  assert.equal(dates.getPeriodTitle('day', '2026-09-16'), '16 septembre 2026');
+  // MAIR-893: the mockup titles of the calendar panel.
+  assert.equal(dates.getPeriodTitle('week', '2026-09-16'), '14 – 20 septembre 2026');
+  assert.equal(dates.getPeriodTitle('week', '2026-12-02'), '30 novembre – 6 décembre 2026');
+  assert.equal(dates.getPeriodTitle('week', '2026-12-30'), '28 décembre 2026 – 3 janvier 2027');
+  assert.equal(dates.getPeriodTitle('day', '2026-09-16'), 'Mercredi 16 septembre 2026');
+  assert.equal(dates.getPeriodTitle('day', '2026-11-12'), 'Jeudi 12 novembre 2026');
 });
 
 test('buildCreateInitialValues prefills a one-hour slot', () => {
