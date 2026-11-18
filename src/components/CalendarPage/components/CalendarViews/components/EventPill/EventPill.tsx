@@ -52,7 +52,7 @@ export const EventPill = ({ event, onClick, className, style, showTime = true, i
     >
       <div className="min-w-0 truncate text-left">
         {startLabel && <span className="calendar-event-time mr-1 font-semibold tabular-nums">{startLabel}</span>}
-        {event.title}
+        {startLabel ? <span className="calendar-event-title">{event.title}</span> : event.title}
       </div>
       {timeLabel && !inline && (
         <div className="break-words text-[11px] font-normal opacity-75">{timeLabel}</div>

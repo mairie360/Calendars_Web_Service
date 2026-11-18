@@ -23,10 +23,12 @@ const event = {
 };
 
 describe('EventDetailsModal component', () => {
-  it('displays event details', () => {
-    render(<EventDetailsModal isOpen event={event} people={people} onClose={vi.fn()} />);
+  it('MAIR-929: is titled with the event, shows its category pill, description and facts', () => {
+    render(<EventDetailsModal isOpen event={event} people={people} categories={[{ value: 'meeting', label: 'Réunion' }]} onClose={vi.fn()} />);
 
-    expect(screen.getByText('Conseil municipal')).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Conseil municipal' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Conseil municipal' })).toBeInTheDocument();
+    expect(screen.getByText('Réunion').closest('[data-tone]')).toHaveAttribute('data-tone', 'info');
     expect(screen.getByText('Préparer la séance')).toBeInTheDocument();
     expect(screen.getByText('Salle du conseil')).toBeInTheDocument();
     expect(screen.getByText('09:00 – 10:30')).toBeInTheDocument();
@@ -51,7 +53,7 @@ describe('EventDetailsModal component', () => {
       />
     );
 
-    expect(screen.getByText('Chaque semaine (Lun, Mar, Mer, Jeu, Ven) jusqu’au 15 Juillet 2026')).toBeInTheDocument();
+    expect(screen.getByText('Lundi 15 juin 2026 · chaque semaine (Lun, Mar, Mer, Jeu, Ven) jusqu’au 15 Juillet 2026')).toBeInTheDocument();
   });
 
   it('edits and saves event details', () => {

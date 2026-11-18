@@ -76,17 +76,7 @@ function EventDetailsSession({ trainingSource, ...props }: ControlledDetailsProp
             {...props}
             extraContent={<EventTrainingLink key={String(props.event.id)} eventId={String(props.event.id)} source={trainingSource} />}
             categories={formCategories(props.categories)}
-            title={props.saving || props.error ? (
-              <>
-                {props.title ?? 'Détail de l’événement'}
-                <span
-                  role={props.saving ? 'status' : 'alert'}
-                  className={`mt-2 block whitespace-normal break-words text-sm font-normal leading-5 ${props.saving ? 'text-[#e2e8f0]' : 'text-[#fecaca]'}`}
-                >
-                  {props.saving ? 'Enregistrement en cours…' : props.error}
-                </span>
-              </>
-            ) : props.title}
+            // MAIR-929 C4: no saving / error status in the title any more, the outcome goes to the toasts.
             onClose={() => { if (!props.saving) props.onClose(); }}
             onSave={props.onSave ? (event) => void saveDraft({
               ...event,

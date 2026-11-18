@@ -13,7 +13,7 @@ let eventId = '';
 async function openEvent(page: Page) {
   await page.goto('/');
   await page.getByText(title, { exact: true }).first().click();
-  const details = page.getByRole('dialog', { name: 'Détail de l’événement' });
+  const details = page.getByRole('dialog', { name: title });
   await expect(details).toContainText(title);
   await expect(details).toBeVisible();
   return details;
