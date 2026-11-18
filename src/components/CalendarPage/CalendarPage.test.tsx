@@ -26,7 +26,7 @@ describe('CalendarPage', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Calendrier & Événements' })).toBeInTheDocument();
     expect(screen.getByText('grille loading')).toBeInTheDocument();
     expect(screen.getByText('colonne loading')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Nouvel événement/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Créer' })).toBeNull();
   });
 
   it('MAIR-911: an explicit refresh shows skeletons, a failed read the unavailable states', () => {
