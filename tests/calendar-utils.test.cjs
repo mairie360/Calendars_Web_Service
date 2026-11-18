@@ -6,7 +6,7 @@ const { loadTs } = require('./support/load-ts.cjs');
 
 const dates = loadTs('app/calendar/date-utils');
 const { buildStats, eventOccursOnDate } = loadTs('app/calendar/stats');
-const { getEventColor, resolveAssignees } = loadTs('app/calendar/constants');
+const { getEventColor, getEventTone, resolveAssignees } = loadTs('app/calendar/constants');
 
 const ymd = (date) => dates.formatDateForQuery(date);
 
@@ -97,7 +97,9 @@ test('buildStats counts occurrences for the month, the week and the selected day
 });
 
 test('event colours and assignee resolution', () => {
-  assert.equal(getEventColor('ceremony'), 'bg-[#fff5d8] text-[#8a5d00]');
+  // MAIR-905: one tone per category (Figma Calendrier/EventPill), on the mairie-* tokens.
+  assert.deepEqual(['meeting', 'activity', 'ceremony', 'other', 'unknown', undefined].map(getEventTone), ['info', 'success', 'warning', 'neutral', 'neutral', 'neutral']);
+  assert.equal(getEventColor('ceremony'), 'bg-[var(--mairie-warning-surface)] text-[var(--mairie-warning-text)]');
   assert.equal(getEventColor('unknown'), getEventColor('other'));
   assert.equal(getEventColor(), getEventColor('other'));
   const people = [{ id: 7, name: 'Alice' }, { id: 'user-3', name: 'Marie' }];

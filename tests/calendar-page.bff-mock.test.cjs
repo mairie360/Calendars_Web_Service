@@ -364,7 +364,7 @@ test('handleSaveEvent patches the event and merges the saved version', async () 
 
   assert.deepEqual(front.calendarBff.calls('/calendar/events/{id}', 'PATCH').map((call) => [call.pathParams.id, call.body.title]), [['5', 'Conseil renommé']]);
   assert.equal(saved.events[0].title, 'Conseil renommé');
-  assert.equal(saved.events[0].colorClassName, 'bg-[#eaf7ee] text-[#257444]');
+  assert.equal(saved.events[0].colorClassName, 'bg-[var(--mairie-success-surface)] text-[var(--mairie-success-text)]');
   assert.equal(saved.selectedEvent, null);
 });
 
