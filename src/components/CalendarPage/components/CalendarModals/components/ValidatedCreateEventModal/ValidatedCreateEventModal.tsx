@@ -1,11 +1,11 @@
 import type { ComponentProps } from 'react';
 import { useState } from 'react';
 import { CreateEventModal } from '../CreateEventModal';
-import { ModalFeedback, type SaveFeedback } from '../ModalFeedback';
 import { ValidatedModal } from '../ValidatedModal';
 import { formCategories } from '../../form-categories';
 
 type CreateProps = ComponentProps<typeof CreateEventModal>;
+type SaveFeedback = { saving?: boolean; error?: string | null };
 
 function CreateEventSession({ saving = false, error, ...props }: CreateProps & SaveFeedback) {
   // A draft belongs to this opening, not to subsequent reference-data reads.
@@ -17,12 +17,14 @@ function CreateEventSession({ saving = false, error, ...props }: CreateProps & S
   const initialFrequency = initialValues.recurrence?.frequency;
   return (
     <ValidatedModal isOpen={props.isOpen} resetKey={String(initialValues.date ?? '')} initialFrequency={initialFrequency}>
-      <fieldset disabled={saving} aria-busy={saving} className="m-0 min-w-0 border-0 p-0">
+      {(fieldErrors) => (<fieldset disabled={saving} aria-busy={saving} className="m-0 min-w-0 border-0 p-0">
         <CreateEventModal
           {...props}
           categories={formCategories(props.categories)}
           initialValues={initialValues}
-          subtitle={<ModalFeedback subtitle={props.subtitle} saving={saving} error={error} />}
+          saving={saving}
+          error={error}
+          fieldErrors={fieldErrors}
           onCancel={() => { if (!saving) props.onCancel(); }}
           onCreate={(event) => {
             if (!saving) props.onCreate({
@@ -31,7 +33,7 @@ function CreateEventSession({ saving = false, error, ...props }: CreateProps & S
             });
           }}
         />
-      </fieldset>
+      </fieldset>)}
     </ValidatedModal>
   );
 }

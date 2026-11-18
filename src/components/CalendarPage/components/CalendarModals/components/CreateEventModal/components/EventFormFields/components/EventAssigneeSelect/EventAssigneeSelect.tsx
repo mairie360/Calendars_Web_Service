@@ -31,7 +31,7 @@ export const EventAssigneeSelect = ({
   people = [],
   value = [],
   onChange,
-  label = 'Personnes assignées',
+  label = 'Participants',
   placeholder = 'Sélectionner des personnes',
   searchPlaceholder = 'Rechercher une personne...',
   emptyLabel = 'Aucune personne disponible',
@@ -39,6 +39,7 @@ export const EventAssigneeSelect = ({
   className = '',
   ...props
 }: EventAssigneeSelectProps) => {
+  const helpId = React.useId();
   const [open, setOpen] = React.useState(false);
   const [search, setSearch] = React.useState('');
   const [dropdownStyle, setDropdownStyle] = React.useState<React.CSSProperties>();
@@ -200,6 +201,7 @@ export const EventAssigneeSelect = ({
         className="flex h-9 w-full items-center justify-between gap-2 rounded-md border border-[var(--mairie-border)] bg-[var(--mairie-surface-raised)] px-3 text-left text-sm text-[var(--mairie-text)] shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mairie-accent)]/20 disabled:cursor-not-allowed disabled:opacity-60"
         aria-haspopup="listbox"
         aria-expanded={open}
+        aria-describedby={helpId}
         disabled={disabled}
         onClick={() => setOpen((currentOpen) => !currentOpen)}
       >
@@ -215,6 +217,8 @@ export const EventAssigneeSelect = ({
         </span>
         <ChevronDown className="h-4 w-4 shrink-0 text-[var(--mairie-muted)]" strokeWidth={1.8} />
       </button>
+
+      <p id={helpId} className="mt-1 text-xs text-[var(--mairie-muted)]">Les participants reçoivent l’événement dans leur calendrier.</p>
 
       {selectedPeople.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-2">

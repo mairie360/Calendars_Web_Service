@@ -23,7 +23,7 @@ const approvalTones = { pending: 'warning', approved: 'success', rejected: 'dang
 export const EventDetailsModal = ({
   isOpen, extraContent, event, people = [], categories = defaultEventCategories, canEdit, canDelete = false, canValidate = false, canCreateRecurringEvents = true,
   title, closeLabel = 'Fermer', editLabel = 'Modifier', deleteLabel = 'Supprimer', approveLabel = 'Valider', rejectLabel = 'Refuser',
-  cancelLabel = 'Annuler', saveLabel = 'Enregistrer', onClose, onSave, onDelete, onApprove, onReject, saving = false,
+  cancelLabel = 'Annuler', saveLabel = 'Enregistrer', onClose, onSave, onDelete, onApprove, onReject, saving = false, fieldErrors,
 }: EventDetailsModalProps) => {
   // MAIR-931: « Supprimer » asks first; cancelling (or a refused deletion) comes back to « Supprimer ».
   const [confirmingDelete, setConfirmingDelete] = React.useState(false);
@@ -75,7 +75,7 @@ export const EventDetailsModal = ({
   if (editing) {
     return (
       <CreateEventModal isOpen people={people} categories={categories} initialValues={values} canCreateRecurringEvents={canCreateRecurringEvents}
-        title="Modifier l’événement" subtitle="Modifier les informations de l’événement sélectionné" cancelLabel={cancelLabel} submitLabel={saveLabel}
+        title="Modifier l’événement" cancelLabel={cancelLabel} submitLabel={saveLabel} saving={saving} fieldErrors={fieldErrors}
         onCancel={() => { setValues(eventValues(event)); setEditing(false); }} onDismiss={onClose} onCreate={handleSave} />
     );
   }

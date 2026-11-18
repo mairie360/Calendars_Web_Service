@@ -1,7 +1,7 @@
 import type { FormEvent, ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 import type { CalendarRecurrence } from '@/app/calendar/types';
-import { validateEventChronology, validateEventTexts } from './validation';
+import { validateEventForm } from './validation';
 
 function readFormValue(form: HTMLFormElement, id: string) {
   return form.querySelector<HTMLInputElement | HTMLSelectElement>(`#${id}`)?.value ?? '';
@@ -29,7 +29,20 @@ function chronologyFromForm(form: HTMLFormElement) {
   };
 }
 
-/** Validates the event form it wraps on submit (texts, then chronology) and announces the first error. */
+/** Fields whose error a change of the given input clears (a chronology error concerns both ends). */
+const relatedFields: Record<string, string[]> = {
+  'event-date': ['event-date', 'event-end-date', 'event-end-time', 'event-recurrence-end'],
+  'event-end-date': ['event-end-date', 'event-end-time'],
+  'event-start-time': ['event-end-time'],
+  'event-end-time': ['event-end-time'],
+  'event-recurrence': ['event-end-date', 'event-recurrence-end'],
+};
+
+/**
+ * Validates the event form it wraps on submit (MAIR-926): the errors, keyed by input id, go to `children`
+ * (render function) which hands them to the form, the first field in error takes the focus, and a change
+ * clears its error.
+ */
 export function ValidatedModal({
   isOpen,
   resetKey,
@@ -39,15 +52,15 @@ export function ValidatedModal({
   isOpen: boolean;
   resetKey: string;
   initialFrequency?: CalendarRecurrence['frequency'];
-  children: ReactNode;
+  children: ReactNode | ((fieldErrors: Record<string, string>) => ReactNode);
 }) {
   const [recurring, setRecurring] = useState(initialFrequency !== undefined && initialFrequency !== 'none');
-  const [validationError, setValidationError] = useState('');
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (isOpen) {
       setRecurring(initialFrequency !== undefined && initialFrequency !== 'none');
-      setValidationError('');
+      setErrors({});
     }
   }, [initialFrequency, isOpen, resetKey]);
 
@@ -57,21 +70,26 @@ export function ValidatedModal({
     const form = event.target as HTMLFormElement;
     if (!form.querySelector<HTMLInputElement>('#event-date')) return;
 
-    const error = validateEventTexts(textsFromForm(form)) ?? validateEventChronology(chronologyFromForm(form));
-    if (!error) {
-      setValidationError('');
+    const found = validateEventForm({ ...textsFromForm(form), ...chronologyFromForm(form) });
+    if (found.length === 0) {
+      setErrors({});
       return;
     }
 
     event.preventDefault();
     event.stopPropagation();
-    setValidationError(error);
+    setErrors(Object.fromEntries(found.map(({ field, message }) => [field, message])));
+    const first = form.querySelector<HTMLElement>(`#${found[0].field}`);
+    if (typeof first?.focus === 'function') first.focus();
   };
 
   const handleChangeCapture = (event: FormEvent<HTMLDivElement>) => {
     const field = event.target as HTMLInputElement | HTMLSelectElement;
     if (field.id === 'event-recurrence') setRecurring(field.value !== 'none');
-    setValidationError('');
+    const cleared = relatedFields[field.id] ?? [field.id];
+    setErrors((current) => cleared.some((id) => id in current)
+      ? Object.fromEntries(Object.entries(current).filter(([id]) => !cleared.includes(id)))
+      : current);
   };
 
   return (
@@ -81,15 +99,7 @@ export function ValidatedModal({
       onSubmitCapture={handleSubmitCapture}
       onChangeCapture={handleChangeCapture}
     >
-      {children}
-      {validationError && (
-        <p
-          role="alert"
-          className="fixed inset-x-4 top-20 z-[60] mx-auto max-w-[470px] rounded-md border border-red-300 bg-red-50 px-4 py-2 text-sm font-medium text-red-800 shadow-lg"
-        >
-          {validationError}
-        </p>
-      )}
+      {typeof children === 'function' ? children(errors) : children}
     </div>
   );
 }

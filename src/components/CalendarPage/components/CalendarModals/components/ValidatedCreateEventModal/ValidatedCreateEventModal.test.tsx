@@ -8,11 +8,13 @@ import { defaultEventValues } from '../CreateEventModal';
 
 describe('ValidatedCreateEventModal', () => {
   it('stays closed, then opens the creation dialog with the page feedback', () => {
-    const props = { people: [], categories: [{ value: 'meeting', label: 'Réunion' }], initialValues: defaultEventValues({ date: '2026-10-21' }, 'meeting'), title: 'Nouvel événement', subtitle: 'Ajoutez une date.', cancelLabel: 'Annuler', submitLabel: 'Créer', onCancel: vi.fn(), onCreate: vi.fn() };
+    const props = { people: [], categories: [{ value: 'meeting', label: 'Réunion' }], initialValues: defaultEventValues({ date: '2026-10-21' }, 'meeting'), title: 'Nouvel événement', subtitle: 'Ajoutez une date.', cancelLabel: 'Annuler', submitLabel: 'Enregistrer', onCancel: vi.fn(), onCreate: vi.fn() };
     const { container, rerender } = render(<ValidatedCreateEventModal isOpen={false} {...props} />);
     expect(container).toBeEmptyDOMElement();
     rerender(<ValidatedCreateEventModal isOpen {...props} saving />);
     expect(screen.getByRole('dialog', { name: 'Nouvel événement' })).toBeInTheDocument();
-    expect(screen.getByRole('status')).toHaveTextContent('Enregistrement en cours…');
+    // MAIR-926 C4: the pending save is the loading « Enregistrer », not a status text.
+    expect(screen.getByRole('button', { name: /Enregistrer/ })).toHaveAttribute('aria-busy', 'true');
+    expect(screen.queryByText('Enregistrement en cours…')).toBeNull();
   });
 });
