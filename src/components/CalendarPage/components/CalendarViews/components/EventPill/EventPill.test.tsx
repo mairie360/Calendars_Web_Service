@@ -24,3 +24,14 @@ it('MAIR-905: the pill takes the tone of its category and an inline start time',
     unmount();
   }
 });
+
+it('MAIR-935: an event outside the search fades to 30 % and stays clickable', async () => {
+  const onClick = vi.fn();
+  const event = { id: 2, title: 'Marché', date: '2026-10-15', searchDimmed: true };
+  render(<EventPill event={event} onClick={onClick} />);
+  const pill = screen.getByRole('button', { name: /Marché/ });
+  expect(pill).toHaveAttribute('data-dimmed', 'true');
+  expect(pill).toHaveClass('opacity-30');
+  await userEvent.click(pill);
+  expect(onClick).toHaveBeenCalledWith(event);
+});

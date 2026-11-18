@@ -24,6 +24,7 @@ import {
   parseDateInput,
 } from "./date-utils";
 import { buildStats, getUpcomingOccurrences } from "./stats";
+import { applyEventSearch } from "./search";
 import type { CalendarReferenceOption } from "./api";
 import type {
   CalendarAssignee,
@@ -127,6 +128,9 @@ export function useCalendarPage(initial?: InitialCalendarPage) {
 
   // MAIR-918: statistics of the displayed month, the next three occurrences from now.
   const stats = useMemo(() => buildStats(events, currentDate, categories), [events, currentDate, categories]);
+  // MAIR-935: the top-bar search dims, in the three views, the events whose title and location do not match.
+  const [searchQuery, setSearchQuery] = useState('');
+  const displayedEvents = useMemo(() => applyEventSearch(events, searchQuery), [events, searchQuery]);
   const upcoming = useMemo(() => {
     const now = new Date();
     return getUpcomingOccurrences(events, now, calendarToday(now));
@@ -476,6 +480,7 @@ export function useCalendarPage(initial?: InitialCalendarPage) {
     createInitialValues,
     createModalOpen,
     currentDate,
+    displayedEvents,
     error,
     events,
     handleDeleteEvent,
@@ -502,8 +507,10 @@ export function useCalendarPage(initial?: InitialCalendarPage) {
     setCreateModalOpen,
     setSelectedEvent,
     setView,
+    searchQuery,
     services,
     saving,
+    setSearchQuery,
     feedback,
     dismissFeedback,
     stats,
