@@ -269,12 +269,14 @@ for (const operation of ['create', 'edit', 'delete', 'approve']) {
         front.calendarBff.on('patch', '/calendar/events/{id}/approval', refused);
         await page.result.current.handleValidateEvent(state.events[0], 'approved');
       }
-      assert.equal((await page.waitFor(current => !current.saving)).error, `${operation} refused`);
+      // MAIR-931: a refused deletion is reported as « Suppression impossible — <reason> ».
+      const expected = operation === 'delete' ? `Suppression impossible — ${operation} refused` : `${operation} refused`;
+      assert.equal((await page.waitFor(current => !current.saving)).error, expected);
       reply(readFails ? { status: 502, body: apiError('UNAVAILABLE', 'Read unavailable') } : { body: bootstrap() });
       await read;
       const after = await page.waitFor(current => !current.loading);
-      assert.equal(after.error, `${operation} refused`);
-      assert.equal(after.mutationError, `${operation} refused`);
+      assert.equal(after.error, expected);
+      assert.equal(after.mutationError, expected);
       assert.equal(after.readError, readFails ? 'Read unavailable' : null);
       assert.equal(after.selectedEvent.id, 5);
       assert.deepEqual(after.events.map(event => event.id), [5, 6]);
@@ -548,12 +550,13 @@ test('a confirmed approval cannot replace another selection or reopen a closed e
   }
 });
 
-test('handleDeleteEvent deletes the event and removes it locally', async () => {
+test('MAIR-931: handleDeleteEvent deletes the event, removes it locally, resolves true and announces « Événement supprimé »', async () => {
   const state = await renderLoadedPage();
   front.calendarBff.on('delete', '/calendar/events/{id}', { status: 204 });
 
-  await page.result.current.handleDeleteEvent(state.events[1]);
+  assert.equal(await page.result.current.handleDeleteEvent(state.events[1]), true);
   const after = await page.waitFor((current) => !current.saving);
+  assert.equal(after.feedback, 'Événement supprimé');
 
   assert.deepEqual(front.calendarBff.calls('/calendar/events/{id}', 'DELETE').map((call) => call.pathParams.id), ['6']);
   assert.deepEqual(after.events.map((event) => event.id), [5]);
@@ -582,14 +585,14 @@ test('a synchronous repeated create or edit dispatch makes only one write and pr
   assert.deepEqual(after.events, state.events);
 });
 
-test('handleDeleteEvent reports a refused deletion', async () => {
+test('MAIR-931: handleDeleteEvent reports a refused deletion and resolves false', async () => {
   const state = await renderLoadedPage();
   front.calendarBff.on('delete', '/calendar/events/{id}', { status: 403, body: apiError('FORBIDDEN', 'Suppression interdite') });
 
-  await page.result.current.handleDeleteEvent(state.events[1]);
+  assert.equal(await page.result.current.handleDeleteEvent(state.events[1]), false);
 
   const after = await page.waitFor((current) => !current.saving);
-  assert.equal(after.error, 'Suppression interdite');
+  assert.equal(after.error, 'Suppression impossible — Suppression interdite');
   assert.equal(after.events.length, 2);
 });
 

@@ -391,8 +391,9 @@ export function useCalendarPage(initial?: InitialCalendarPage) {
     }
   };
 
+  // MAIR-931: called once the deletion is confirmed; resolves whether the event is gone.
   const handleDeleteEvent = async (eventToDelete: CalendarEventItem) => {
-    if (mutationInFlight.current) return;
+    if (mutationInFlight.current) return false;
     mutationInFlight.current = true;
 
     setSaving(true);
@@ -405,14 +406,16 @@ export function useCalendarPage(initial?: InitialCalendarPage) {
       setEvents((currentEvents) =>
         currentEvents.filter((event) => String(event.id) !== String(eventToDelete.id)),
       );
-      setFeedback(`Événement « ${eventToDelete.title} » supprimé.`);
+      setFeedback("Événement supprimé");
       // A reopened copy of the deleted event is no longer official either.
       // Never close a different event selected in the meantime.
       setSelectedEventState((current) =>
         String(current?.id) === String(eventToDelete.id) ? null : current,
       );
+      return true;
     } catch (deleteError) {
-      setMutationError(formatCalendarApiError(deleteError));
+      setMutationError(`Suppression impossible — ${formatCalendarApiError(deleteError)}`);
+      return false;
     } finally {
       mutationInFlight.current = false;
       setSaving(false);

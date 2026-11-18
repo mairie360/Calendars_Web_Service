@@ -181,3 +181,8 @@ Le calendrier suit la maquette V2 validée ([Figma, parcours F1–F9](https://ww
   « Supprimer » à gauche, « Fermer » et « Modifier » à droite, chacun seulement si le droit est accordé.
   L'enregistrement et les refus ne s'affichent plus dans le titre : la fenêtre est occupée pendant
   l'enregistrement et le résultat part dans les toasts.
+- **Suppression (MAIR-931).** « Supprimer » ouvre une confirmation danger (« Supprimer cet événement ? »,
+  « « <titre> » sera retiré du calendrier[, avec toutes ses répétitions]. Cette action est définitive. »).
+  « Annuler », ✕ ou Échap ramènent à la fiche, focus sur « Supprimer » ; « Confirmer la suppression » est en
+  chargement pendant l'appel. Le succès ferme toutes les fenêtres avec le toast « Événement supprimé » ; un
+  refus ramène à la fiche avec le toast « Suppression impossible — <raison> ».
