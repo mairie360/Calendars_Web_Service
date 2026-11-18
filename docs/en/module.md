@@ -173,3 +173,9 @@ The calendar follows the agreed V2 mockup ([Figma, journeys F1–F9](https://www
   (« Aujourd’hui », « Demain », « ven. 20 nov. ») and hours, and participants; a row opens the event details.
   Then « Statistiques »: « N événements en <mois> » for the displayed month and one metric card per API
   category (Réunions, Animations, Cérémonies, Autres), recomputed when the month changes.
+- **Event details (MAIR-929).** The dialog is titled with the event; under the title the category pill
+  (and « En attente » / « Refusé » when relevant) and the description; then four facts with icons: Date
+  with the recurrence (« Jeudi 12 novembre 2026 · chaque mois »), Horaire, Lieu, Participants. The training
+  link and the approve / reject actions of pending events follow. Footer: « Supprimer » on the left,
+  « Fermer » and « Modifier » on the right, each only when allowed. Saving and refusals no longer show in the
+  title: the dialog is busy while saving and the outcome goes to the toasts.

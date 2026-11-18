@@ -1,21 +1,28 @@
 import React from 'react';
-import { Modal } from '@mairie360/lib-components/primitives';
+import { Modal, StatusPill } from '@mairie360/lib-components/primitives';
+import { getEventTone } from '@/app/calendar/constants';
 
 import { CreateEventModal } from '../CreateEventModal';
 import { defaultEventCategories } from '@/components/CalendarPage/calendar-constants';
 import { normalizeDateForServer } from '@/components/CalendarPage/calendar-date';
-import { EventAssigneesList } from './components/EventAssigneesList';
-import { EventDetailsActions } from './components/EventDetailsActions';
-import { EventFacts } from './components/EventFacts';
+import { EventApprovalActions, EventDetailsActions } from './components/EventDetailsActions';
+import { EventFacts, approvalStatusLabels } from './components/EventFacts';
 import { defaultEventValues, eventValues, selectedAssignees } from '../CreateEventModal';
 import type { CreateCalendarEventValues, EventDetailsModalProps } from '@/components/CalendarPage/calendar-types';
 
 export type { EventDetailsModalProps } from '@/components/CalendarPage/calendar-types';
 
-/** An event's details in the lib `Modal`, switching to the edit form in place (Figma Calendars « Détail de l’événement »). */
+const approvalTones = { pending: 'warning', approved: 'success', rejected: 'danger' } as const;
+
+/**
+ * An event's details in the lib `Modal`, switching to the edit form in place (Figma Calendars F5).
+ * MAIR-929: the dialog is titled with the event; category pill and description under the title, four facts
+ * with icons, then the extra content (training link, approval actions), « Supprimer » left and « Fermer » /
+ * « Modifier » right, each only when allowed.
+ */
 export const EventDetailsModal = ({
   isOpen, extraContent, event, people = [], categories = defaultEventCategories, canEdit, canDelete = false, canValidate = false, canCreateRecurringEvents = true,
-  title = 'Détail de l’événement', closeLabel = 'Fermer', editLabel = 'Modifier', deleteLabel = 'Supprimer', approveLabel = 'Valider', rejectLabel = 'Refuser',
+  title, closeLabel = 'Fermer', editLabel = 'Modifier', deleteLabel = 'Supprimer', approveLabel = 'Valider', rejectLabel = 'Refuser',
   cancelLabel = 'Annuler', saveLabel = 'Enregistrer', onClose, onSave, onDelete, onApprove, onReject,
 }: EventDetailsModalProps) => {
   const [editing, setEditing] = React.useState(false);
@@ -64,18 +71,24 @@ export const EventDetailsModal = ({
   }
 
   return (
-    <Modal open title={title} size="m" closeLabel="Fermer" onClose={onClose}
+    <Modal open title={title ?? event.title} size="m" closeLabel="Fermer la fenêtre" onClose={onClose}
       footer={<EventDetailsActions event={event} labels={{ close: closeLabel, edit: editLabel, delete: deleteLabel, approve: approveLabel, reject: rejectLabel }}
         showValidation={canValidate && event.approvalStatus === 'pending'} canDelete={canDelete} canEdit={resolvedCanEdit}
         onClose={onClose} onEdit={() => { setValues(eventValues(event)); setEditing(true); }} onDelete={onDelete} onApprove={onApprove} onReject={onReject} />}>
       <div className="space-y-4">
-        <div>
-          <div className="whitespace-normal break-words text-xl font-semibold leading-7 text-[var(--mairie-text)]">{event.title}</div>
-          {event.description && <p className="mt-2 whitespace-normal break-words text-sm leading-6 text-[var(--mairie-muted)]">{event.description}</p>}
+        <div className="space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {categoryLabel && <StatusPill size="s" dot tone={getEventTone(values.category)} label={String(categoryLabel)} />}
+            {event.approvalStatus && event.approvalStatus !== 'approved' && (
+              <StatusPill size="s" tone={approvalTones[event.approvalStatus]} label={approvalStatusLabels[event.approvalStatus]} />
+            )}
+          </div>
+          {event.description && <p className="whitespace-normal break-words text-sm leading-6 text-[var(--mairie-muted)]">{event.description}</p>}
         </div>
+        <EventFacts event={event} assignees={selectedAssignees(people, values.assigneeIds)} />
         {extraContent}
-        <EventFacts event={event} categoryLabel={categoryLabel ? String(categoryLabel) : undefined} />
-        <EventAssigneesList assignees={selectedAssignees(people, values.assigneeIds)} />
+        <EventApprovalActions event={event} labels={{ close: closeLabel, edit: editLabel, delete: deleteLabel, approve: approveLabel, reject: rejectLabel }}
+          showValidation={canValidate && event.approvalStatus === 'pending'} onApprove={onApprove} onReject={onReject} />
       </div>
     </Modal>
   );

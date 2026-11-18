@@ -31,7 +31,7 @@ test('opening the real event details moves focus inside, cycles Tab and returns 
   assert.equal(dom.document.activeElement, first);
   assert.equal(press(dom, first, 'Tab', true).defaultPrevented, true);
   assert.equal(dom.document.activeElement, last);
-  await dom.click(modal.querySelector('button[aria-label="Fermer"]'));
+  await dom.click(modal.querySelector('button[aria-label="Fermer la fenêtre"]'));
   assert.equal(dialog(dom), null); assert.equal(dom.document.activeElement, opener);
 });
 
