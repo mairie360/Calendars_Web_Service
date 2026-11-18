@@ -5,7 +5,7 @@ const { loadTs } = require('./support/load-ts.cjs');
 // Logique pure du calendrier (dates, statistiques, couleurs) et navigation entre modules : aucune requête réseau.
 
 const dates = loadTs('app/calendar/date-utils');
-const { buildStats, eventOccursOnDate } = loadTs('app/calendar/stats');
+const { buildStats, eventOccursOnDate, getUpcomingOccurrences } = loadTs('app/calendar/stats');
 const { getEventColor, getEventTone, resolveAssignees } = loadTs('app/calendar/constants');
 
 const ymd = (date) => dates.formatDateForQuery(date);
@@ -80,20 +80,41 @@ test('eventOccursOnDate handles multi-day events and daily, weekly and monthly r
   assert.equal(eventOccursOnDate({ ...monthly, recurrence: { frequency: 'none' } }, '2026-04-15'), false);
 });
 
-test('buildStats counts occurrences for the month, the week and the selected day', () => {
+test('MAIR-918: buildStats counts the occurrences of the displayed month per API category', () => {
   const events = [
-    { id: 1, title: 'A', date: '2026-09-16' },
-    { id: 2, title: 'B', date: '2026-09-14', endDate: '2026-09-15' },
-    { id: 3, title: 'C', date: '2026-09-01', recurrence: { frequency: 'weekly', daysOfWeek: [3] } },
+    { id: 1, title: 'A', date: '2026-09-16', category: 'meeting' },
+    { id: 2, title: 'B', date: '2026-09-14', endDate: '2026-09-15', category: 'activity' },
+    { id: 3, title: 'C', date: '2026-09-01', category: 'ceremony', recurrence: { frequency: 'weekly', daysOfWeek: [3] } },
+    { id: 4, title: 'D', date: '2026-10-02', category: 'meeting' },
   ];
+  const categories = [{ value: 'meeting', label: 'Réunion' }, { value: 'activity', label: 'Animation' }, { value: 'ceremony', label: 'Cérémonie' }, { value: 'other', label: 'Autre' }, { value: 'vote', label: 'Scrutin' }];
+  // September: A, B once (an occurrence counts once, on its first day), C on Tuesday 1st (base date) and the 5 Wednesdays.
+  assert.deepEqual(buildStats(events, new Date(2026, 8, 16), categories), {
+    month: 'septembre', total: 8,
+    items: [
+      { category: 'meeting', label: 'Réunions', value: 1 }, { category: 'activity', label: 'Animations', value: 1 },
+      { category: 'ceremony', label: 'Cérémonies', value: 6 }, { category: 'other', label: 'Autres', value: 0 },
+      { category: 'vote', label: 'Scrutin', value: 0 },
+    ],
+  });
+  // F3: moving to October recomputes them.
+  const october = buildStats(events, new Date(2026, 9, 1), categories);
+  assert.equal(october.month, 'octobre');
+  assert.equal(october.items.find((item) => item.category === 'meeting').value, 1);
+  assert.equal(buildStats([], new Date(2026, 8, 16)).total, 0);
+});
 
-  // Mois : A + B sur 2 jours + C le mardi 1er (date de base) et les 5 mercredis.
-  assert.deepEqual(buildStats(events, new Date(2026, 8, 16)), [
-    { label: 'Ce mois', value: '9 événements' },
-    { label: 'Cette semaine', value: '4 événements' },
-    { label: "Aujourd'hui", value: '2 événements' },
-  ]);
-  assert.equal(buildStats([], new Date(2026, 8, 16))[2].value, '0 événement');
+test('MAIR-918: getUpcomingOccurrences lists the next three occurrences from now, recurrences included', () => {
+  const events = [
+    { id: 1, title: 'Fini', date: '2026-11-18', startTime: '08:00', endTime: '09:00' },
+    { id: 2, title: 'En cours', date: '2026-11-18', startTime: '09:30', endTime: '11:00' },
+    { id: 3, title: 'Permanence', date: '2026-11-02', startTime: '14:00', endTime: '16:00', recurrence: { frequency: 'weekly', daysOfWeek: [4] } },
+    { id: 4, title: 'Passé', date: '2026-11-10' },
+  ];
+  const now = new Date(2026, 10, 18, 10, 0), today = new Date(2026, 10, 18);
+  const upcoming = getUpcomingOccurrences(events, now, today);
+  assert.deepEqual(upcoming.map(({ event, date }) => [event.title, date.getDate()]), [['En cours', 18], ['Permanence', 19], ['Permanence', 26]]);
+  assert.deepEqual(getUpcomingOccurrences([], now, today), []);
 });
 
 test('event colours and assignee resolution', () => {

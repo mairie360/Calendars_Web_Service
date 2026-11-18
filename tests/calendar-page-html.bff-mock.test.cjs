@@ -93,7 +93,7 @@ test('the first pass renders the loading state, the second the events answered b
   assert.doesNotMatch(withoutToastRegions(html), /role="alert"/);
   assert.match(view.text(), /Événement 5/);
   assert.match(view.text(), /Permanence/);
-  assert.match(view.text(), /Description 5/);
+  assert.doesNotMatch(view.text(), /Description 5/, 'MAIR-918: « À venir » no longer shows descriptions');
   assert.match(html, /role="radiogroup" aria-label="Changer de vue"/);
   assert.match(html, /<button type="button" role="radio" aria-checked="true"[^>]*>Mois<\/button>/);
   assert.match(html, /<button type="button" role="radio" aria-checked="false"[^>]*>Semaine<\/button>/);
@@ -320,7 +320,7 @@ test('day arrows render the navigated date in the actual schedule, statistics an
   assert.ok(view.find('Panel').some(({ props }) => props.title === 'Vendredi 1 janvier 2027'), 'MAIR-893: the period is the title of the calendar panel');
   assert.match(html, /aria-label="1 Janvier 2027 à 09:00"/);
   assert.doesNotMatch(html, /aria-label="31 Décembre 2026 à/);
-  assert.equal(view.props('CalendarSidebar').stats[2].value, '1 événement');
+  assert.equal(view.props('CalendarSidebar').stats.total, 1, 'MAIR-918: statistics of the displayed month (January)');
   await view.act(() => view.props('CalendarHeader').onCreate());
   assert.equal(view.props('ValidatedCreateEventModal').initialValues.date, '01-01-2027');
   assert.ok(front.calendarBff.sequence().every((call) => /^GET \/calendar\/(bootstrap|period)\?/.test(call)));
@@ -371,6 +371,20 @@ test('MAIR-905 F4: a month day opens « Nouvel événement » on that day at 09:
   assert.ok(front.calendarBff.sequence().every((call) => /^GET \/calendar\//.test(call)));
 });
 
+test('MAIR-918 F5: « À venir » lists the next occurrences first and a row opens the event details', async () => {
+  const inThreeDays = new Date(initialDate.getFullYear(), initialDate.getMonth(), initialDate.getDate() + 3);
+  const ymd = `${inThreeDays.getFullYear()}-${String(inThreeDays.getMonth() + 1).padStart(2, '0')}-${String(inThreeDays.getDate()).padStart(2, '0')}`;
+  await renderLoadedPage(bootstrap({ events: [calendarEvent(7, { title: 'Conseil à venir', date: ymd, startTime: '18:00', endTime: '19:30' })] }));
+  const sidebar = view.props('CalendarSidebar');
+  assert.deepEqual(sidebar.upcoming.map(({ event }) => event.title), ['Conseil à venir']);
+  assert.deepEqual(view.find('Panel').map(({ props }) => props.title).slice(-2), ['À venir', 'Statistiques'], 'À venir comes first');
+  assert.match(view.text(), /Conseil à venir\s*Réunion/);
+  assert.match(view.text(), /18:00 – 19:30/);
+  await view.click((props, text, tag) => tag === 'button' && /Conseil à venir/.test(text));
+  await view.waitFor(() => view.props('ValidatedEventDetailsModal')?.event?.canEdit !== undefined);
+  assert.equal(view.props('ValidatedEventDetailsModal').event.id, 7);
+});
+
 test('calendar layout uses responsive grids and a bounded sidebar with BFF-backed events', async () => {
   const monthHtml = await renderLoadedPage();
 
@@ -378,7 +392,7 @@ test('calendar layout uses responsive grids and a bounded sidebar with BFF-backe
   assert.match(monthHtml, /class="calendar-grid-viewport mt-9"/);
   assert.equal(view.props('MonthGrid').className, 'calendar-month-grid');
   assert.equal(view.props('CalendarSidebar').className, 'calendar-sidebar');
-  assert.deepEqual(view.props('CalendarSidebar').events.map((event) => event.id), [5, 6]);
+  assert.deepEqual(view.props('CalendarSidebar').stats.items.map((item) => [item.label, item.value]), [['Réunions', 1], ['Autres', 1]]);
   assert.deepEqual(front.calendarBff.sequence().map((line) => line.split('?')[0]), ['GET /calendar/bootstrap']);
 
   await view.act(() => view.props('CalendarToolbar').onViewChange('week'));
