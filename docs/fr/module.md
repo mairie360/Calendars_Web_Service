@@ -195,3 +195,8 @@ Le calendrier suit la maquette V2 validée ([Figma, parcours F1–F9](https://ww
   focus. Un refus affiche « Impossible d’enregistrer » en haut de la fenêtre, garde la saisie et l'erreur part en
   toast ; le succès ferme la fenêtre, amène le calendrier à la date de l'événement et affiche « Événement créé » /
   « Événement modifié ».
+- **Recherche (MAIR-935).** « Rechercher un événement » dans le bandeau haut filtre à chaque frappe, sans tenir
+  compte de la casse ni des accents, sur le titre et le lieu : dans les vues Mois, Semaine et Jour, les
+  événements qui ne correspondent pas passent à 30 % d'opacité et restent cliquables (aucun résultat : tout est
+  estompé, sans message dédié) ; l'effacement (✕ ou Échap) réaffiche tout. La recherche est conservée au
+  changement de période et de vue.

@@ -36,7 +36,7 @@ function CalendarScreen({ initial }: { initial?: InitialCalendarPage }) {
   const gridRef = useCalendarTodayMarker(calendar.view, state === 'default' ? calendar.currentDate.getTime() : -1);
 
   return (
-    <AppShell activeItem="calendar">
+    <AppShell activeItem="calendar" search={{ value: calendar.searchQuery, onChange: calendar.setSearchQuery }}>
       <CalendarHeader onCreate={calendar.ready ? () => calendar.openCreateModal() : undefined}
         onRefresh={calendar.ready ? () => void calendar.refreshData() : undefined} loading={calendar.loading} />
       <div className="calendar-board mt-7 grid items-start gap-6" ref={prepareUpcomingScrollRegion}>

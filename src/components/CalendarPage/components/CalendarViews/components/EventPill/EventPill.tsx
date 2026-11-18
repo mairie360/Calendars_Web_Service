@@ -43,9 +43,12 @@ export const EventPill = ({ event, onClick, className, style, showTime = true, i
         onClick && 'cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mairie-accent)]/35',
         event.colorClassName || 'bg-[var(--mairie-accent-surface)] text-[var(--mairie-accent)]',
         event.className,
-        className
+        className,
+        // MAIR-935: an event outside the top-bar search fades to 30 % and stays clickable.
+        event.searchDimmed && 'opacity-30'
       )}
       data-tone={getEventTone(event.category)}
+      data-dimmed={event.searchDimmed ? 'true' : undefined}
       title={typeof event.title === 'string' ? event.title : undefined}
       style={style}
       {...clickableProps}
