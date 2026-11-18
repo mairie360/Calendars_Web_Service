@@ -116,6 +116,34 @@ test('period navigation uses the period contract and a cached return avoids anot
   assert.ok(front.calendarBff.sequence().slice(1).every(call => call.startsWith('GET /calendar/period?')));
 });
 
+test('MAIR-911: skeletons cover the first read and an explicit refresh, never a period change', async () => {
+  front.calendarRead({ body: bootstrap() });
+  page = renderHook(useCalendarPage);
+  await page.waitFor(state => state.loading);
+  assert.equal(page.result.current.panelsLoading, true, 'the first read shows the panel skeletons');
+  await page.waitFor(state => !state.loading);
+  assert.equal(page.result.current.panelsLoading, false);
+
+  let reply;
+  front.calendarBff.on('get', '/calendar/period', () => new Promise(resolve => { reply = resolve; }));
+  page.result.current.handleNext();
+  await page.waitFor(state => state.loading && Boolean(reply));
+  assert.equal(page.result.current.panelsLoading, false, 'navigating keeps the grid in place');
+  reply({ body: bootstrap() });
+  await page.waitFor(state => !state.loading);
+
+  front.calendarBff.on('get', '/calendar/bootstrap', () => new Promise(resolve => { reply = resolve; }));
+  reply = undefined;
+  const refreshed = page.result.current.refreshData();
+  await page.waitFor(state => state.loading && Boolean(reply));
+  assert.equal(page.result.current.panelsLoading, true, '« Actualiser » shows the skeletons');
+  reply({ body: bootstrap() });
+  await refreshed;
+  const state = await page.waitFor(current => !current.loading);
+  assert.equal(state.panelsLoading, false);
+  assert.equal(state.readError, null);
+});
+
 test('refreshData and date selection do not call anything outside the contract', async () => {
   await renderLoadedPage();
 

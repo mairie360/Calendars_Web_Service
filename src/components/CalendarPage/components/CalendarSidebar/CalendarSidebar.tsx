@@ -9,6 +9,8 @@ import type { CalendarSidebarProps } from '../../calendar-types';
 export type { CalendarEvent, CalendarSidebarProps, CalendarStat } from '../../calendar-types';
 
 export const CalendarSidebar = ({
+  state = 'default',
+  onRetry,
   events = [],
   /** The current date to use for filtering events and calculating stats */
   currentDate = new Date(),
@@ -25,8 +27,10 @@ export const CalendarSidebar = ({
 
   return (
     <aside className={joinClasses('flex flex-col gap-6', className)} {...props}>
-      <StatsPanel stats={resolvedStats} />
+      <StatsPanel stats={resolvedStats} state={state} />
       <UpcomingEventsPanel
+        state={state}
+        onRetry={onRetry}
         className="calendar-upcoming-panel"
         events={resolvedUpcomingEvents}
         showEmptyState={showEmptyState}

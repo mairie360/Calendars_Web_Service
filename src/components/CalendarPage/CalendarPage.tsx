@@ -7,9 +7,7 @@ import { prepareUpcomingScrollRegion } from './upcoming-scroll-region';
 import { useCalendarTodayMarker } from './use-calendar-today-marker';
 import { useCalendarToasts } from './use-calendar-toasts';
 import { CalendarHeader } from './components/CalendarHeader';
-import { CalendarLoadingCard } from './components/CalendarLoadingCard';
 import { CalendarModals } from './components/CalendarModals';
-import { CalendarStatusBar } from './components/CalendarStatusBar';
 import { CalendarViews } from './components/CalendarViews';
 import { useCalendarPage } from '../../app/calendar/use-calendar-page';
 
@@ -27,28 +25,25 @@ export default function CalendarClient({ initial }: { initial?: InitialCalendarP
 function CalendarScreen({ initial }: { initial?: InitialCalendarPage }) {
   const calendar = useCalendarPage(initial);
   useCalendarToasts(calendar);
-  const gridRef = useCalendarTodayMarker(calendar.view, calendar.ready ? calendar.currentDate.getTime() : -1);
-
-  if (!calendar.ready) {
-    return (
-      <AppShell activeItem="calendar">
-        <CalendarHeader />
-        <CalendarLoadingCard readError={calendar.readError} />
-      </AppShell>
-    );
-  }
+  // MAIR-911: one state for the three panels — skeletons during the first read and an explicit refresh,
+  // the unavailable states after a failed read; write errors stay in the dialogs and the toasts.
+  // Before the browser takes over, a refused server read is shown at once (no endless skeleton).
+  const state = !calendar.ready
+    ? (calendar.readError ? 'unavailable' : 'loading')
+    : calendar.panelsLoading ? 'loading' : calendar.readError ? 'unavailable' : 'default';
+  // The grid only exists in the default state: the today marker attaches again when it comes back.
+  const gridRef = useCalendarTodayMarker(calendar.view, state === 'default' ? calendar.currentDate.getTime() : -1);
 
   return (
     <AppShell activeItem="calendar">
-      <CalendarHeader onCreate={() => calendar.openCreateModal()} />
+      <CalendarHeader onCreate={calendar.ready ? () => calendar.openCreateModal() : undefined} />
       <div className="calendar-board mt-7 grid items-start gap-6" ref={prepareUpcomingScrollRegion}>
-        <Card className="min-h-[620px] overflow-hidden rounded-lg">
+        <Card className="min-h-[620px] overflow-hidden rounded-lg" aria-busy={state === 'loading' || undefined}>
           <div className="px-6 pb-8 pt-6">
-            <CalendarStatusBar readError={calendar.readError} mutationError={calendar.mutationError} loading={calendar.loading} saving={calendar.saving} onRetry={() => void calendar.refreshData()} />
-            <CalendarViews calendar={calendar} gridRef={gridRef} />
+            <CalendarViews calendar={calendar} gridRef={gridRef} state={state} />
           </div>
         </Card>
-        <CalendarSidebar className="calendar-sidebar" events={calendar.events} currentDate={calendar.selectedDate} stats={calendar.stats} showEmptyState={false} onEventClick={calendar.handleEventClick} />
+        <CalendarSidebar className="calendar-sidebar" state={state} onRetry={() => void calendar.refreshData()} events={calendar.events} currentDate={calendar.selectedDate} stats={calendar.stats} showEmptyState={false} onEventClick={calendar.handleEventClick} />
       </div>
       <CalendarModals calendar={calendar} />
     </AppShell>
