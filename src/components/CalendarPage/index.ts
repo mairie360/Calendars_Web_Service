@@ -7,3 +7,4 @@ export * from './calendar-types';
 export * from './today-marker';
 export * from './upcoming-scroll-region';
 export * from './use-calendar-today-marker';
+export * from './use-calendar-toasts';

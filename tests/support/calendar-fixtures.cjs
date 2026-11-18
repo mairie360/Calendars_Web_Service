@@ -82,4 +82,12 @@ function installWindow() {
   return window;
 }
 
-module.exports = { admin, alice, marie, apiError, bootstrap, calendarEvent, installWindow, sessionResponse };
+// MAIR-879: the lib ToastProvider keeps two hidden live regions (status / alert) mounted and floats its toasts
+// in a section after the page; page states are checked without them.
+const withoutToastRegions = (html) => html
+  .replace(/<div data-m360-component="ToastProvider" class="sr-only" role="(?:status|alert)"[^>]*>(?:<div>[^<]*<\/div>)*<\/div>/g, '')
+  .replace(/<section data-m360-component="ToastProvider"[\s\S]*?<\/section>/g, '');
+/** Status regions of the page in a DOM, the toast live regions left out. */
+const pageStatusRegions = (document) => [...document.querySelectorAll('[role="status"]')].filter(node => !node.closest('[data-m360-component="ToastProvider"]'));
+
+module.exports = { admin, alice, marie, apiError, bootstrap, calendarEvent, installWindow, pageStatusRegions, sessionResponse, withoutToastRegions };

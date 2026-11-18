@@ -1,10 +1,5 @@
 html {
-  font-size: 17px;
   --calendar-card-shadow: 0 5px 15px rgb(23 32 51 / 14%), 0 1px 3px rgb(23 32 51 / 12%);
-}
-
-html[data-theme="dark"] {
-  --calendar-card-shadow: 0 6px 20px rgb(0 0 0 / 35%), 0 1px 4px rgb(0 0 0 / 30%);
 }
 
 html,
@@ -15,7 +10,6 @@ body {
 
 body {
   margin: 0;
-  font-family: system-ui, sans-serif;
   color: var(--mairie-text);
   -webkit-font-smoothing: antialiased;
   text-rendering: geometricPrecision;
@@ -25,74 +19,13 @@ button {
   cursor: pointer;
 }
 
-.calendar-scroll-shell {
-  height: 100vh;
-  height: 100dvh;
-  min-height: 0;
-  overflow: hidden;
-}
-
-.calendar-scroll-shell > .flex {
-  height: 100%;
-  min-height: 0;
-}
-
-.calendar-scroll-shell > .flex > .hidden {
-  min-height: 0;
-  overflow-y: auto;
-}
-
-.calendar-scroll-shell > .flex > .hidden > aside {
-  min-height: 100%;
-}
-
-.calendar-scroll-shell aside.app-published-sidebar[aria-label="Navigation principale"] {
-  position: relative;
-  z-index: 20;
-  box-shadow: 8px 0 24px rgb(12 28 48 / 28%);
-}
-
-.calendar-scroll-shell aside.app-published-sidebar[aria-label="Navigation principale"] > nav button {
-  min-height: 44px;
-  flex-shrink: 0;
-}
-
-/* Keep historical drawer rules away from the shared fixed desktop navigation. */
-.calendar-scroll-shell [role="dialog"][aria-label="Navigation mobile"] aside[aria-label="Navigation principale"] {
-  z-index: 0;
-}
-
-.calendar-scroll-shell > .flex > div:last-child {
-  min-height: 0;
-}
-
-.calendar-scroll-shell > .flex > div:last-child > header {
-  flex-shrink: 0;
-}
-
-.calendar-scroll-shell > .flex > div:last-child > main {
-  min-height: 0;
-  min-width: 0;
-  overflow-x: hidden;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  padding: 28px;
-}
-
 @media (min-width: 64rem) {
   .calendar-title-bar {
     align-items: center !important;
   }
 }
 
-.calendar-scroll-shell > .flex > div:last-child > footer {
-  position: static;
-  flex-shrink: 0;
-  width: 100%;
-  z-index: 30;
-}
-
-.calendar-scroll-shell .grid > * {
+.calendar-board .grid > * {
   min-width: 0;
 }
 
@@ -205,10 +138,6 @@ button {
 }
 
 @media (max-width: 767px) {
-  .calendar-scroll-shell > .flex > div:last-child > main {
-    padding: 20px 14px;
-  }
-
   .calendar-board > section > div {
     padding: 16px 10px;
   }
@@ -238,13 +167,4 @@ button {
   .calendar-month-grid [role="button"] > div + div {
     display: none;
   }
-}
-
-/* Honor presentation attributes when supplied, without inventing persistence. */
-html[data-settings-density="compact"] .calendar-scroll-shell > .flex > div:last-child > main {
-  padding: 16px;
-}
-
-html[data-settings-density="comfortable"] .calendar-scroll-shell > .flex > div:last-child > main {
-  padding: 32px;
 }

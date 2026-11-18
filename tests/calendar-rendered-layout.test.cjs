@@ -22,24 +22,23 @@ function shadow(window, value) {
   });
 }
 
-test('real calendar sidebar applies reference position, shadow and seven command row styles', async (t) => {
-  const dom = await calendarDom(t), sidebar = dom.document.querySelector('.app-published-sidebar');
-  const computed = dom.style(sidebar);
-  assert.equal(computed.position, 'relative'); assert.equal(computed.zIndex, '20');
-  assert.deepEqual(shadow(dom.window, computed.boxShadow), [{ lengths: [8, 0, 24, 0], color: 'rgba(12, 28, 48, 0.28)' }]);
-  const commands = [...sidebar.querySelectorAll('nav button')];
-  assert.deepEqual(commands.map((button) => button.textContent), ['Tableau de bord', 'Projets', 'Messagerie', 'Formation', 'Calendrier', 'Administration', 'Paramètres']);
-  for (const button of commands) {
-    assert.equal(dom.style(button).minHeight, '44px'); assert.equal(dom.style(button).flexShrink, '0');
-  }
+test('MAIR-879: the shared lib-components 2 frame is not reshaped by calendar rules', async (t) => {
+  const dom = await calendarDom(t);
+  const navigation = dom.document.querySelector('aside.app-desktop-navigation[aria-label="Navigation principale"]');
+  assert.ok(navigation, 'the collapsible navigation band of the lib frame is rendered');
+  const commands = [...navigation.querySelectorAll('nav button')];
+  assert.deepEqual(commands.map((button) => button.getAttribute('aria-label')), ['Tableau de bord', 'Projets', 'Messagerie', 'Formation', 'Calendrier', 'Administration', 'Paramètres']);
+  assert.equal(dom.document.querySelector('.calendar-scroll-shell'), null);
+  assert.ok(dom.document.querySelector('.app-shell-frame > .app-shell-body'));
+  assert.ok(dom.document.querySelector('.app-shell-footer > footer'));
 });
 
-test('real calendar drawer applies its lower sidebar layer and closes through its published command', async (t) => {
+test('real calendar drawer opens the shared sidebar and closes through its published command', async (t) => {
   const dom = await calendarDom(t);
   await dom.click(dom.button('Ouvrir la navigation'));
   const drawer = dom.document.querySelector('[role="dialog"][aria-label="Navigation mobile"]');
   assert.ok(drawer);
-  assert.equal(dom.style(drawer.querySelector('aside')).zIndex, '0');
+  assert.ok(drawer.querySelector('aside'));
   await dom.click(dom.button('Fermer la navigation'));
   assert.equal(dom.document.querySelector('[role="dialog"][aria-label="Navigation mobile"]'), null);
 });
@@ -73,43 +72,30 @@ test('real upcoming panel keeps scroll and padding styles on its prepared region
   assert.equal(dom.style(region).flexBasis, 'auto');
 });
 
-test('actual shell and supplied density contexts apply reference typography, insets and scroll styles', async (t) => {
+test('MAIR-879: the lib main area keeps its own scroll, insets and typography', async (t) => {
   const dom = await calendarDom(t), main = dom.document.querySelector('main');
-  assert.equal(dom.style(dom.document.documentElement).fontSize, '17px');
-  assert.equal(dom.style(dom.document.body).fontFamily, 'system-ui, sans-serif');
-  assert.equal(dom.style(main).padding, '28px');
-  assert.equal(dom.style(main).overflowY, 'auto'); assert.equal(dom.style(main).overflowX, 'hidden');
-  const shell = dom.document.querySelector('.calendar-scroll-shell');
-  assert.equal(dom.style(shell).height, '100dvh'); assert.equal(dom.style(shell).overflow, 'hidden');
-  assert.equal(Number.parseFloat(dom.style(shell.querySelector(':scope > .flex')).minHeight), 0);
-  const skip = [...shell.querySelectorAll('a[href]')].find(link => link.getAttribute('href') === `#${main.id}`);
+  assert.ok(main.classList.contains('app-shell-main'));
+  assert.notEqual(dom.style(dom.document.documentElement).fontSize, '17px', 'no calendar-only root font size');
+  assert.notEqual(dom.style(dom.document.body).fontFamily, 'system-ui, sans-serif', 'no calendar-only font family');
+  assert.notEqual(dom.style(main).padding, '28px', 'the lib owns the main insets');
+  const skip = [...dom.document.querySelectorAll('a[href]')].find(link => link.getAttribute('href') === `#${main.id}`);
   assert.ok(skip);
-  assert.notEqual(dom.style(skip.parentElement).height, '100%', 'The skip-link wrapper cannot displace the calendar frame');
-  assert.equal(dom.style(dom.document.querySelector('.app-published-sidebar').closest('.hidden')).overflowY, 'auto');
-  assert.equal(Number.parseFloat(dom.style(main.parentElement).minHeight), 0);
-  for (const [density, padding] of [['compact', '16px'], ['comfortable', '32px']]) {
-    dom.document.documentElement.setAttribute('data-settings-density', density);
-    assert.equal(dom.style(main).padding, padding);
-  }
-  // Supplying the CSS context does not verify settings persistence or breakpoint layout.
 });
 
-test('real cards reference the consumer shadow token and supplied light/dark contexts change its declaration', async (t) => {
+test('real cards reference the consumer shadow token in the always-light theme', async (t) => {
   const dom = await calendarDom(t);
   const cards = [...dom.document.querySelectorAll('.calendar-board > section, .calendar-sidebar > section')];
   assert.ok(cards.length >= 3);
   for (const card of cards) assert.equal(dom.style(card).boxShadow, 'var(--calendar-card-shadow)');
   const token = () => shadow(dom.window, dom.style(dom.document.documentElement).getPropertyValue('--calendar-card-shadow'));
-  assert.deepEqual(token(), [
+  const light = [
     { lengths: [0, 5, 15, 0], color: 'rgba(23, 32, 51, 0.14)' },
     { lengths: [0, 1, 3, 0], color: 'rgba(23, 32, 51, 0.12)' },
-  ]);
+  ];
+  assert.deepEqual(token(), light);
+  // MAIR-933 (lib 2): the fronts are always light, a dark attribute no longer swaps the calendar token.
   dom.document.documentElement.setAttribute('data-theme', 'dark');
-  assert.deepEqual(token(), [
-    { lengths: [0, 6, 20, 0], color: 'rgba(0, 0, 0, 0.35)' },
-    { lengths: [0, 1, 4, 0], color: 'rgba(0, 0, 0, 0.3)' },
-  ]);
-  // JSDOM retains the variable reference; native rendering and settings persistence are separate.
+  assert.deepEqual(token(), light);
 });
 
 test('real page marks today after bootstrap, keeps selection independent and reattaches in week view', async (t) => {
@@ -118,8 +104,8 @@ test('real page marks today after bootstrap, keeps selection independent and rea
   assert.deepEqual(today().map((button) => button.getAttribute('aria-label')), ['Sélectionner le 9 Octobre 2026']);
   assert.equal(dom.style(today()[0]).borderTopWidth, '2px');
   assert.equal(dom.style(today()[0]).borderTopStyle, 'dashed');
-  assert.equal(dom.style(today()[0]).borderTopColor, 'rgb(62, 106, 98)' /* MAIR-608 charte accent */);
-  assert.equal(dom.style(dom.document.documentElement).getPropertyValue('--mairie-accent').trim(), '#3e6a62');
+  assert.equal(dom.style(today()[0]).borderTopColor, 'rgb(45, 120, 108)' /* lib 1.2.0+ accent */);
+  assert.equal(dom.style(dom.document.documentElement).getPropertyValue('--mairie-accent').trim(), '#2d786c');
   const other = dom.button('Sélectionner le 8 Octobre 2026');
   const beforeOther = other.className, beforeToday = today()[0].className;
   await dom.click(other);
