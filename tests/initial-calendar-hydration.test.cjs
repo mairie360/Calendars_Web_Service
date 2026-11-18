@@ -47,7 +47,9 @@ test('foreground verification keeps an open event draft on both confirmed and re
   await view.act(() => window.dispatchEvent({ type: 'focus' }));
   await view.waitFor(() => view.text().includes('Foreground read refused'));
   assert.equal(view.hostElements(props => props.id === 'event-title')[0].props.value, 'Draft across foreground');
-  assert.match(view.text(), /Foreground event/);
+  // MAIR-911: a refused read replaces the panels with their unavailable states, the open draft stays.
+  assert.match(view.text(), /Calendrier indisponible\./);
+  assert.match(view.text(), /Statistiques indisponibles\./);
 });
 
 test('an unavailable server receipt resumes through the existing browser bootstrap route', async () => {

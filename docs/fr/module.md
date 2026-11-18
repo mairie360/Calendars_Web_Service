@@ -148,3 +148,9 @@ Le calendrier suit la maquette V2 validée ([Figma, parcours F1–F9](https://ww
   teintés fournis par le cadre de la lib (le calendrier ne le redessine plus), thème toujours clair. Les
   retours d'action s'affichent dans les toasts de la lib (`ToastProvider`, en haut à droite) : un succès
   disparaît après 5 s, une écriture refusée reste jusqu'à sa fermeture.
+- **États chargement et indisponible (MAIR-911).** Le premier chargement et « Actualiser » / « Réessayer »
+  affichent des squelettes dans les trois panneaux (calendrier, À venir, statistiques) ; un changement de
+  période garde la grille. Si le calendrier ne peut pas être lu, la barre d'outils reste et les panneaux
+  affichent « Calendrier indisponible. » (avec l'erreur et « Réessayer »), une alerte « Service
+  indisponible » avec « Réessayer » et « Statistiques indisponibles. ». L'ancienne barre d'état disparaît :
+  les erreurs d'écriture restent dans les fenêtres et les toasts.
