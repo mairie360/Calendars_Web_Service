@@ -99,6 +99,10 @@ export const MonthGrid = ({
   const cells = useMemo(() => getMonthCells(parsedDate, weekStartsOn), [parsedDate, weekStartsOn]);
   const weeks = useMemo(() => getWeeks(cells), [cells]);
   const weekSegments = useMemo(() => weeks.map((week) => getWeekEventSegments(events, week)), [events, weeks]);
+  // MAIR-905: days of the adjacent months fill the first and last weeks (Outside cells).
+  const leadingDays = cells.findIndex(Boolean);
+  const outsideDate = (weekIndex: number, index: number) =>
+    new Date(parsedDate.getFullYear(), parsedDate.getMonth(), weekIndex * 7 + index - leadingDays + 1);
 
   return (
     <div className={joinClasses('space-y-3', className)} {...props}>
@@ -123,30 +127,17 @@ export const MonthGrid = ({
                   date ? (
                     <CalendarCell
                       key={dateKey(date)}
+                      day={date.getDate()}
                       aria-label={`Sélectionner le ${formatFullDate(date)}`}
+                      aria-haspopup="dialog"
                       selected={isSameDay(date, selected)}
                       className="h-full min-h-0"
                       onClick={() => onSelectDate?.(date)}
                     />
                   ) : (
-                    <div key={`empty-${weekIndex}-${index}`} aria-hidden="true" className="rounded-md border border-transparent" />
+                    <CalendarCell key={`outside-${weekIndex}-${index}`} outside day={outsideDate(weekIndex, index).getDate()} className="h-full min-h-0" />
                   )
                 )}
-              </div>
-
-              <div className="pointer-events-none absolute inset-x-0 top-0 z-30 grid grid-cols-7 gap-1.5">
-                {week.map((date, index) => (
-                  <div
-                    key={date ? `label-${dateKey(date)}` : `empty-label-${weekIndex}-${index}`}
-                    aria-hidden={!date}
-                    className={joinClasses(
-                      'h-10 px-2 pt-2 text-sm font-medium leading-5',
-                      date && isSameDay(date, selected) ? 'text-[var(--mairie-accent)]' : 'text-[var(--mairie-text)]'
-                    )}
-                  >
-                    {date?.getDate()}
-                  </div>
-                ))}
               </div>
 
               <div
@@ -158,7 +149,9 @@ export const MonthGrid = ({
                     key={`${segment.event.id}-${weekIndex}-${segment.startColumn}-${segment.endColumn}-${segment.lane}`}
                     event={segment.event}
                     onClick={onEventClick}
-                    showTime={false}
+                    inline
+                    // MAIR-905: the start time only while the day holds a single event.
+                    showTime={segments.filter((other) => other.startColumn === segment.startColumn).length < 2}
                     className={monthEventClassName}
                     style={{
                       gridColumn: `${segment.startColumn + 1} / span ${segment.endColumn - segment.startColumn}`,

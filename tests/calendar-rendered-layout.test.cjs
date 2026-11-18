@@ -103,12 +103,19 @@ test('real page marks today after bootstrap, keeps selection independent and rea
   const today = () => [...dom.document.querySelectorAll('button[aria-current="date"]')];
   assert.deepEqual(today().map((button) => button.getAttribute('aria-label')), ['Sélectionner le 9 Octobre 2026']);
   assert.equal(dom.style(today()[0]).borderTopWidth, '2px');
-  assert.equal(dom.style(today()[0]).borderTopStyle, 'dashed');
+  assert.equal(dom.style(today()[0]).borderTopStyle, 'solid');
+  // MAIR-905: Today cell — the number sits on an accent pill.
+  assert.match(dom.style(today()[0].querySelector('.calendar-day-number')).backgroundColor, /var\(--mairie-accent\)|rgb\(45, 120, 108\)/);
   assert.equal(dom.style(today()[0]).borderTopColor, 'rgb(45, 120, 108)' /* lib 1.2.0+ accent */);
   assert.equal(dom.style(dom.document.documentElement).getPropertyValue('--mairie-accent').trim(), '#2d786c');
   const other = dom.button('Sélectionner le 8 Octobre 2026');
   const beforeOther = other.className, beforeToday = today()[0].className;
   await dom.click(other);
+  // MAIR-905 C1: a day click keeps the selection and opens « Nouvel événement » on that day, 09:00 – 10:00.
+  const dialog = dom.document.querySelector('[role="dialog"]');
+  assert.match(dialog?.textContent ?? '', /Nouvel événement/);
+  assert.equal(dom.document.getElementById('event-date')?.value ?? dialog.querySelector('input[value="08-10-2026"]')?.value, '08-10-2026');
+  await dom.click(dom.button('Annuler'));
   assert.notEqual(other.className, beforeOther, 'The real selected-day presentation changes');
   assert.notEqual(today()[0].className, beforeToday, 'The previous selection presentation clears');
   assert.equal(today()[0].getAttribute('aria-label'), 'Sélectionner le 9 Octobre 2026');

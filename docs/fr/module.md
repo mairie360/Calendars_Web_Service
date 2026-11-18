@@ -162,3 +162,9 @@ Le calendrier suit la maquette V2 validée ([Figma, parcours F1–F9](https://ww
   d'outils : Précédent / Suivant de la lib (un mois, une semaine ou un jour), « Aujourd’hui » (retour à la
   période du jour) et le choix de vue en `SegmentedControl` de la lib (Mois / Semaine / Jour, flèches du
   clavier). L'URL suit toujours `view` et `date`.
+- **Grille du mois (MAIR-905).** Un clic sur un jour (ou Entrée / Espace) le garde sélectionné et ouvre
+  « Nouvel événement » à cette date, 09:00 – 10:00 ; un clic sur une pastille ouvre toujours la fiche. Les
+  cellules suivent la maquette : Normal, Sélectionné, Aujourd'hui (bordure accent, numéro sur pastille
+  accent) et Hors mois (jours des mois voisins sur `surface-raised`, non interactifs). Les pastilles prennent
+  le ton de leur catégorie (réunion info, activité succès, cérémonie avertissement, autre neutre, jetons
+  `mairie-*`) et n'affichent l'heure de début que si le jour n'a qu'un événement.
