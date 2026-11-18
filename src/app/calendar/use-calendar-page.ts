@@ -331,7 +331,7 @@ export function useCalendarPage(initial?: InitialCalendarPage) {
 
       preserveConfirmedMutation();
       setEvents((currentEvents) => [...currentEvents, createdEvent]);
-      if (createdEvent.id !== undefined && String(createdEvent.id).trim()) setFeedback(`Événement « ${createdEvent.title} » créé.`);
+      if (createdEvent.id !== undefined && String(createdEvent.id).trim()) setFeedback("Événement créé");
       setCreateModalOpen(false);
       selectionFollowsToday.current = false;
       setCurrentDate(parseDateInput(createdEvent.date));
@@ -372,12 +372,19 @@ export function useCalendarPage(initial?: InitialCalendarPage) {
             : event,
         ),
       );
-      if (String(savedEvent.id) === String(updatedEvent.id)) setFeedback(`Événement « ${savedEvent.title} » enregistré.`);
+      if (String(savedEvent.id) === String(updatedEvent.id)) setFeedback("Événement modifié");
       const selectionUnchanged = eventSelectionRevision.current === selection;
       if (selectionUnchanged) {
         setSelectedEventState((current) =>
           String(current?.id) === String(updatedEvent.id) ? null : current,
         );
+        // MAIR-926 C6: like a creation, the calendar moves to the date of the saved event.
+        const savedDate = parseDateInput(savedEvent.date);
+        if (!Number.isNaN(savedDate.getTime())) {
+          selectionFollowsToday.current = false;
+          setCurrentDate(savedDate);
+          pageUrl.update({ date: formatDateForQuery(savedDate) });
+        }
       }
       // A reopened or different form must not exit editing because an earlier
       // form's write completed; the official event list still receives the result.

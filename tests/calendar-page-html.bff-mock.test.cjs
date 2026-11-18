@@ -244,7 +244,8 @@ test('a successful independent read cannot hide a refused edit or reset its draf
   await view.click('Réessayer');
   await view.waitFor(html => !html.includes('Read unavailable') && !html.includes('Chargement des données'));
   assert.equal(view.props('ValidatedEventDetailsModal').error, 'Edit refused');
-  assert.match(view.html, /<span role="alert"[^>]*>Edit refused<\/span>/);
+  // MAIR-926 C5: the refusal sits at the top of the edit dialog as « Impossible d’enregistrer ».
+  assert.match(view.text(), /Modifier l’événement Impossible d’enregistrer Edit refused/);
   assert.equal(view.hostElements(props => props.id === 'event-title')[0].props.value, 'Draft retained');
   assert.doesNotMatch(view.text(), /Réessayer/);
   assert.equal(front.calendarBff.calls('/calendar/events/{id}', 'PATCH').length, 1);
@@ -279,12 +280,12 @@ test('pending and refused edit keeps its draft through reordered category reads,
   await view.waitFor(() => !view.props('ValidatedEventDetailsModal').saving && view.props('ValidatedEventDetailsModal').categories[0].value === 'meeting');
   assert.equal(view.hostElements(props => props.id === 'event-title')[0].props.value, 'Combined draft');
   assert.equal(view.hostElements(props => props.id === 'event-category')[0].props.value, 'other');
-  assert.match(dialogHtml(), /role="alert"[^>]*>Combined edit refused/);
+  assert.match(dialogHtml(), /role="alert"[\s\S]*Impossible d’enregistrer[\s\S]*Combined edit refused/);
   assert.equal(front.calendarBff.calls('/calendar/events/{id}', 'PATCH').length, 1);
   const confirmed = calendarEvent(event.id, { ...event, title: 'Combined draft', category: 'other' });
   front.calendarBff.on('patch', '/calendar/events/{id}', { body: confirmed });
   await view.act(submitEdit);
-  await view.waitFor(() => !view.html.includes('Modifier l’événement') && !view.html.includes('Enregistrement en cours'));
+  await view.waitFor(() => !view.html.includes('Modifier l’événement'));
   assert.equal(front.calendarBff.calls('/calendar/events/{id}', 'PATCH').length, 2);
   assert.equal(view.props('DaySchedule').events[0].title, 'Combined draft');
   assert.equal(view.props('DaySchedule').events[0].category, 'other');
@@ -292,7 +293,7 @@ test('pending and refused edit keeps its draft through reordered category reads,
   assert.doesNotMatch(withoutToastRegions(view.html), /Combined edit refused/);
   // MAIR-879: the refused write stays in an error toast until dismissed; the confirmed one is a success toast.
   assert.match(toastTexts(), /Combined edit refused/);
-  assert.match(toastTexts(), /Événement « Combined draft » enregistré\./);
+  assert.match(toastTexts(), /Événement modifié/);
 });
 
 test('changing the view re-renders the week grid with the reloaded events', async () => {
@@ -401,10 +402,13 @@ test('calendar layout uses responsive grids and a bounded sidebar with BFF-backe
 
 test('the create modal opens from the title bar and the created event appears in the page', async () => {
   await renderLoadedPage();
-  assert.doesNotMatch(view.html, /Ajoutez une date au calendrier de la mairie\./);
+  assert.doesNotMatch(view.html, /role="dialog"/);
 
   await view.act(() => view.props('CalendarHeader').onCreate());
-  assert.match(view.html, /Ajoutez une date au calendrier de la mairie\./);
+  // MAIR-926 C1: « Nouvel événement » without subtitle, saved with « Enregistrer ».
+  assert.match(dialogHtml(), /Nouvel événement/);
+  assert.doesNotMatch(dialogHtml(), /Ajoutez une date au calendrier de la mairie\./);
+  assert.match(dialogHtml(), /Enregistrer/);
   assert.equal(view.props('ValidatedCreateEventModal').isOpen, true);
 
   const created = calendarEvent(9, { title: 'Conseil municipal', date: '2026-09-18' });
@@ -419,7 +423,9 @@ test('the create modal opens from the title bar and the created event appears in
   const html = await view.waitFor((current) => current.includes('Conseil municipal') && !isCalendarPending());
 
   assert.equal(front.calendarBff.sequence().filter((line) => line.startsWith('POST')).length, 1);
-  assert.doesNotMatch(html, /Ajoutez une date au calendrier de la mairie\./);
+  // MAIR-926 C6: the dialog closes and « Événement créé » is toasted.
+  assert.doesNotMatch(withoutToastRegions(html), /role="dialog"/);
+  await view.waitFor(() => toastTexts().includes('Événement créé'));
   assert.match(view.text(), /Conseil municipal/);
   assert.equal(view.props('MonthGrid').events.some((event) => event.id === created.id), true);
 });

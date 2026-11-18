@@ -215,9 +215,16 @@ export interface CreateEventModalProps {
   initialValues?: Partial<CreateCalendarEventValues>;
   canCreateRecurringEvents?: boolean;
   title?: React.ReactNode;
+  /** MAIR-926: the mockup windows have no subtitle; kept for callers that still pass one. */
   subtitle?: React.ReactNode;
   cancelLabel?: string;
   submitLabel?: string;
+  /** MAIR-926 C4: « Enregistrer » loads while the write runs. */
+  saving?: boolean;
+  /** MAIR-926 C5: the refused write, shown as « Impossible d’enregistrer » at the top of the window. */
+  error?: string | null;
+  /** MAIR-926 C3: validation errors keyed by input id (`event-title`…), shown under their fields. */
+  fieldErrors?: Record<string, string>;
   onCancel: () => void;
   /** Escape, the backdrop and the header close; defaults to `onCancel`. The details editor closes the whole dialog with it. */
   onDismiss?: () => void;
@@ -226,6 +233,8 @@ export interface CreateEventModalProps {
 
 export interface EventDetailsModalProps {
   extraContent?: React.ReactNode;
+  /** MAIR-926: validation errors of the edit form, forwarded to it. */
+  fieldErrors?: Record<string, string>;
   isOpen: boolean;
   event?: CalendarEvent | null;
   people?: CalendarAssignee[];
