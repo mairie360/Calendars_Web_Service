@@ -16,7 +16,7 @@ test('the upcoming-events list is a named keyboard-scrollable region', () => {
 
   prepareUpcomingScrollRegion(board);
   assert.equal(region.tabIndex, 0);
-  assert.deepEqual(attributes, { role: 'region', 'aria-label': 'Événements à venir' });
+  assert.deepEqual(attributes, { role: 'region', 'aria-label': 'À venir' });
 });
 
 test('missing or unmounted sidebar does not fail', () => {

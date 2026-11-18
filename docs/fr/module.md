@@ -168,3 +168,9 @@ Le calendrier suit la maquette V2 validée ([Figma, parcours F1–F9](https://ww
   accent) et Hors mois (jours des mois voisins sur `surface-raised`, non interactifs). Les pastilles prennent
   le ton de leur catégorie (réunion info, activité succès, cérémonie avertissement, autre neutre, jetons
   `mairie-*`) et n'affichent l'heure de début que si le jour n'a qu'un événement.
+- **Colonne de droite (MAIR-918).** « À venir » d'abord : les trois prochaines occurrences à partir de
+  maintenant (récurrences comprises, un événement du jour reste jusqu'à son heure de fin), chaque ligne avec
+  titre, pastille de catégorie, jour (« Aujourd’hui », « Demain », « ven. 20 nov. ») et horaires, et
+  participants ; une ligne ouvre la fiche. Puis « Statistiques » : « N événements en <mois> » pour le mois
+  affiché et une carte par catégorie de l'API (Réunions, Animations, Cérémonies, Autres), recalculées au
+  changement de mois.

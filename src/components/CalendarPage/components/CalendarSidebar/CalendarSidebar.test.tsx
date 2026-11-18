@@ -3,4 +3,11 @@ import '@testing-library/jest-dom/vitest';
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { CalendarSidebar } from './CalendarSidebar';
-it('uses explicitly supplied statistics and events instead of deriving replacement data', () => { render(<CalendarSidebar currentDate="2026-10-15" events={[]} upcomingEvents={[{ id: 1, title: 'Conseil', date: '2026-10-16' }]} stats={[{ label: 'Confirmés', value: 4 }]} />); expect(screen.getByText('Conseil')).toBeVisible(); expect(screen.getByText('Confirmés').closest('div')).toHaveTextContent('4'); });
+it('MAIR-918: shows the supplied occurrences and month statistics, « À venir » first', () => {
+  render(<CalendarSidebar today={new Date(2026, 9, 15)} upcoming={[{ event: { id: 1, title: 'Conseil', date: '2026-10-16' }, date: new Date(2026, 9, 16) }]}
+    stats={{ month: 'octobre', total: 4, items: [{ category: 'meeting', label: 'Réunions', value: 4 }] }} />);
+  const headings = screen.getAllByRole('heading').map(heading => heading.textContent);
+  expect(headings).toEqual(['À venir', 'Statistiques']);
+  expect(screen.getByRole('button', { name: /Conseil/ })).toHaveTextContent('Demain');
+  expect(screen.getByRole('region', { name: 'Réunions' })).toHaveTextContent('4');
+});

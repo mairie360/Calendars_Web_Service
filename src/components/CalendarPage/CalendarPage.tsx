@@ -1,6 +1,7 @@
 'use client';
 
 import { CalendarSidebar } from './components/CalendarSidebar';
+import { calendarToday } from '@/app/calendar/date-utils';
 import { Panel, ToastProvider } from "@mairie360/lib-components/primitives";
 import { AppShell } from './components/AppShell';
 import { prepareUpcomingScrollRegion } from './upcoming-scroll-region';
@@ -43,7 +44,7 @@ function CalendarScreen({ initial }: { initial?: InitialCalendarPage }) {
         <Panel title={calendar.ready ? calendar.periodTitle : 'Calendrier'} className="calendar-panel min-h-[620px] overflow-hidden" aria-busy={state === 'loading' || undefined}>
           <CalendarViews calendar={calendar} gridRef={gridRef} state={state} />
         </Panel>
-        <CalendarSidebar className="calendar-sidebar" state={state} onRetry={() => void calendar.refreshData()} events={calendar.events} currentDate={calendar.selectedDate} stats={calendar.stats} showEmptyState={false} onEventClick={calendar.handleEventClick} />
+        <CalendarSidebar className="calendar-sidebar" state={state} onRetry={() => void calendar.refreshData()} upcoming={calendar.upcoming} categories={calendar.categories} today={calendarToday()} stats={calendar.stats} onEventClick={calendar.handleEventClick} />
       </div>
       <CalendarModals calendar={calendar} />
     </AppShell>

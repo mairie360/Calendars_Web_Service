@@ -1,5 +1,5 @@
 import { weekDayOptions } from './calendar-constants';
-import type { CalendarDateInput, CalendarEvent, CalendarRecurrence, CalendarStat } from './calendar-types';
+import type { CalendarDateInput, CalendarEvent, CalendarRecurrence } from './calendar-types';
 
 const serverDateRegex = /^(\d{2})[-/](\d{2})[-/](\d{4})$/;
 const isoDateRegex = /^(\d{4})-(\d{2})-(\d{2})$/;
@@ -334,44 +334,3 @@ export const getEventsForSlot = (events: CalendarEvent[], date: Date, time?: str
     return eventStartsInSlot(event, date, time);
   });
 
-export const getUpcomingEvents = (events: CalendarEvent[] = [], fromDate = new Date()) =>
-  [...events]
-    .filter((event) => {
-      const from = parseDateInput(fromDate);
-      const eventEnd = parseDateInput(event.endDate || event.recurrence?.endsOn || event.date);
-      return eventEnd.getTime() >= from.getTime();
-    })
-    .sort((eventA, eventB) => {
-      const dateDiff = parseDateInput(eventA.date).getTime() - parseDateInput(eventB.date).getTime();
-      if (dateDiff !== 0) return dateDiff;
-      return (eventA.startTime || '').localeCompare(eventB.startTime || '');
-    });
-
-const countEventOccurrencesBetween = (events: CalendarEvent[], startDate: Date, endDate: Date) =>
-  events.reduce((total, event) => {
-    let occurrences = 0;
-
-    for (let day = startDate; day.getTime() <= endDate.getTime(); day = addDays(day, 1)) {
-      if (eventOccursOnDate(event, day)) {
-        occurrences += 1;
-      }
-    }
-
-    return total + occurrences;
-  }, 0);
-
-export const getDefaultStats = (events: CalendarEvent[] = [], selectedDate: Date): CalendarStat[] => {
-  const monthStart = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
-  const monthEnd = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0);
-  const weekStart = startOfWeek(selectedDate);
-  const weekEnd = addDays(weekStart, 6);
-  const monthEventsCount = countEventOccurrencesBetween(events, monthStart, monthEnd);
-  const weekEventsCount = countEventOccurrencesBetween(events, weekStart, weekEnd);
-  const dayEventsCount = countEventOccurrencesBetween(events, selectedDate, selectedDate);
-
-  return [
-    { label: 'Ce mois', value: `${monthEventsCount} événement${monthEventsCount > 1 ? 's' : ''}` },
-    { label: 'Cette semaine', value: `${weekEventsCount} événement${weekEventsCount > 1 ? 's' : ''}` },
-    { label: 'Aujourd’hui', value: `${dayEventsCount} événement${dayEventsCount > 1 ? 's' : ''}` },
-  ];
-};

@@ -72,29 +72,87 @@ export function eventOccursOnDate(event: CalendarEventItem, date: CalendarDateIn
   return Boolean(getEventOccurrenceStartDate(event, date));
 }
 
-function countEventsBetween(events: CalendarEventItem[], startDate: Date, endDate: Date) {
-  let count = 0;
+/** MAIR-918: count of the displayed month for one category (one MetricCard). */
+export interface CalendarCategoryStat {
+  category: string;
+  label: string;
+  value: number;
+}
 
+export interface CalendarMonthStats {
+  /** « novembre », for « N événements en novembre » and the « En novembre » trend. */
+  month: string;
+  total: number;
+  items: CalendarCategoryStat[];
+}
+
+/** One upcoming occurrence of an event (recurrences expanded). */
+export interface CalendarOccurrence {
+  event: CalendarEventItem;
+  date: Date;
+}
+
+const pluralCategoryLabels: Record<string, string> = {
+  meeting: "Réunions",
+  activity: "Animations",
+  ceremony: "Cérémonies",
+  other: "Autres",
+};
+
+/** Occurrence starts of the events between two days, inclusive. */
+function occurrencesBetween(events: CalendarEventItem[], startDate: Date, endDate: Date) {
+  const occurrences: CalendarOccurrence[] = [];
   for (let date = parseDateInput(startDate); date.getTime() <= endDate.getTime(); date = addDays(date, 1)) {
-    count += events.filter((event) => eventOccursOnDate(event, date)).length;
+    for (const event of events) {
+      const start = getEventOccurrenceStartDate(event, date);
+      if (start && isSameDay(start, date)) occurrences.push({ event, date });
+    }
   }
-
-  return count;
+  return occurrences;
 }
 
-function eventLabel(count: number) {
-  return `${count} événement${count > 1 ? "s" : ""}`;
+/**
+ * MAIR-918 C3: occurrences of the displayed month per category of the API (« Réunions », « Animations »,
+ * « Cérémonies », « Autres »), recomputed whenever the displayed month changes.
+ */
+export function buildStats(
+  events: CalendarEventItem[],
+  monthDate: Date,
+  categories: Array<{ value: string; label: string }> = [],
+): CalendarMonthStats {
+  const monthStart = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
+  const monthEnd = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0);
+  const occurrences = occurrencesBetween(events, monthStart, monthEnd);
+  const keys = categories.map((category) => category.value);
+  for (const { event } of occurrences) {
+    const key = event.category || "other";
+    if (!keys.includes(key)) keys.push(key);
+  }
+  return {
+    month: new Intl.DateTimeFormat("fr-FR", { month: "long" }).format(monthStart),
+    total: occurrences.length,
+    items: keys.map((key) => ({
+      category: key,
+      label: pluralCategoryLabels[key] ?? categories.find((category) => category.value === key)?.label ?? key,
+      value: occurrences.filter(({ event }) => (event.category || "other") === key).length,
+    })),
+  };
 }
 
-export function buildStats(events: CalendarEventItem[], selectedDate: Date) {
-  const monthStart = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
-  const monthEnd = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0);
-  const weekStart = startOfWeek(selectedDate);
-  const weekEnd = addDays(weekStart, 6);
-
-  return [
-    { label: "Ce mois", value: eventLabel(countEventsBetween(events, monthStart, monthEnd)) },
-    { label: "Cette semaine", value: eventLabel(countEventsBetween(events, weekStart, weekEnd)) },
-    { label: "Aujourd'hui", value: eventLabel(countEventsBetween(events, selectedDate, selectedDate)) },
-  ];
+/**
+ * MAIR-918 C2: the next `limit` occurrences from now (recurrences included); an event of today stays
+ * listed until its end time.
+ */
+export function getUpcomingOccurrences(events: CalendarEventItem[], now: Date, today: Date, limit = 3, horizonDays = 366) {
+  const time = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+  const upcoming: CalendarOccurrence[] = [];
+  for (let offset = 0; offset < horizonDays && upcoming.length < limit; offset += 1) {
+    const date = addDays(today, offset);
+    const ofDay = occurrencesBetween(events, date, date)
+      .filter(({ event }) => offset > 0 || !event.endTime || event.endTime > time)
+      .sort((first, second) => (first.event.startTime || "").localeCompare(second.event.startTime || ""));
+    upcoming.push(...ofDay.slice(0, limit - upcoming.length));
+  }
+  return upcoming;
 }
+
