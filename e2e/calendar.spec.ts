@@ -24,7 +24,7 @@ test.describe.configure({ mode: 'serial' });
 test('an administrator creates an event and invites an agent', async ({ page, context, baseURL }) => {
   await signInAs(context, baseURL!, users.manager);
   await page.goto('/');
-  await page.getByRole('button', { name: 'Nouvel événement' }).first().click();
+  await page.getByRole('button', { name: 'Créer', exact: true }).first().click();
 
   const dialog = page.getByRole('dialog', { name: 'Nouvel événement' });
   await dialog.getByRole('textbox', { name: 'Titre' }).fill(title);

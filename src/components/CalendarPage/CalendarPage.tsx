@@ -36,7 +36,8 @@ function CalendarScreen({ initial }: { initial?: InitialCalendarPage }) {
 
   return (
     <AppShell activeItem="calendar">
-      <CalendarHeader onCreate={calendar.ready ? () => calendar.openCreateModal() : undefined} />
+      <CalendarHeader onCreate={calendar.ready ? () => calendar.openCreateModal() : undefined}
+        onRefresh={calendar.ready ? () => void calendar.refreshData() : undefined} loading={calendar.loading} />
       <div className="calendar-board mt-7 grid items-start gap-6" ref={prepareUpcomingScrollRegion}>
         <Card className="min-h-[620px] overflow-hidden rounded-lg" aria-busy={state === 'loading' || undefined}>
           <div className="px-6 pb-8 pt-6">
