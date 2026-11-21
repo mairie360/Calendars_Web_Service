@@ -200,7 +200,7 @@ test('cancel after refused edit discards draft and reopening uses official value
   await submit({ 'event-date': '16-09-2026', 'event-end-date': '16-09-2026', 'event-start-time': '09:00', 'event-end-time': '10:00', 'event-recurrence': 'none' });
   assert.match(view.html, /value="Brouillon abandonné"/);
   await view.click('Annuler');
-  assert.match(view.text(), /Détail de l’événement.*Conseil officiel/);
+  assert.match(view.text(), /^Conseil officiel/, 'MAIR-929: the details dialog is titled with the event');
   await view.click('Modifier');
   assert.match(view.html, /value="Conseil officiel"/);
   assert.doesNotMatch(view.html, /Brouillon abandonné/);
