@@ -89,7 +89,7 @@ button {
   overflow: hidden;
 }
 
-.calendar-sidebar > .calendar-upcoming-panel > h2 {
+.calendar-sidebar > .calendar-upcoming-panel > header {
   flex-shrink: 0;
 }
 

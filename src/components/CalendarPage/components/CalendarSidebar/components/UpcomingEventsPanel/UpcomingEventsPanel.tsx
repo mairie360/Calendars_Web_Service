@@ -1,14 +1,17 @@
 import React from 'react';
 import { Users } from 'lucide-react';
 
-import { Card } from '@mairie360/lib-components/primitives';
+import { Panel, UnavailableAlert } from '@mairie360/lib-components/primitives';
 import { formatFullDate, getEventTimeLabel } from '@/components/CalendarPage/calendar-date';
 import { joinClasses } from '@/components/CalendarPage/calendar-style';
 import type { UpcomingEventsPanelProps } from '@/components/CalendarPage/calendar-types';
 
 export type { CalendarEvent, UpcomingEventsPanelProps } from '@/components/CalendarPage/calendar-types';
 
+/** Upcoming events; MAIR-911: skeleton while the calendar loads, an unavailable alert with « Réessayer » after a failed read. */
 export const UpcomingEventsPanel = ({
+  state = 'default',
+  onRetry,
   events = [],
   title = 'Événements à venir',
   emptyLabel = 'Aucun événement à venir',
@@ -17,9 +20,12 @@ export const UpcomingEventsPanel = ({
   className = '',
   ...props
 }: UpcomingEventsPanelProps) => (
-  <Card title={title} className={joinClasses('min-h-[22rem]', className)} {...props}>
-    <div className="px-6 pb-5 pt-4">
-      {events.length > 0 ? (
+  <Panel title={title} className={joinClasses('min-h-[22rem]', className)} state={state === 'loading' ? 'loading' : 'default'}
+    stateProps={{ title: 'Chargement des événements à venir…' }} {...props}>
+    <div>
+      {state === 'unavailable' ? (
+        <UnavailableAlert size="s" onAction={onRetry} />
+      ) : events.length > 0 ? (
         <div className="space-y-3">
           {events.map((event) => (
             <div
@@ -61,5 +67,5 @@ export const UpcomingEventsPanel = ({
         showEmptyState && <p className="text-sm leading-6 text-[var(--mairie-muted)]">{emptyLabel}</p>
       )}
     </div>
-  </Card>
+  </Panel>
 );

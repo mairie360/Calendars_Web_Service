@@ -129,7 +129,12 @@ export interface DayScheduleProps extends React.HTMLAttributes<HTMLDivElement> {
   onEventClick?: (event: CalendarEvent) => void;
 }
 
+/** MAIR-911: what a calendar panel shows instead of its data while it loads or after a failed read. */
+export type CalendarPanelState = 'default' | 'loading' | 'unavailable';
+
 export interface UpcomingEventsPanelProps extends Omit<React.HTMLAttributes<HTMLElement>, 'title'> {
+  state?: CalendarPanelState;
+  onRetry?: () => void;
   events?: CalendarEvent[];
   title?: React.ReactNode;
   emptyLabel?: React.ReactNode;
@@ -138,11 +143,14 @@ export interface UpcomingEventsPanelProps extends Omit<React.HTMLAttributes<HTML
 }
 
 export interface StatsPanelProps extends Omit<React.HTMLAttributes<HTMLElement>, 'title'> {
+  state?: CalendarPanelState;
   stats: CalendarStat[];
   title?: React.ReactNode;
 }
 
 export interface CalendarSidebarProps extends React.HTMLAttributes<HTMLElement> {
+  state?: CalendarPanelState;
+  onRetry?: () => void;
   events?: CalendarEvent[];
   currentDate?: CalendarDateInput;
   upcomingEvents?: CalendarEvent[];

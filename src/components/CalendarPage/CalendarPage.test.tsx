@@ -6,8 +6,8 @@ vi.mock('@/lib/auth-session', () => ({ useAuthSession: () => ({ user: { name: 'A
 vi.mock('@/app/navigation', () => ({ getActiveFrontHrefs: () => ({ calendar: '/' }) }));
 const page = vi.hoisted(() => ({ state: {} as Record<string, unknown> }));
 vi.mock('@/app/calendar/use-calendar-page', () => ({ useCalendarPage: () => page.state }));
-vi.mock('./components/CalendarViews', () => ({ CalendarViews: () => <div>grille</div> }));
-vi.mock('./components/CalendarSidebar', () => ({ CalendarSidebar: () => <div>colonne</div> }));
+vi.mock('./components/CalendarViews', () => ({ CalendarViews: ({ state }: { state: string }) => <div>grille {state}</div> }));
+vi.mock('./components/CalendarSidebar', () => ({ CalendarSidebar: ({ state }: { state: string }) => <div>colonne {state}</div> }));
 vi.mock('./components/CalendarModals', () => ({ CalendarModals: () => null }));
 
 import CalendarPage from './CalendarPage';
@@ -21,10 +21,28 @@ const loaded = (overrides: Record<string, unknown> = {}) => ({
 describe('CalendarPage', () => {
   beforeEach(() => { page.state = { ready: false, readError: null, view: 'month', currentDate: new Date(2026, 9, 21) }; });
 
-  it('renders the shell, the header and the loading card until the data is ready', () => {
+  it('MAIR-911: renders the shell, the header and the three panel skeletons until the data is ready', () => {
     render(<CalendarPage />);
     expect(screen.getByRole('heading', { level: 1, name: 'Calendrier & Événements' })).toBeInTheDocument();
-    expect(screen.getByText('Chargement des données du calendrier…')).toBeInTheDocument();
+    expect(screen.getByText('grille loading')).toBeInTheDocument();
+    expect(screen.getByText('colonne loading')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Nouvel événement/ })).toBeNull();
+  });
+
+  it('MAIR-911: an explicit refresh shows skeletons, a failed read the unavailable states', () => {
+    page.state = loaded({ panelsLoading: true, loading: true });
+    const { rerender } = render(<CalendarPage />);
+    expect(screen.getByText('grille loading')).toBeInTheDocument();
+    page.state = loaded({ readError: 'Calendar API unavailable' });
+    rerender(<CalendarPage />);
+    expect(screen.getByText('grille unavailable')).toBeInTheDocument();
+    expect(screen.getByText('colonne unavailable')).toBeInTheDocument();
+    page.state = loaded({ loading: true, readError: 'Calendar API unavailable' }); // a period change keeps the state
+    rerender(<CalendarPage />);
+    expect(screen.getByText('grille unavailable')).toBeInTheDocument();
+    page.state = loaded();
+    rerender(<CalendarPage />);
+    expect(screen.getByText('grille default')).toBeInTheDocument();
   });
 
   it('MAIR-879: announces a confirmed action in a success toast and acknowledges it', () => {

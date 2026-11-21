@@ -74,6 +74,10 @@ export function useCalendarPage(initial?: InitialCalendarPage) {
     setSelectedEventState(event);
   }, []);
   const [loading, setLoading] = useState(!initialReceipt);
+  // MAIR-911: the panels show skeletons until a first read is confirmed and while an explicit
+  // refresh (« Actualiser », « Réessayer ») runs; a period change keeps the grid in place.
+  const [confirmedOnce, setConfirmedOnce] = useState(Boolean(initialReceipt));
+  const [refreshing, setRefreshing] = useState(false);
   const calendarReadRevision = useRef(0);
   const preserveConfirmedMutation = () => {
     // A read started before this confirmation can only describe older data.
@@ -177,6 +181,7 @@ export function useCalendarPage(initial?: InitialCalendarPage) {
         setCategories(calendarData.categories);
         setServices(calendarData.services);
         setReadError(null);
+        setConfirmedOnce(true);
         cancelPrefetch();
         if (dataCache.canPrefetch() && !mutationInFlight.current && typeof window !== 'undefined' && typeof window.requestIdleCallback === 'function') {
           const browser = window;
@@ -243,6 +248,11 @@ export function useCalendarPage(initial?: InitialCalendarPage) {
     if (linkedEvent) openEvent(linkedEvent);
     setLink({ ready: true, eventId: null });
   }, [readError, events, link.eventId, loading, openEvent]);
+
+  const refreshData = useCallback(async () => {
+    setRefreshing(true);
+    try { await loadData(undefined, true); } finally { setRefreshing(false); }
+  }, [loadData]);
 
   const handlePrevious = () => {
     selectionFollowsToday.current = false;
@@ -452,7 +462,8 @@ export function useCalendarPage(initial?: InitialCalendarPage) {
     openCreateModal,
     people,
     periodTitle,
-    refreshData: () => loadData(undefined, true),
+    refreshData,
+    panelsLoading: loading && (refreshing || !confirmedOnce),
     ready: link.ready,
     readError,
     selectedDate,
