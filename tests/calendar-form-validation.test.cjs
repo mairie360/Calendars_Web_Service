@@ -2,7 +2,7 @@ const assert = require('node:assert/strict');
 const { test } = require('node:test');
 const { loadTs } = require('./support/load-ts.cjs');
 
-const { validateEventChronology, validateEventTexts } = loadTs('components/CalendarPage/components/CalendarModals/components/ValidatedModal/validation');
+const { validateEventChronology, validateEventForm, validateEventTexts } = loadTs('components/CalendarPage/components/CalendarModals/components/ValidatedModal/validation');
 
 const valid = {
   date: '16-09-2026',
@@ -22,15 +22,15 @@ test('calendar form accepts valid same-day and multi-day events', () => {
 test('calendar form rejects invalid and reversed dates', () => {
   assert.match(validateEventChronology({ ...valid, date: '31-02-2026' }), /date de début est invalide/);
   assert.match(validateEventChronology({ ...valid, endDate: 'not-a-date' }), /date de fin est invalide/);
-  assert.match(validateEventChronology({ ...valid, endDate: '15-09-2026' }), /date de fin doit être après/);
+  assert.match(validateEventChronology({ ...valid, endDate: '15-09-2026' }), /date de fin doit suivre la date de début/);
   assert.match(validateEventChronology({ ...valid, recurrence: { frequency: 'weekly', endsOn: '31-02-2026' } }), /fin de récurrence est invalide/);
   assert.match(validateEventChronology({ ...valid, recurrence: { frequency: 'weekly', endsOn: '15-09-2026' } }), /fin de récurrence doit être après/);
 });
 
 test('calendar form rejects reversed same-day hours but not valid overnight multi-day hours', () => {
-  assert.match(validateEventChronology({ ...valid, endTime: '09:00' }), /heure de fin doit être après/);
-  assert.match(validateEventChronology({ ...valid, endTime: '08:45' }), /heure de fin doit être après/);
-  assert.match(validateEventChronology({ ...valid, endTime: '25:00' }), /heure de fin doit être après/);
+  assert.match(validateEventChronology({ ...valid, endTime: '09:00' }), /heure de fin doit suivre l’heure de début/);
+  assert.match(validateEventChronology({ ...valid, endTime: '08:45' }), /heure de fin doit suivre l’heure de début/);
+  assert.match(validateEventChronology({ ...valid, endTime: '25:00' }), /heure de fin doit suivre l’heure de début/);
   assert.equal(validateEventChronology({ ...valid, endDate: '17-09-2026', endTime: '08:00' }), null);
 });
 
@@ -50,4 +50,17 @@ test('calendar form refuses < and > in the event texts with a French message per
   assert.equal(validateEventTexts({ title: 'ok', description: 'a > b' }), 'La description ne doit pas contenir les caractères < ou >.');
   assert.equal(validateEventTexts({ title: 'ok', description: 'ok', location: '<Salle>' }), 'Le lieu ne doit pas contenir les caractères < ou >.');
   assert.equal(validateEventTexts({ service: 'dir<ection' }), 'Le service ne doit pas contenir les caractères < ou >.');
+});
+
+test('MAIR-926: validateEventForm keys every error by its field, in the form order', () => {
+  const valid = { title: 'Conseil', description: '', location: '', date: '16-09-2026', endDate: '16-09-2026', startTime: '09:00', endTime: '10:00', recurrence: { frequency: 'none' } };
+  assert.deepEqual(validateEventForm(valid), []);
+  assert.deepEqual(validateEventForm({ ...valid, title: ' ', location: 'Salle <A>', endDate: '15-09-2026' }), [
+    { field: 'event-title', message: 'Donnez un titre à l’événement.' },
+    { field: 'event-end-date', message: 'La date de fin doit suivre la date de début.' },
+    { field: 'event-location', message: 'Le lieu ne doit pas contenir les caractères < ou >.' },
+  ]);
+  assert.deepEqual(validateEventForm({ ...valid, endTime: '08:00' }), [{ field: 'event-end-time', message: 'L’heure de fin doit suivre l’heure de début.' }]);
+  assert.equal(validateEventForm({ ...valid, date: '31-02-2026' })[0].field, 'event-date');
+  assert.equal(validateEventForm({ ...valid, recurrence: { frequency: 'weekly', endsOn: '01-09-2026' } })[0].field, 'event-recurrence-end');
 });

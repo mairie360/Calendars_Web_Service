@@ -9,7 +9,7 @@ type Calendar = ReturnType<typeof useCalendarPage>;
 export const CalendarModals = ({ calendar }: { calendar: Calendar }) => (
   <>
     <ValidatedCreateEventModal isOpen={calendar.createModalOpen} people={calendar.people} categories={calendar.categories} initialValues={calendar.createInitialValues}
-      title="Nouvel événement" subtitle="Ajoutez une date au calendrier de la mairie." cancelLabel="Annuler" submitLabel="Créer"
+      title="Nouvel événement" cancelLabel="Annuler" submitLabel="Enregistrer"
       onCancel={() => calendar.setCreateModalOpen(false)} onCreate={calendar.handleCreateEvent} saving={calendar.saving} error={calendar.mutationError} />
     <ValidatedEventDetailsModal isOpen={Boolean(calendar.selectedEvent)} event={calendar.selectedEvent} people={calendar.people} categories={calendar.categories}
       canEdit={Boolean(calendar.selectedEvent?.canEdit) && !calendar.saving} canDelete={Boolean(calendar.selectedEvent?.canDelete) && !calendar.saving}

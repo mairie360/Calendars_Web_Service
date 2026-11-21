@@ -184,3 +184,11 @@ The calendar follows the agreed V2 mockup ([Figma, journeys F1–F9](https://www
   Escape return to the details with focus on « Supprimer »; « Confirmer la suppression » loads during the call.
   Success closes every dialog and toasts « Événement supprimé »; a refusal returns to the details and toasts
   « Suppression impossible — <raison> ».
+- **Event form (MAIR-926).** « Nouvel événement » and « Modifier l’événement » have no subtitle and save with
+  « Enregistrer », which loads during the call (no double submit). Fields: Titre*, Description, Date de début* +
+  Date de fin, Heure de début + Heure de fin, Catégorie + Récurrence (recurrence details below), Lieu,
+  Participants (« Les participants reçoivent l’événement dans leur calendrier. »). Errors show under their field
+  (« Donnez un titre à l’événement. », « La date de fin doit suivre la date de début. », « L’heure de fin doit
+  suivre l’heure de début. ») and the first one takes the focus. A refusal shows « Impossible d’enregistrer » at
+  the top of the dialog, keeps the entries and toasts the error; success closes the dialog, moves the calendar to
+  the event date and toasts « Événement créé » / « Événement modifié ».

@@ -25,6 +25,8 @@ export interface CalendarDateFieldProps extends Omit<React.HTMLAttributes<HTMLDi
   disabled?: boolean;
   inputClassName?: string;
   labelClassName?: string;
+  /** MAIR-926: validation error shown under the input (`aria-describedby`, `aria-invalid`). */
+  error?: string;
   onChange: (value: string) => void;
 }
 
@@ -54,6 +56,7 @@ export const CalendarDateField = ({
   disabled = false,
   inputClassName = '',
   labelClassName = '',
+  error,
   onChange,
   className = '',
   ...props
@@ -222,7 +225,9 @@ export const CalendarDateField = ({
           value={getDisplayValue(value)}
           placeholder="dd-mm-yyyy"
           title="Format attendu : dd-mm-yyyy"
-          className={joinClasses(inputClassName, 'pr-11')}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error ? `${id}-error` : undefined}
+          className={joinClasses(inputClassName, 'pr-11', error && 'border-[var(--mairie-error-text)]')}
           onChange={handleInputChange}
         />
         <button
@@ -235,6 +240,8 @@ export const CalendarDateField = ({
           <CalendarDays className="size-4" strokeWidth={1.8} />
         </button>
       </div>
+
+      {error && <p id={`${id}-error`} role="alert" className="mt-1 text-xs text-[var(--mairie-error-text)]">{error}</p>}
 
       {popover}
     </div>
