@@ -244,7 +244,10 @@ export interface EventDetailsModalProps {
   saveLabel?: string;
   onClose: () => void;
   onSave?: (event: CalendarEvent) => void;
-  onDelete?: (event: CalendarEvent) => void;
+  /** MAIR-931: runs after the confirmation; resolves `false` when the deletion was refused (back to the details). */
+  onDelete?: (event: CalendarEvent) => void | boolean | Promise<void | boolean>;
+  /** A write is running: the delete confirmation shows its button loading. */
+  saving?: boolean;
   onApprove?: (event: CalendarEvent) => void;
   onReject?: (event: CalendarEvent) => void;
 }
