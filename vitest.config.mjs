@@ -12,6 +12,8 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     maxWorkers: 1,
+    // Role queries over the full lib-components 2 stylesheet in jsdom can exceed the 5 s default on a loaded machine.
+    testTimeout: 15_000,
     coverage: {
       provider: "v8",
       include: ["src/**/*.tsx", ...coverageScope.reactSources],

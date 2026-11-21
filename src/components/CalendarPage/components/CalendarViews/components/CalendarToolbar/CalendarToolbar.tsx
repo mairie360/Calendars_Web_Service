@@ -1,13 +1,17 @@
 import React from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
 
-import { ViewSwitcher } from './components/ViewSwitcher';
+import { Button, NextIconButton, PreviousIconButton, SegmentedControl } from '@mairie360/lib-components/primitives';
 import { defaultViewOptions } from '@/components/CalendarPage/calendar-constants';
 import { joinClasses } from '@/components/CalendarPage/calendar-style';
 import type { CalendarToolbarProps } from '@/components/CalendarPage/calendar-types';
+import type { CalendarViewMode } from '@/app/calendar/types';
 
 export type { CalendarToolbarProps } from '@/components/CalendarPage/calendar-types';
 
+/**
+ * MAIR-893 (F2, F3): lib Précédent / Suivant (one month, week or day), « Aujourd'hui », and the view
+ * choice as a lib SegmentedControl. The period itself is the title of the calendar panel.
+ */
 export const CalendarToolbar = ({
   title,
   view,
@@ -15,6 +19,7 @@ export const CalendarToolbar = ({
   onViewChange,
   onPrevious,
   onNext,
+  onToday,
   previousLabel = 'Période précédente',
   nextLabel = 'Période suivante',
   className = '',
@@ -24,26 +29,14 @@ export const CalendarToolbar = ({
     className={joinClasses('flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between', className)}
     {...props}
   >
-    <div className="flex min-w-0 items-center gap-4">
-      <button
-        type="button"
-        aria-label={previousLabel}
-        className="inline-flex h-8 w-9 items-center justify-center rounded-md border border-[var(--mairie-border)] bg-[var(--mairie-surface-raised)] text-[var(--mairie-text)] transition-colors hover:bg-[var(--mairie-surface-raised)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mairie-accent)]/30"
-        onClick={onPrevious}
-      >
-        <ChevronLeft className="h-4 w-4" />
-      </button>
-      <h2 className="min-w-0 text-xl font-bold leading-7 text-[var(--mairie-text)]">{title}</h2>
-      <button
-        type="button"
-        aria-label={nextLabel}
-        className="inline-flex h-8 w-9 items-center justify-center rounded-md border border-[var(--mairie-border)] bg-[var(--mairie-surface-raised)] text-[var(--mairie-text)] transition-colors hover:bg-[var(--mairie-surface-raised)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mairie-accent)]/30"
-        onClick={onNext}
-      >
-        <ChevronRight className="h-4 w-4" />
-      </button>
+    <div className="flex min-w-0 items-center gap-2" role="group" aria-label={title ? `Navigation : ${title}` : 'Navigation dans le calendrier'}>
+      <PreviousIconButton size="s" label={previousLabel} onClick={onPrevious} />
+      <NextIconButton size="s" label={nextLabel} onClick={onNext} />
+      <Button variant="ghost" tone="neutral" size="s" label="Aujourd’hui" onClick={onToday} />
     </div>
 
-    <ViewSwitcher options={viewOptions} value={view} onChange={onViewChange} />
+    <SegmentedControl<CalendarViewMode> label="Changer de vue" size="m"
+      options={viewOptions.map(option => ({ key: option.value, label: option.label }))}
+      value={view} onChange={next => onViewChange?.(next)} />
   </div>
 );

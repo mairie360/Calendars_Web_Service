@@ -20,7 +20,7 @@ type CalendarViewsProps = { calendar: Calendar; gridRef: Ref<HTMLDivElement>; st
 export const CalendarViews = ({ calendar, gridRef, state = "default" }: CalendarViewsProps) => (
   <>
     {/* Before the browser initialisation the period would be the server's date: no toolbar yet. */}
-    {calendar.ready && <CalendarToolbar title={calendar.periodTitle} view={calendar.view} onPrevious={calendar.handlePrevious} onNext={calendar.handleNext} onViewChange={calendar.setView} />}
+    {calendar.ready && <CalendarToolbar title={calendar.periodTitle} view={calendar.view} onPrevious={calendar.handlePrevious} onNext={calendar.handleNext} onToday={calendar.handleToday} onViewChange={calendar.setView} />}
     {state === "loading" && <DataState className="mt-9" state="loading" title="Chargement des données du calendrier…" />}
     {state === "unavailable" && (
       <DataState className="mt-9" state="unavailable" title="Calendrier indisponible."
