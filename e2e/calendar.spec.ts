@@ -75,7 +75,7 @@ test('the administrator deletes the event', async ({ page, context, baseURL }) =
   await expect(details.getByRole('button', { name: 'Modifier', exact: true })).toBeVisible();
   await details.getByRole('button', { name: 'Supprimer', exact: true }).click();
 
-  await expect(page.getByText(`Événement « ${title} » supprimé.`)).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Notifications du calendrier' }).getByText(`Événement « ${title} » supprimé.`)).toBeVisible();
   await expect(page.getByText(title, { exact: true })).toHaveCount(0);
 });
 
