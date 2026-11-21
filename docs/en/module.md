@@ -168,3 +168,8 @@ The calendar follows the agreed V2 mockup ([Figma, journeys F1–F9](https://www
   months on `surface-raised`, not interactive). Pills take the tone of their category (meeting info,
   activity success, ceremony warning, other neutral, on the `mairie-*` tokens) and show their start time
   only while their day holds a single event.
+- **Right column (MAIR-918).** « À venir » comes first: the next three occurrences from now (recurrences
+  included, an event of today stays until its end time), each row with its title, category pill, day
+  (« Aujourd’hui », « Demain », « ven. 20 nov. ») and hours, and participants; a row opens the event details.
+  Then « Statistiques »: « N événements en <mois> » for the displayed month and one metric card per API
+  category (Réunions, Animations, Cérémonies, Autres), recomputed when the month changes.

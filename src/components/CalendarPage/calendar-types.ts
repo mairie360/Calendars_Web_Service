@@ -50,11 +50,6 @@ export interface CalendarEvent {
   className?: string;
 }
 
-export interface CalendarStat {
-  label: React.ReactNode;
-  value: React.ReactNode;
-}
-
 /** A view of the calendar offered by the toolbar SegmentedControl (MAIR-893). */
 export interface ViewSwitcherOption<T extends string = string> {
   value: T;
@@ -131,30 +126,46 @@ export interface DayScheduleProps extends React.HTMLAttributes<HTMLDivElement> {
 /** MAIR-911: what a calendar panel shows instead of its data while it loads or after a failed read. */
 export type CalendarPanelState = 'default' | 'loading' | 'unavailable';
 
+/** MAIR-918: one upcoming occurrence (recurrences expanded) and the month statistics. */
+export interface CalendarUpcomingItem {
+  event: CalendarEvent;
+  date: Date;
+}
+
+export interface CalendarMonthStats {
+  month: string;
+  total: number;
+  items: Array<{ category: string; label: string; value: number }>;
+}
+
+export interface CalendarCategoryOption {
+  value: string;
+  label: string;
+}
+
 export interface UpcomingEventsPanelProps extends Omit<React.HTMLAttributes<HTMLElement>, 'title'> {
   state?: CalendarPanelState;
   onRetry?: () => void;
-  events?: CalendarEvent[];
-  title?: React.ReactNode;
+  items?: CalendarUpcomingItem[];
+  categories?: CalendarCategoryOption[];
+  /** Today in the instance time zone, for « Aujourd’hui » / « Demain ». */
+  today?: Date;
   emptyLabel?: React.ReactNode;
-  showEmptyState?: boolean;
   onEventClick?: (event: CalendarEvent) => void;
 }
 
 export interface StatsPanelProps extends Omit<React.HTMLAttributes<HTMLElement>, 'title'> {
   state?: CalendarPanelState;
-  stats: CalendarStat[];
-  title?: React.ReactNode;
+  stats: CalendarMonthStats;
 }
 
 export interface CalendarSidebarProps extends React.HTMLAttributes<HTMLElement> {
   state?: CalendarPanelState;
   onRetry?: () => void;
-  events?: CalendarEvent[];
-  currentDate?: CalendarDateInput;
-  upcomingEvents?: CalendarEvent[];
-  stats?: CalendarStat[];
-  showEmptyState?: boolean;
+  upcoming: CalendarUpcomingItem[];
+  categories?: CalendarCategoryOption[];
+  today?: Date;
+  stats: CalendarMonthStats;
   onEventClick?: (event: CalendarEvent) => void;
 }
 

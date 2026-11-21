@@ -49,7 +49,7 @@ test('the first render loads the visible month through GET /calendar/bootstrap o
   assert.equal(state.people.length, 3);
   assert.equal(state.categories.length, 2);
   assert.equal(state.services.length, 1);
-  assert.equal(state.stats.length, 3);
+  assert.deepEqual(state.stats.items.map((item) => item.label), ['Réunions', 'Autres']);
   assert.match(state.periodTitle, /\d{4}$/);
 });
 
@@ -172,7 +172,7 @@ test('day navigation keeps the selected day, statistics, read range and creation
     let state = await page.waitFor((current) => !current.loading && front.calendarBff.requests.length === initialRequests + 2);
     assert.equal(formatDateForQuery(state.currentDate), '2027-01-01');
     assert.equal(formatDateForQuery(state.selectedDate), '2027-01-01');
-    assert.equal(state.stats[2].value, '1 événement');
+    assert.deepEqual([state.stats.month, state.stats.total], ['janvier', 1], 'MAIR-918: statistics of the displayed month');
     assert.equal(front.calendarBff.sequence().at(-1), 'GET /calendar/period?from=2027-01-01&to=2027-01-01');
     state.openCreateModal();
     state = await page.waitFor((current) => current.createModalOpen);
@@ -181,7 +181,7 @@ test('day navigation keeps the selected day, statistics, read range and creation
     page.result.current.handlePrevious();
     state = await page.waitFor((current) => !current.loading && formatDateForQuery(current.currentDate) === '2026-12-31');
     assert.equal(formatDateForQuery(state.selectedDate), '2026-12-31');
-    assert.equal(state.stats[2].value, '0 événement');
+    assert.deepEqual([state.stats.month, state.stats.total], ['décembre', 0]);
     assert.ok(front.calendarBff.sequence().every((call) => /^GET \/calendar\/(bootstrap|period)\?/.test(call)));
   } finally {
     delete global.window;
