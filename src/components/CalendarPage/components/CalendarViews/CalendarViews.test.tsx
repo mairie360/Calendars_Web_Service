@@ -20,7 +20,9 @@ describe('CalendarViews', () => {
 
   it('MAIR-911: keeps the toolbar and shows a skeleton while the calendar loads', () => {
     const { container } = render(<CalendarViews calendar={make()} gridRef={React.createRef()} state="loading" />);
-    expect(screen.getByRole('status')).toHaveTextContent('Chargement des données du calendrier…');
+    // MAIR-484: the skeleton is decorative, the page's permanent region announces the load (RGAA 7.5).
+    expect(screen.queryByRole('status')).toBeNull();
+    expect(container.querySelector('[data-calendar-skeleton][aria-busy="true"]')).not.toBeNull();
     expect(screen.getByRole('button', { name: /précédent/i })).toBeInTheDocument();
     expect(container.querySelector('.calendar-month-grid')).toBeNull();
   });

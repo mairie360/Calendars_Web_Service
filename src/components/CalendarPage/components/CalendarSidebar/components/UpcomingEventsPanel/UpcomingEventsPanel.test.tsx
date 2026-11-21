@@ -29,8 +29,10 @@ it('MAIR-918: names the day as Aujourd’hui, Demain or its short date, and show
 });
 it('MAIR-911: shows a skeleton while loading and an unavailable alert whose retry reloads', async () => {
   const onRetry = vi.fn(); const items = [{ event, date: today }];
-  const { rerender } = render(<UpcomingEventsPanel items={items} state="loading" onRetry={onRetry} />);
-  expect(screen.getByRole('status')).toHaveTextContent('Chargement des événements à venir…'); expect(screen.queryByText('Conseil')).toBeNull();
+  const { container, rerender } = render(<UpcomingEventsPanel items={items} state="loading" onRetry={onRetry} />);
+  // MAIR-484: a busy, decorative skeleton; no status inserted with its text (RGAA 7.5).
+  expect(container.querySelector('[data-calendar-skeleton][aria-busy="true"]')).not.toBeNull();
+  expect(screen.queryByRole('status')).toBeNull(); expect(screen.queryByText('Conseil')).toBeNull();
   rerender(<UpcomingEventsPanel items={items} state="unavailable" onRetry={onRetry} />);
   expect(screen.getByText('Service indisponible')).toBeVisible(); expect(screen.queryByText('Conseil')).toBeNull();
   await userEvent.click(screen.getByRole('button', { name: 'Réessayer' })); expect(onRetry).toHaveBeenCalledTimes(1);

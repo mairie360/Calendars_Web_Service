@@ -52,6 +52,38 @@ test('an administrator creates an event and invites an agent', async ({ page, co
   await expect(page.getByText(title, { exact: true }).first()).toBeVisible();
 });
 
+test('MAIR-484: the event is read back at the hours it was created with, in the instance time zone', async ({ page, context, baseURL }) => {
+  await signInAs(context, baseURL!, users.manager);
+  const details = await openEvent(page);
+  // Created 09 h 00 – 23 h 00 in Europe/Paris: a front left on UTC would show 08:00 – 22:00.
+  await expect(details).toContainText('09:00 – 23:00');
+});
+
+test('MAIR-484: one main landmark and one status region, mounted before the loading text (RGAA 9.2, 12.6, 7.5)', async ({ page, context, baseURL }) => {
+  await signInAs(context, baseURL!, users.manager);
+  await page.goto('/');
+  await expect(page.getByText(title, { exact: true }).first()).toBeVisible();
+  await expect(page.getByRole('main')).toHaveCount(1);
+  const status = page.locator('p[role="status"]');
+  await expect(status).toHaveCount(1);
+  await expect(status).toHaveText('');
+  await status.evaluate((node) => { (window as unknown as { calendarStatus?: Element }).calendarStatus = node; });
+
+  // Hold the next read so the loading state can be observed.
+  let release: () => void = () => {};
+  const held = new Promise<void>((resolve) => { release = resolve; });
+  await page.route('**/calendar/bootstrap**', async (route) => { await held; await route.continue(); });
+  await page.getByRole('button', { name: 'Actualiser' }).click();
+  await expect(status).toHaveText('Chargement des données du calendrier…');
+  // The same node announces the load: it was not inserted together with its text.
+  expect(await status.evaluate((node) => (window as unknown as { calendarStatus?: Element }).calendarStatus === node)).toBe(true);
+  await expect(page.locator('[role="status"]', { hasText: /Chargement des (statistiques|événements à venir)/ })).toHaveCount(0);
+  release();
+  await expect(status).toHaveText('');
+  await expect(page.getByText(title, { exact: true }).first()).toBeVisible();
+  await page.unroute('**/calendar/bootstrap**');
+});
+
 test('MAIR-935: the top-bar search dims the events that do not match and Escape restores them', async ({ page, context, baseURL }) => {
   await signInAs(context, baseURL!, users.manager);
   await page.goto('/');

@@ -279,6 +279,9 @@ services:
     environment:
       HOSTNAME: "0.0.0.0"
       PORT: 5002
+      # Instance time zone of the calendar (lib instanceTimeZone): without it the front falls back to UTC
+      # and shows the events one hour early in Paris.
+      INSTANCE_TIMEZONE: Europe/Paris
       # Readiness resumes on this isolated frontend origin without following Login.
       LOGIN_FRONT_URL: "${LOGIN_FRONT_URL:-http://login-front.invalid/}"
       CALENDAR_FRONT_URL: http://calendar-front:5002/

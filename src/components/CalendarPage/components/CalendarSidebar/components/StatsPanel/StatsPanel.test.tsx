@@ -19,9 +19,10 @@ it('MAIR-918: one MetricCard per category with « N événements en <mois> » an
   expect(screen.getByText('1 événement en décembre')).toBeVisible();
 });
 it('MAIR-911: is a busy skeleton while loading and « Statistiques indisponibles. » after a failed read', () => {
-  const { rerender } = render(<StatsPanel stats={stats} state="loading" />);
-  expect(screen.getByRole('region', { name: 'Statistiques' })).toHaveAttribute('aria-busy', 'true');
-  expect(screen.getByRole('status')).toHaveTextContent('Chargement des statistiques…');
+  const { container, rerender } = render(<StatsPanel stats={stats} state="loading" />);
+  // MAIR-484: a busy, decorative skeleton; no status inserted with its text (RGAA 7.5).
+  expect(container.querySelector('[data-calendar-skeleton][aria-busy="true"]')).not.toBeNull();
+  expect(screen.queryByRole('status')).toBeNull();
   expect(screen.queryByText('Réunions')).toBeNull();
   rerender(<StatsPanel stats={stats} state="unavailable" />);
   expect(screen.getByText('Statistiques indisponibles.')).toBeVisible();

@@ -1,6 +1,7 @@
 import React from 'react';
 
 import { MetricCard, Panel } from '@mairie360/lib-components/primitives';
+import { CalendarLoadingSkeleton } from '@/components/CalendarPage/components/CalendarLoadingSkeleton';
 import type { StatsPanelProps } from '@/components/CalendarPage/calendar-types';
 
 export type { CalendarMonthStats, StatsPanelProps } from '@/components/CalendarPage/calendar-types';
@@ -13,12 +14,15 @@ const plural = (count: number) => `${count} événement${count > 1 ? 's' : ''}`;
  */
 export const StatsPanel = ({ stats, state = 'default', className = '', ...props }: StatsPanelProps) => (
   <Panel title="Statistiques" description={state === 'default' ? `${plural(stats.total)} en ${stats.month}` : undefined}
-    className={className} state={state}
-    stateProps={state === 'unavailable' ? { title: 'Statistiques indisponibles.', description: null } : { title: 'Chargement des statistiques…' }} {...props}>
-    <div className="grid grid-cols-2 gap-3">
-      {stats.items.map((item) => (
-        <MetricCard key={item.category} size="s" label={item.label} value={item.value} trendLabel={`En ${stats.month}`} />
-      ))}
-    </div>
+    className={className} state={state === 'unavailable' ? 'unavailable' : 'default'}
+    stateProps={{ title: 'Statistiques indisponibles.', description: null }} {...props}>
+    {/* The Panel loading state would insert its own status, the page announces the load once. */}
+    {state === 'loading' ? <CalendarLoadingSkeleton padding="0" /> : (
+      <div className="grid grid-cols-2 gap-3">
+        {stats.items.map((item) => (
+          <MetricCard key={item.category} size="s" label={item.label} value={item.value} trendLabel={`En ${stats.month}`} />
+        ))}
+      </div>
+    )}
   </Panel>
 );

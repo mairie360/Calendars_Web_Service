@@ -8,6 +8,7 @@ import { prepareUpcomingScrollRegion } from './upcoming-scroll-region';
 import { useCalendarTodayMarker } from './use-calendar-today-marker';
 import { useCalendarToasts } from './use-calendar-toasts';
 import { CalendarHeader } from './components/CalendarHeader';
+import { CalendarLoadingStatus } from './components/CalendarLoadingStatus';
 import { CalendarModals } from './components/CalendarModals';
 import { CalendarViews } from './components/CalendarViews';
 import { useCalendarPage } from '../../app/calendar/use-calendar-page';
@@ -39,6 +40,8 @@ function CalendarScreen({ initial }: { initial?: InitialCalendarPage }) {
     <AppShell activeItem="calendar" search={{ value: calendar.searchQuery, onChange: calendar.setSearchQuery }}>
       <CalendarHeader onCreate={calendar.ready ? () => calendar.openCreateModal() : undefined}
         onRefresh={calendar.ready ? () => void calendar.refreshData() : undefined} loading={calendar.loading} />
+      {/* RGAA 7.5: mounted with the page, only its text follows the panels' loading state. */}
+      <CalendarLoadingStatus state={state} />
       <div className="calendar-board mt-7 grid items-start gap-6" ref={prepareUpcomingScrollRegion}>
         {/* MAIR-893: the panel title is the displayed period (not before the browser initialisation). */}
         <Panel title={calendar.ready ? calendar.periodTitle : 'Calendrier'} className="calendar-panel min-h-[620px] overflow-hidden" aria-busy={state === 'loading' || undefined}>
