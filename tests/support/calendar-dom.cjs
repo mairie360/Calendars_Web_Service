@@ -64,7 +64,7 @@ async function calendarDom(t, { initial, strict = false } = {}) {
   dom.window.document.head.append(sharedStyle);
   // JSDOM cannot expand a variable-bearing border shorthand; preserve its exact longhands.
   style.textContent = fs.readFileSync(path.join(SRC, 'app/app-overrides.css'), 'utf8')
-    .replace('border: 2px dashed var(--mairie-accent);', `border-width: 2px; border-style: dashed; border-color: ${dom.window.getComputedStyle(dom.window.document.documentElement).getPropertyValue('--mairie-accent').trim()};`);
+    .replace('border: 2px solid var(--mairie-accent);', `border-width: 2px; border-style: solid; border-color: ${dom.window.getComputedStyle(dom.window.document.documentElement).getPropertyValue('--mairie-accent').trim()};`);
   dom.window.document.head.append(style);
   const { setBrowserFrontUrls } = loadTs('lib/front-urls');
   setBrowserFrontUrls({

@@ -91,6 +91,10 @@ export interface CalendarToolbarProps extends React.HTMLAttributes<HTMLDivElemen
 export interface CalendarCellProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   selected?: boolean;
   muted?: boolean;
+  /** MAIR-905: a day of the previous or next month (not interactive). */
+  outside?: boolean;
+  /** Day number shown in the top-left corner. */
+  day?: number;
   children?: React.ReactNode;
 }
 
