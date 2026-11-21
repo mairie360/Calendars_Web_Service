@@ -87,7 +87,13 @@ function installWindow() {
 const withoutToastRegions = (html) => html
   .replace(/<div data-m360-component="ToastProvider" class="sr-only" role="(?:status|alert)"[^>]*>(?:<div>[^<]*<\/div>)*<\/div>/g, '')
   .replace(/<section data-m360-component="ToastProvider"[\s\S]*?<\/section>/g, '');
-/** Status regions of the page in a DOM, the toast live regions left out. */
-const pageStatusRegions = (document) => [...document.querySelectorAll('[role="status"]')].filter(node => !node.closest('[data-m360-component="ToastProvider"]'));
+/**
+ * Status messages the page is announcing in a DOM, the toast live regions left out. MAIR-484: the page keeps
+ * an empty status region mounted, so only a region with text means a pending load.
+ */
+const pageStatusRegions = (document) => [...document.querySelectorAll('[role="status"]')]
+  .filter(node => !node.closest('[data-m360-component="ToastProvider"]') && node.textContent.trim());
+/** Same check on rendered HTML: a page status element whose first text is not empty. */
+const hasPageStatus = (html) => /role="status"[^>]*>(?:<(?!\/)[^>]*>)*[^<\s]/.test(withoutToastRegions(html));
 
-module.exports = { admin, alice, marie, apiError, bootstrap, calendarEvent, installWindow, pageStatusRegions, sessionResponse, withoutToastRegions };
+module.exports = { admin, alice, marie, apiError, bootstrap, calendarEvent, hasPageStatus, installWindow, pageStatusRegions, sessionResponse, withoutToastRegions };

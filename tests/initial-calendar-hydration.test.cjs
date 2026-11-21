@@ -5,7 +5,7 @@ const { router } = installReactRuntime();
 const React = require('react');
 const { loadTs } = require('./support/load-ts.cjs');
 const { FrontHarness, jwtFor } = require('./support/front-harness.cjs');
-const { bootstrap, calendarEvent, installWindow, sessionResponse, apiError, withoutToastRegions } = require('./support/calendar-fixtures.cjs');
+const { bootstrap, calendarEvent, installWindow, sessionResponse, apiError, hasPageStatus } = require('./support/calendar-fixtures.cjs');
 const Client = loadTs('components/CalendarPage/CalendarPage').default;
 const front = new FrontHarness();
 let view;
@@ -28,10 +28,10 @@ test('hydration shows the confirmed period immediately and revisiting it reuses 
   await view.settle();
   assert.deepEqual(front.calendarBff.sequence(), []);
   await view.act(() => view.props('CalendarToolbar').onNext());
-  await view.waitFor(() => front.calendarBff.requests.length === 1 && !withoutToastRegions(view.html).includes('role="status"'));
+  await view.waitFor(() => front.calendarBff.requests.length === 1 && !hasPageStatus(view.html));
   assert.equal(front.calendarBff.sequence()[0], 'GET /calendar/period?from=2026-11-18&to=2026-11-18');
   await view.act(() => view.props('CalendarToolbar').onPrevious());
-  await view.waitFor(() => view.text().includes('Confirmed server event') && !withoutToastRegions(view.html).includes('role="status"'));
+  await view.waitFor(() => view.text().includes('Confirmed server event') && !hasPageStatus(view.html));
   assert.equal(front.calendarBff.requests.length, 1);
 });
 
@@ -55,7 +55,7 @@ test('foreground verification keeps an open event draft on both confirmed and re
 test('an unavailable server receipt resumes through the existing browser bootstrap route', async () => {
   front.calendarRead({ body: data() });
   view = mount(React.createElement(Client, { initial: { status: 'unavailable', message: 'Initial server read unavailable' } }));
-  await view.waitFor(() => view.text().includes('Confirmed server event') && !withoutToastRegions(view.html).includes('role="status"'));
+  await view.waitFor(() => view.text().includes('Confirmed server event') && !hasPageStatus(view.html));
   assert.equal(front.calendarBff.sequence()[0], 'GET /calendar/bootstrap?from=2026-11-17&to=2026-11-17');
   assert.doesNotMatch(view.text(), /Initial server read unavailable/);
 });
