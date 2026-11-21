@@ -38,6 +38,8 @@ export type CalendarEventItem = {
   visibleToRoles?: CalendarUserRole[];
   colorClassName?: string;
   className?: string;
+  /** MAIR-935: does not match the top-bar search (shown at 30 % opacity). */
+  searchDimmed?: boolean;
 };
 
 export type CreateCalendarEventValues = {
