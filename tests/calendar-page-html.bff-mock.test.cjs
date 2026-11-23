@@ -106,12 +106,9 @@ test('the shell shows the user resolved from BFF User in the header', async () =
   assert.deepEqual(front.userBff.sequence(), ['GET /me']);
   assert.match(html, /<(?:span|div) data-slot="avatar-fallback"[^>]*>AM<\/(?:span|div)>|<span[^>]*>AM<\/span>/);
   assert.match(html, /<span[^>]*>Admin Mairie<\/span>/);
-  const footer = html.match(/<footer\b[^>]*>[\s\S]*?<\/footer>/)?.[0];
-  assert.ok(footer);
-  assert.doesNotMatch(html, /<aside\b[^]*?<footer\b[^]*?<\/footer>[^]*?<\/aside>/);
-  assert.match(html, /<\/main>[\s\S]*<div class="app-shell-footer shrink-0"[^>]*><footer\b/);
-  assert.match(footer.replace(/<[^>]*>/g, ''), new RegExp(`© ${new Date().getFullYear()} Mairie360`));
-  assert.doesNotMatch(footer, /Version|<button\b|<a\b/);
+  // lib-components 2.3: the page base has no footer anymore, the white frame ends with the content.
+  assert.doesNotMatch(html, /<footer\b/);
+  assert.doesNotMatch(html, /app-shell-footer/);
   assert.equal(view.props('DesktopNavigation').isAdmin, false, 'a page mounted without its server provider keeps the least privileged display role');
 });
 

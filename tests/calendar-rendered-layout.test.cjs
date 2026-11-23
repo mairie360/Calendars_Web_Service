@@ -30,7 +30,7 @@ test('MAIR-879: the shared lib-components 2 frame is not reshaped by calendar ru
   assert.deepEqual(commands.map((button) => button.getAttribute('aria-label')), ['Tableau de bord', 'Projets', 'Messagerie', 'Formation', 'Calendrier', 'Administration', 'Paramètres']);
   assert.equal(dom.document.querySelector('.calendar-scroll-shell'), null);
   assert.ok(dom.document.querySelector('.app-shell-frame > .app-shell-body'));
-  assert.ok(dom.document.querySelector('.app-shell-footer > footer'));
+  assert.equal(dom.document.querySelector('footer'), null, 'lib-components 2.3 renders no footer in the page base');
 });
 
 test('real calendar drawer opens the shared sidebar and closes through its published command', async (t) => {

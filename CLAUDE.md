@@ -83,7 +83,7 @@ and agree the mockup first, then code it: the sync direction is Figma → code.
 
 ## Architecture
 
-- **V2 screen (epic MAIR-820)** — lib pin `2.1.0` (recorded in `tests/fixtures/shared-ui-releases.json`): the
+- **V2 screen (epic MAIR-820)** — lib pin `2.3.2` (recorded in `tests/fixtures/shared-ui-releases.json`; since lib 2.3 the page base has no footer and the proxy forwards only declared body media types): the
   `AccessibleShell` frame of lib 2 is collapsible and self-sufficient, so `app-overrides.css` holds no shell rule
   any more (only `.calendar-*` board/grid rules) and `layout.tsx` always renders `data-theme="light"` (MAIR-933).
   `CalendarPage` wraps the screen in the lib `ToastProvider` (`placement="top-end"`, region « Notifications du
