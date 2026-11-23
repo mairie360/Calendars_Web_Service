@@ -1,5 +1,5 @@
 import { calendarToday } from './date-utils';
-import { subscribePageReturn } from "@/lib/page-return";
+import { subscribePageReturn } from "@mairie360/lib-components/shared";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePageUrlState } from '@/lib/use-page-url-state';
 import { calendarUrlSchema } from './page-query';
