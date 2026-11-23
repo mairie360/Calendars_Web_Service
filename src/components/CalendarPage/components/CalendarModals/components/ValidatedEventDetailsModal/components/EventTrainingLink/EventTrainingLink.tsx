@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { frontUrl } from '@/lib/front-urls';
-import { parseFrontUrl } from '@/lib/front-url';
+import { parseFrontUrl } from '@mairie360/lib-components/shared';
 
 export interface EventTraining { id: string; title: string }
 export interface EventTrainingSource { find: (eventId: string, signal: AbortSignal) => Promise<EventTraining | null> }
