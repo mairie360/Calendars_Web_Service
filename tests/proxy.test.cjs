@@ -53,10 +53,19 @@ test('forwardToBff preserves binary upload bytes and 204 responses', async () =>
   let init;
   global.fetch = async (_url, options) => { init = options; return new Response(null, { status: 204 }); };
   const request = new NextRequest('http://localhost/calendar/events', { method: 'POST', headers: { 'Content-Type': 'multipart/form-data; boundary=test', cookie: 'accessToken=test-session' }, body: bytes });
-  const response = await forwardToBff(request, 'http://bff.example', '/calendar/events');
+  // The relayed operation declares multipart bodies: lib-components 2.3 forwards only declared media types.
+  const paths = { '/calendar/events': { post: { requestBody: { content: { 'multipart/form-data': {} } } } } };
+  const response = await forwardToBff(request, 'http://bff.example', '/calendar/events', { paths });
   assert.equal(response.status, 204); assert.equal(await response.text(), '');
   assert.deepEqual(new Uint8Array(init.body), bytes); assert.equal(init.headers.get('Authorization'), 'Bearer test-session');
   assert.equal(init.headers.get('Content-Type'), 'multipart/form-data; boundary=test');
+});
+
+test('forwardToBff refuses a body whose media type the contract operation does not declare', async () => {
+  global.fetch = neverCalled;
+  const request = new NextRequest('http://localhost/calendar/events', { method: 'POST', headers: { 'Content-Type': 'multipart/form-data; boundary=test', cookie: 'accessToken=test-session' }, body: Uint8Array.from([0, 1]) });
+  const response = await forwardToBff(request, 'http://bff.example', '/calendar/events');
+  assert.equal(response.status, 415);
 });
 
 test('contract rejects unknown routes, undeclared methods and BFF documentation before contacting the BFF', async () => {

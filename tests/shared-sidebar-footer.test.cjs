@@ -21,7 +21,7 @@ test('the installed shared UI matches the reviewed published artifact', () => {
 });
 
 test('the shared shell keeps sidebar information distinct from a contentinfo landmark and has one skip target', t => {
-  const document = shellDocument(t, { footerProps: { year: 2026 } });
+  const document = shellDocument(t, { showFooter: true, footerProps: { year: 2026 } });
   const sidebar = document.querySelector('aside');
   assert.match(sidebar.textContent, /© 2026 Mairie360/);
   assert.equal(sidebar.querySelectorAll('footer, [role="contentinfo"]').length, 0);
@@ -33,6 +33,13 @@ test('the shared shell keeps sidebar information distinct from a contentinfo lan
   assert.equal(document.querySelector('main').tabIndex, -1);
 });
 
+test('lib-components 2.3: the shell renders no footer unless asked', t => {
+  const document = shellDocument(t, { footerProps: { year: 2026 } });
+  assert.equal(document.querySelector('footer'), null);
+  assert.doesNotMatch(document.body.textContent, /© 2026 Mairie360/);
+  assert.match(document.body.textContent, /Contenu du module/);
+});
+
 test('standalone Footer retains its horizontal contentinfo landmark', () => {
   const html = renderToStaticMarkup(React.createElement(Footer, { year: 2026 }));
   assert.match(html, /<footer\b[^>]*role="contentinfo"/);
@@ -40,7 +47,7 @@ test('standalone Footer retains its horizontal contentinfo landmark', () => {
 });
 
 test('supplied product, year, real version and actionable links remain in sidebar information', t => {
-  const document = shellDocument(t, { footerProps: {
+  const document = shellDocument(t, { showFooter: true, footerProps: {
     productName: 'Produit fourni', year: 2024, version: '0.6.11',
     links: [{ label: 'Documentation', href: 'https://docs.example/' }],
   } });
@@ -53,7 +60,7 @@ test('supplied product, year, real version and actionable links remain in sideba
 });
 
 test('an explicitly requested content footer has the sole contentinfo landmark outside the sidebar', t => {
-  const document = shellDocument(t, { footerPlacement: 'content', footerProps: { year: 2026 } });
+  const document = shellDocument(t, { showFooter: true, footerPlacement: 'content', footerProps: { year: 2026 } });
   const footer = document.querySelector('footer');
   assert.equal(footer.getAttribute('role'), 'contentinfo');
   assert.equal(document.querySelectorAll('[role="contentinfo"]').length, 1);

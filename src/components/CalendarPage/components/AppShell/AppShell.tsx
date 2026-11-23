@@ -36,7 +36,6 @@ export function AppShell({ activeItem, children }: AppShellProps) {
       onLogout={() => void logout()}
       hrefs={{ ...frontHrefs, calendar: frontHrefs.calendar ?? "/" }}
       sidebarProps={{ brandLogoSrc: "/mairie360-logo.png" }}
-      className="calendar-scroll-shell"
     >
       {logoutError && <div className="mb-4">
         <ErrorAlert title={logoutError} onDismiss={() => setLogoutError(null)} />

@@ -47,7 +47,6 @@ test('parsed calendar media policies retain reference tracks, insets and bounded
   const { declarations } = policyDocument(t);
   const mobile = '(max-width: 767px)', tablet = '(min-width: 768px) and (max-width: 1699px)', desktop = '(min-width: 1700px)';
   assert.equal(value(declarations('.calendar-week-grid > .grid', mobile)('grid-template-columns')), '2.4remrepeat(7,minmax(0,1fr))');
-  assert.equal(value(declarations('.calendar-scroll-shell > .flex > div:last-child > main', mobile)('padding')), '20px14px');
   assert.equal(value(declarations('.calendar-board > section > div', mobile)('padding')), '16px10px');
   assert.equal(value(declarations('.calendar-sidebar', tablet)('grid-template-columns')), 'repeat(2,minmax(0,1fr))');
   assert.equal(value(declarations('.calendar-board', desktop)('grid-template-columns')), 'minmax(0,1fr)310px');
@@ -59,8 +58,10 @@ test('parsed calendar media policies retain reference tracks, insets and bounded
 
 test('parsed calendar fallback and focus policies remain scoped without overriding global small-text tokens', (t) => {
   const { declarations, rows, window } = policyDocument(t);
-  assert.equal(declarations('.calendar-scroll-shell > .flex > div:last-child > footer')('position'), 'static');
-  assert.equal(declarations('.calendar-scroll-shell > .flex > .hidden')('overflow-y'), 'auto');
+  // MAIR-879: the lib-components 2 frame is self-sufficient, no calendar rule reshapes it.
+  for (const row of rows) for (const selected of row.selectors) {
+    assert.doesNotMatch(selected, /calendar-scroll-shell|app-published-sidebar|app-shell|^main\b|\bfooter\b/, selected);
+  }
   for (const row of rows) for (let index = 0; index < row.style.length; index += 1) {
     assert.equal(['--text-xs', '--text-sm'].includes(row.style.item(index)), false, 'Keep global small-text tokens');
   }
@@ -75,7 +76,7 @@ test('parsed calendar fallback and focus policies remain scoped without overridi
     // JSDOM does not expand outline shorthand into computed longhands reliably.
     const probe = window.document.createElement('span');
     probe.style.color = resolveSharedColor(colors[0]); window.document.body.append(probe);
-    assert.equal(window.getComputedStyle(probe).color, 'rgb(62, 106, 98)' /* MAIR-608 charte accent */); probe.remove();
+    assert.equal(window.getComputedStyle(probe).color, 'rgb(45, 120, 108)' /* lib 1.2.0+ accent */); probe.remove();
   }
   // Focus configuration is preserved; native keyboard/scroll and RGAA remain separate.
 });

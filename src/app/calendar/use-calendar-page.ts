@@ -1,5 +1,5 @@
 import { calendarToday } from './date-utils';
-import { subscribePageReturn } from "@/lib/page-return";
+import { subscribePageReturn } from "@mairie360/lib-components/shared";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePageUrlState } from '@/lib/use-page-url-state';
 import { calendarUrlSchema } from './page-query';
@@ -91,6 +91,7 @@ export function useCalendarPage(initial?: InitialCalendarPage) {
   const [readError, setReadError] = useState<string | null>(initial?.status === 'unavailable' ? initial.message : initial && !initialReceipt ? CALENDAR_INITIAL_UNAVAILABLE : null);
   const [mutationError, setMutationError] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const dismissFeedback = useCallback(() => setFeedback(null), []);
   const error = mutationError ?? readError;
   const navigationDateRef = useRef(currentDate);
   const peopleRef = useRef(people);
@@ -462,7 +463,7 @@ export function useCalendarPage(initial?: InitialCalendarPage) {
     services,
     saving,
     feedback,
-    dismissFeedback: () => setFeedback(null),
+    dismissFeedback,
     stats,
     view,
   };

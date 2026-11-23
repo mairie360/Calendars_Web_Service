@@ -139,3 +139,12 @@ Le [guide technique](technical.md) détaille architecture, configuration, routes
 ## Direction visuelle commune — MAIR-547
 
 DA claire option 1 : tokens et police communs, navigation accessible et contenu métier conservé. Voir la [recette visuelle](../qa/design-qa.md) pour les preuves, vérifications et limites RGAA.
+
+## Écran V2 (epic MAIR-820)
+
+Le calendrier suit la maquette V2 validée ([Figma, parcours F1–F9](https://www.figma.com/design/TaP7bHBB2E4uyTEJ5wg6Df/Mairie360-%E2%80%93-Calendars_Web_Service?node-id=19-794)) sur `@mairie360/lib-components` 2.
+
+- **Socle (MAIR-879).** Lib 2.1.0 : bandeau de navigation vert d'eau repliable, barre du haut et pied de page
+  teintés fournis par le cadre de la lib (le calendrier ne le redessine plus), thème toujours clair. Les
+  retours d'action s'affichent dans les toasts de la lib (`ToastProvider`, en haut à droite) : un succès
+  disparaît après 5 s, une écriture refusée reste jusqu'à sa fermeture.

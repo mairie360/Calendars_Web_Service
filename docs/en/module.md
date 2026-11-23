@@ -141,3 +141,12 @@ The [technical guide](technical.md) covers architecture, configuration, routes, 
 ## Shared visual direction — MAIR-547
 
 Approved light option 1: shared tokens and font, accessible navigation, and preserved business layouts. See the [visual QA](../qa/design-qa.md) for evidence, checks, and RGAA limitations.
+
+## V2 screen (epic MAIR-820)
+
+The calendar follows the agreed V2 mockup ([Figma, journeys F1–F9](https://www.figma.com/design/TaP7bHBB2E4uyTEJ5wg6Df/Mairie360-%E2%80%93-Calendars_Web_Service?node-id=19-794)) on `@mairie360/lib-components` 2.
+
+- **Foundation (MAIR-879).** Lib 2.1.0: collapsible teal navigation band, tinted top bar and full-width
+  footer owned by the lib frame (the calendar no longer reshapes it), always-light theme. Action results
+  float in the lib toasts (`ToastProvider`, top right): a success disappears after 5 s, a refused write
+  stays until dismissed.

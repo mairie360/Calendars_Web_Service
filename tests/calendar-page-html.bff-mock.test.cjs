@@ -3,7 +3,7 @@ const { test, before, after, beforeEach, afterEach } = require('node:test');
 const { FrontHarness, jwtFor } = require('./support/front-harness.cjs');
 const { loadTs } = require('./support/load-ts.cjs');
 const { installReactRuntime, mount } = require('./support/server-view.cjs');
-const { alice, apiError, bootstrap, calendarEvent, installWindow, sessionResponse } = require('./support/calendar-fixtures.cjs');
+const { alice, apiError, bootstrap, calendarEvent, installWindow, sessionResponse, withoutToastRegions } = require('./support/calendar-fixtures.cjs');
 
 // HTML of the calendar page (src/app/page.tsx) rendered with react-dom/server against the mocked BFFs:
 // the real page, shell and @mairie360/lib-components are rendered, the hook state is kept between render
@@ -20,6 +20,8 @@ const front = new FrontHarness();
 let view;
 const isCalendarPending = () => view.hostElements(props => props.role === 'status').some(({ text }) => /Chargement des données du calendrier|Enregistrement en cours/.test(text));
 let window;
+const toastTexts = () => (view.html.match(/<section data-m360-component="ToastProvider"[\s\S]*?<\/section>/)?.[0] ?? '').replace(/<[^>]*>/g, ' ');
+const dialogHtml = () => { const html = withoutToastRegions(view.html); return html.slice(html.indexOf('role="dialog"')); };
 
 before(() => front.start());
 after(() => front.stop());
@@ -83,7 +85,7 @@ test('the first pass renders the loading state, the second the events answered b
 
   assert.match(html, new RegExp(`<h2[^>]*>${getPeriodTitle('month', initialDate)}</h2>`));
   assert.deepEqual(front.calendarBff.sequence().map((line) => line.split('?')[0]), ['GET /calendar/bootstrap']);
-  assert.doesNotMatch(html, /role="alert"/);
+  assert.doesNotMatch(withoutToastRegions(html), /role="alert"/);
   assert.match(view.text(), /Événement 5/);
   assert.match(view.text(), /Permanence/);
   assert.match(view.text(), /Description 5/);
@@ -96,20 +98,18 @@ test('the first pass renders the loading state, the second the events answered b
 test('the shell shows the user resolved from BFF User in the header', async () => {
   const html = await renderLoadedPage();
 
-  assert.match(html, /calendar-scroll-shell/);
-  assert.match(html, /class="flex h-screen"/);
-  assert.match(html, /<main\b[^>]*class="min-h-0 flex-1 overflow-auto/);
+  // MAIR-879: lib-components 2 frame — collapsible navigation band, tinted top bar, full-width footer.
+  assert.match(html, /data-m360-component="AccessibleShell"/);
+  assert.match(html, /class="app-shell-veil h-screen[^"]*app-shell-frame flex flex-col"/);
+  assert.doesNotMatch(html, /calendar-scroll-shell/, 'the front no longer reshapes the shared frame');
+  assert.match(html, /<main\b[^>]*class="app-shell-main-area min-h-0 flex-1[^"]*overflow-auto app-shell-main"/);
   assert.deepEqual(front.userBff.sequence(), ['GET /me']);
   assert.match(html, /<(?:span|div) data-slot="avatar-fallback"[^>]*>AM<\/(?:span|div)>|<span[^>]*>AM<\/span>/);
   assert.match(html, /<span[^>]*>Admin Mairie<\/span>/);
-  assert.match(html, /<footer/);
-  const footer = html.match(/<footer\b[^>]*>[\s\S]*?<\/footer>/)?.[0];
-  assert.ok(footer);
-  assert.doesNotMatch(html, /<aside\b[^]*?<footer\b[^]*?<\/footer>[^]*?<\/aside>/);
-  assert.match(html, /<\/main>\s*<footer\b/);
-  assert.match(footer.replace(/<[^>]*>/g, ''), new RegExp(`© ${new Date().getFullYear()} Mairie360`));
-  assert.doesNotMatch(footer, /Version|<button\b|<a\b/);
-  assert.deepEqual(view.props('Sidebar').isAdmin, false, 'a page mounted without its server provider keeps the least privileged display role');
+  // lib-components 2.3: the page base has no footer anymore, the white frame ends with the content.
+  assert.doesNotMatch(html, /<footer\b/);
+  assert.doesNotMatch(html, /app-shell-footer/);
+  assert.equal(view.props('DesktopNavigation').isAdmin, false, 'a page mounted without its server provider keeps the least privileged display role');
 });
 
 test('desktop and mobile navigation expose only active modules and keep Settings functional', async () => {
@@ -131,32 +131,31 @@ test('desktop and mobile navigation expose only active modules and keep Settings
   try {
     await renderLoadedPage();
     assert.equal(view.props('Header').profileHref, 'https://settings.test.example/');
-    const isAdmin = view.props('Sidebar').isAdmin;
-    for (const mobileOpen of [false, true]) {
-      await view.act(() => view.props('Header').setSidebarOpen(mobileOpen));
-      const sidebars = view.find('Sidebar');
-      assert.equal(sidebars.length, mobileOpen ? 2 : 1);
-      for (const { props } of sidebars) {
-        assert.deepEqual(props.items.map(item => item.id),
-          ['dashboard', 'projects', 'messages', 'training', 'calendar', 'admin', 'settings']);
-        assert.equal(props.items.find(item => item.id === 'admin').adminOnly, true);
-        assert.equal(props.isAdmin, isAdmin);
-        assert.equal(props.activeItem, 'calendar');
-      }
-      const menus = view.html.match(/<nav\b[^>]*aria-label="Menu principal"[^>]*>[\s\S]*?<\/nav>/g) ?? [];
-      assert.equal(menus.length, sidebars.length + 1);
-      for (const menu of menus) {
-        assert.doesNotMatch(menu, /E-mails|Fichiers/);
-        assert.match(menu, /Paramètres/);
-        assert.equal(menu.includes('>Administration<'), isAdmin);
-      }
-    }
-    const mobileSidebar = view.find('Sidebar')[1].props;
-    await view.act(() => mobileSidebar.onItemSelect(mobileSidebar.items.find(item => item.id === 'settings')));
+    const desktop = view.props('DesktopNavigation');
+    assert.equal(desktop.activeItem, 'calendar');
+    const isAdmin = desktop.isAdmin;
+    const desktopMenu = view.html.match(/<aside\b[^>]*class="app-desktop-navigation"[\s\S]*?<\/aside>/)?.[0] ?? '';
+    assert.doesNotMatch(desktopMenu, /E-mails|Fichiers/);
+    assert.match(desktopMenu, /aria-label="Paramètres"/);
+    assert.equal(desktopMenu.includes('aria-label="Administration"'), isAdmin);
+    assert.equal(view.find('Sidebar').length, 0, 'the desktop band is not the mobile drawer');
+
+    await view.act(() => view.props('Header').setSidebarOpen(true));
+    const [mobile] = view.find('Sidebar');
+    assert.ok(mobile, 'the mobile drawer renders the shared sidebar');
+    assert.deepEqual(mobile.props.items.map(item => item.id),
+      ['dashboard', 'projects', 'messages', 'training', 'calendar', 'admin', 'settings']);
+    assert.equal(mobile.props.items.find(item => item.id === 'admin').adminOnly, true);
+    assert.equal(mobile.props.isAdmin, isAdmin);
+    assert.equal(mobile.props.activeItem, 'calendar');
+    const drawer = view.html.match(/<div[^>]*role="dialog"[^>]*aria-label="Navigation mobile"[\s\S]*?<\/nav>/)?.[0] ?? '';
+    assert.doesNotMatch(drawer, /E-mails|Fichiers/);
+    assert.match(drawer, /Paramètres/);
+    await view.act(() => mobile.props.onItemSelect(mobile.props.items.find(item => item.id === 'settings')));
     assert.deepEqual(assigned, ['https://settings.test.example/']);
     await view.act(() => view.props('Header').onPageChange('profile'));
     assert.deepEqual(assigned, ['https://settings.test.example/', 'https://settings.test.example/']);
-    assert.equal(view.find('Sidebar').length, 1);
+    assert.equal(view.find('Sidebar').length, 0);
   } finally {
     setBrowserFrontUrls({});
     global.window.location.assign = originalAssign;
@@ -166,7 +165,7 @@ test('desktop and mobile navigation expose only active modules and keep Settings
 test('a BFF error is rendered as an alert with a retry button that reloads the calendar', async () => {
   front.calendarRead({ status: 502, body: apiError('BFF_ERROR', 'Calendar API unavailable') });
   view = mount(React.createElement(Page));
-  const failed = await view.waitFor((html) => html.includes('role="alert"'));
+  const failed = await view.waitFor((html) => withoutToastRegions(html).includes('role="alert"'));
 
   assert.match(failed, /<span role="alert">Calendrier : Calendar API unavailable<\/span>/);
   assert.match(failed, /<button type="button"[^>]*>[\s\S]*?Réessayer<\/button>/);
@@ -174,7 +173,7 @@ test('a BFF error is rendered as an alert with a retry button that reloads the c
 
   front.calendarRead({ body: bootstrap() });
   await view.click('Réessayer');
-  const html = await view.waitFor((current) => !current.includes('role="alert"') && !isCalendarPending());
+  const html = await view.waitFor((current) => !withoutToastRegions(current).includes('role="alert"') && !isCalendarPending());
 
   assert.equal(front.calendarBff.requests.length, 2);
   assert.match(view.text(), /Événement 5/);
@@ -248,7 +247,7 @@ test('pending and refused edit keeps its draft through reordered category reads,
   await view.waitFor(() => !view.props('ValidatedEventDetailsModal').saving && view.props('ValidatedEventDetailsModal').categories[0].value === 'meeting');
   assert.equal(view.hostElements(props => props.id === 'event-title')[0].props.value, 'Combined draft');
   assert.equal(view.hostElements(props => props.id === 'event-category')[0].props.value, 'other');
-  assert.match(view.html.slice(view.html.indexOf('role="dialog"')), /role="alert"[^>]*>Combined edit refused/);
+  assert.match(dialogHtml(), /role="alert"[^>]*>Combined edit refused/);
   assert.equal(front.calendarBff.calls('/calendar/events/{id}', 'PATCH').length, 1);
   const confirmed = calendarEvent(event.id, { ...event, title: 'Combined draft', category: 'other' });
   front.calendarBff.on('patch', '/calendar/events/{id}', { body: confirmed });
@@ -258,7 +257,10 @@ test('pending and refused edit keeps its draft through reordered category reads,
   assert.equal(view.props('DaySchedule').events[0].title, 'Combined draft');
   assert.equal(view.props('DaySchedule').events[0].category, 'other');
   assert.doesNotMatch(view.html, /role="dialog"/);
-  assert.doesNotMatch(view.html, /Combined edit refused/);
+  assert.doesNotMatch(withoutToastRegions(view.html), /Combined edit refused/);
+  // MAIR-879: the refused write stays in an error toast until dismissed; the confirmed one is a success toast.
+  assert.match(toastTexts(), /Combined edit refused/);
+  assert.match(toastTexts(), /Événement « Combined draft » enregistré\./);
 });
 
 test('changing the view re-renders the week grid with the reloaded events', async () => {
@@ -360,7 +362,7 @@ for (const [label, method, route, approvalStatus] of [
     // click pending so this assertion observes the UI before either response.
     const pendingClick = view.click(label);
     await view.waitFor(() => Boolean(reply));
-    let dialog = view.html.slice(view.html.indexOf('role="dialog"'));
+    let dialog = dialogHtml();
     assert.match(dialog, /role="status"[^>]*>Enregistrement en cours…/);
     assert.match(view.html, /<fieldset[^>]*disabled=""[^>]*aria-busy="true"/);
     assert.doesNotMatch(dialog, />Supprimer<|>Valider<|>Refuser<|>Modifier</);
@@ -368,7 +370,7 @@ for (const [label, method, route, approvalStatus] of [
     await view.act(() => reply({ status: 403, body: apiError('FORBIDDEN', `${label} refusé`) }));
     await pendingClick;
     await view.waitFor(html => html.includes(`${label} refusé`));
-    dialog = view.html.slice(view.html.indexOf('role="dialog"'));
+    dialog = dialogHtml();
     assert.match(dialog, new RegExp(`role="alert"[^>]*>${label} refusé`));
     assert.match(dialog, /Événement 5/);
     assert.equal(view.props('MonthGrid').events[0].approvalStatus, event.approvalStatus);
@@ -376,7 +378,7 @@ for (const [label, method, route, approvalStatus] of [
     await view.act(() => view.props('CalendarToolbar').onViewChange('week'));
     // bootstrap, the opened event's detail (MAIR-557), the refused action and the week read.
     await view.waitFor(() => front.calendarBff.requests.length === 4 && !isCalendarPending());
-    assert.match(view.html.slice(view.html.indexOf('role="dialog"')), new RegExp(`role="alert"[^>]*>${label} refusé`));
+    assert.match(dialogHtml(), new RegExp(`role="alert"[^>]*>${label} refusé`));
     assert.equal(front.calendarBff.calls(route, method.toUpperCase()).length, 1);
     front.calendarBff.on(method, route, approvalStatus
       ? { body: calendarEvent(5, { approvalStatus }) }
@@ -386,7 +388,7 @@ for (const [label, method, route, approvalStatus] of [
     assert.equal(front.calendarBff.calls(route, method.toUpperCase()).length, 2);
     if (approvalStatus) {
       assert.equal(view.props('WeekGrid').events[0].approvalStatus, approvalStatus);
-      assert.doesNotMatch(view.html.slice(view.html.indexOf('role="dialog"')), /role="alert"/);
+      assert.doesNotMatch(dialogHtml(), /role="alert"/);
       assert.match(view.html, /role="dialog"/);
     } else {
       assert.equal(view.props('WeekGrid').events.some(item => item.id === event.id), false);
@@ -421,13 +423,13 @@ test('MAIR-557: the details dialog offers the actions granted by the event detai
   try {
     await view.act(() => view.props('MonthGrid').onEventClick(view.props('MonthGrid').events[0]));
     await view.waitFor((html) => html.includes('role="dialog"'));
-    assert.doesNotMatch(view.html.slice(view.html.indexOf('role="dialog"')), />Modifier<|>Supprimer<|>Valider</);
+    assert.doesNotMatch(dialogHtml(), />Modifier<|>Supprimer<|>Valider</);
   } finally {
     // Released even when an assertion fails, so afterEach's settle() does not wait forever.
     await view.act(() => release());
   }
   await view.waitFor((html) => />Modifier</.test(html.slice(html.indexOf('role="dialog"'))));
-  const dialog = view.html.slice(view.html.indexOf('role="dialog"'));
+  const dialog = dialogHtml();
   assert.match(dialog, />Supprimer</);
   assert.match(dialog, />Valider</);
   assert.match(dialog, /Description 5/);
