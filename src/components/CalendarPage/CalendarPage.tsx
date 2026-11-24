@@ -34,7 +34,7 @@ function CalendarScreen({ initial }: { initial?: InitialCalendarPage }) {
     ? (calendar.readError ? 'unavailable' : 'loading')
     : calendar.panelsLoading ? 'loading' : calendar.readError ? 'unavailable' : 'default';
   // The grid only exists in the default state: the today marker attaches again when it comes back.
-  const gridRef = useCalendarTodayMarker(calendar.view, state === 'default' ? calendar.currentDate.getTime() : -1);
+  const gridRef = useCalendarTodayMarker(calendar.view, state === 'default' && !calendar.noMatchingEvents ? calendar.currentDate.getTime() : -1);
 
   return (
     <AppShell activeItem="calendar" search={{ value: calendar.searchQuery, onChange: calendar.setSearchQuery }}>

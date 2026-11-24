@@ -26,8 +26,10 @@ import {
 } from "./date-utils";
 import { buildStats, countOccurrencesBetween, getUpcomingOccurrences } from "./stats";
 import { applyEventSearch } from "./search";
+import { readPageUrlState } from "@/lib/page-url-state";
 import {
   applyEventFilters,
+  calendarFilterUrlSchema,
   calendarFiltersToUrl,
   countActiveFilters,
   emptyCalendarFilters,
@@ -164,13 +166,22 @@ export function useCalendarPage(initial?: InitialCalendarPage) {
     shown: countOccurrencesBetween(filteredEvents, periodRange.from, periodRange.to),
     total: countOccurrencesBetween(events, periodRange.from, periodRange.to),
   }), [events, filteredEvents, periodRange.from, periodRange.to]);
+  // Nothing of the displayed period passes the filters: the views show the empty state instead of the grid.
+  const noMatchingEvents = activeFilterCount > 0 && filterCounts.shown === 0;
 
   useEffect(() => {
     if (!pageUrl.ready) return;
     const params = new URLSearchParams(
       typeof window === "undefined" ? "" : window.location.search,
     );
-    const linkedDate = calendarDateFromLink(pageUrl.state.date || null);
+    let linkedDate = calendarDateFromLink(pageUrl.state.date || null);
+    if (!linkInitialized.current) {
+      // A link whose filter range does not overlap its period opens on the range.
+      const opening = linkedDate ?? calendarToday();
+      const period = getCalendarPeriodRange(pageUrl.state.view as CalendarViewMode, opening);
+      const outside = filterRangeOutsidePeriod(readCalendarFilters(readPageUrlState(params.toString(), calendarFilterUrlSchema)), formatDateForQuery(period.from), formatDateForQuery(period.to));
+      if (outside) linkedDate = parseDateInput(outside);
+    }
     // Date-dependent UI stays hidden until this browser-local initialization.
     // A server process/module date must not leak into the hydration markup.
     const openingDate = linkedDate ?? calendarToday();
@@ -331,6 +342,7 @@ export function useCalendarPage(initial?: InitialCalendarPage) {
   // A date range outside the displayed period moves the view to it, which reads that period from the BFF.
   const setFilters = (patch: Partial<CalendarEventFilters>) => {
     const next = { ...filters, ...patch };
+    if (next.from && next.to && next.from > next.to) [next.from, next.to] = [next.to, next.from];
     const urlPatch = calendarFiltersToUrl(next);
     const outside = 'from' in patch || 'to' in patch ? filterRangeOutsidePeriod(next, rangeFrom, rangeTo) : null;
     if (outside) {
@@ -557,6 +569,7 @@ export function useCalendarPage(initial?: InitialCalendarPage) {
     clearFilters,
     filterCounts,
     filters,
+    noMatchingEvents,
     setFilters,
     createInitialValues,
     createModalOpen,

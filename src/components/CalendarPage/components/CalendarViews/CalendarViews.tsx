@@ -23,8 +23,7 @@ type CalendarViewsProps = { calendar: Calendar; gridRef: Ref<HTMLDivElement>; st
  */
 export const CalendarViews = ({ calendar, gridRef, state = "default" }: CalendarViewsProps) => {
   // Filters hide the events that do not match; when none of the period is left, the empty state replaces the grid.
-  const filtered = (calendar.activeFilterCount ?? 0) > 0;
-  const noMatch = state === "default" && filtered && calendar.filterCounts?.shown === 0;
+  const noMatch = state === "default" && Boolean(calendar.noMatchingEvents);
   return (
   <>
     {/* Before the browser initialisation the period would be the server's date: no toolbar yet. */}

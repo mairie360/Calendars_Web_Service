@@ -230,3 +230,15 @@ test('MAIR-1180: a date range outside the displayed period moves the view to it'
   assert.equal(filters.filterRangeOutsidePeriod({ ...noFilter, from: '2026-09-20', to: '2026-12-01' }, '2026-08-31', '2026-10-04'), null, 'an overlapping range stays');
   assert.equal(filters.filterRangeOutsidePeriod(noFilter, '2026-08-31', '2026-10-04'), null);
 });
+
+test('MAIR-1180: a multi-day recurrence still covers a day after the range end, and counts as one occurrence of a period it overlaps', () => {
+  // Three-day occurrences starting every day: the one of the 12th covers the 13th and 14th.
+  const daily = { id: 1, title: 'Garde', date: '2026-09-01', endDate: '2026-09-03', recurrence: { frequency: 'daily', interval: 1, endsOn: '2026-09-30' } };
+  const [windowed] = filters.applyEventFilters([daily], { ...noFilter, from: '2026-09-10', to: '2026-09-12' });
+  assert.equal(eventOccursOnDate(windowed, '2026-09-13'), true, 'stats copy keeps scanning past a start outside the range');
+  assert.equal(calendarDate.eventOccursOnDate(windowed, '2026-09-13'), true, 'grid copy keeps scanning past a start outside the range');
+  assert.equal(eventOccursOnDate(windowed, '2026-09-15'), false);
+  const salon = { id: 2, title: 'Salon', date: '2026-09-09', endDate: '2026-09-11' };
+  assert.equal(countOccurrencesBetween([salon], new Date(2026, 8, 10), new Date(2026, 8, 10)), 1, 'an occurrence started before the period counts');
+  assert.equal(countOccurrencesBetween([salon], new Date(2026, 8, 9), new Date(2026, 8, 11)), 1, 'counted once over its days');
+});

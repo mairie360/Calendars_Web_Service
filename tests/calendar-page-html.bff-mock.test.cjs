@@ -377,6 +377,15 @@ test('MAIR-1180: filters are read from the URL, unknown values ignored, and an o
   assert.equal(view.props('CalendarFilters').filters.from, iso);
 });
 
+test('MAIR-1180: a link whose filter range lies outside its period opens on the range', async () => {
+  const year = initialDate.getFullYear() + 1;
+  window.location.search = `?from=${year}-03-10&to=${year}-03-20`;
+  await renderLoadedPage();
+  assert.equal(view.props('CalendarToolbar').title, getPeriodTitle('month', new Date(year, 2, 10)));
+  const period = front.calendarBff.requests[0].url.searchParams;
+  assert.ok(period.get('from') <= `${year}-03-10` && `${year}-03-10` <= period.get('to'), 'the first read covers the range');
+});
+
 test('changing the view re-renders the week grid with the reloaded events', async () => {
   await renderLoadedPage();
 

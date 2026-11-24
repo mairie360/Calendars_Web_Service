@@ -80,7 +80,7 @@ export const TypeFilter = ({ id, options, value, onChange, variant = 'menu' }: T
   return (
     <div ref={rootRef} className="calendar-type-filter relative">
       <Field htmlFor={id} label="Type">
-        <button ref={triggerRef} type="button" id={id} aria-haspopup="true" aria-expanded={open} aria-controls={`${id}-menu`}
+        <button ref={triggerRef} type="button" id={id} aria-expanded={open} aria-controls={`${id}-menu`}
           aria-label={`Type : ${summary}`} onClick={() => setOpen(!open)}
           className={joinClasses(controlClass(false), 'flex w-full items-center gap-2 text-left')} style={controlStyle('m')}>
           {value.length > 0 && <span className="flex shrink-0 gap-1">{value.map((category) => <CategoryDot key={category} category={category} />)}</span>}
