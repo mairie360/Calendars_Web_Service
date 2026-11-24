@@ -115,6 +115,8 @@ export interface WeekGridProps extends React.HTMLAttributes<HTMLDivElement> {
   onSelectDate?: (date: Date) => void;
   onSelectSlot?: (date: Date, time: string) => void;
   onEventClick?: (event: CalendarEvent) => void;
+  /** MAIR-1123: « +N » of an overlapping group opens the Day view on that date. */
+  onShowDay?: (date: Date) => void;
 }
 
 export interface DayScheduleProps extends React.HTMLAttributes<HTMLDivElement> {

@@ -30,7 +30,7 @@ export const CalendarViews = ({ calendar, gridRef, state = "default" }: Calendar
     )}
     {state === "default" && <div className="calendar-grid-viewport mt-9" ref={gridRef}>
       {calendar.view === "month" && <MonthGrid className="calendar-month-grid" currentDate={calendar.currentDate} selectedDate={calendar.selectedDate} events={calendar.displayedEvents} onSelectDate={(date) => calendar.handleSelectSlot(date, "09:00")} onEventClick={calendar.handleEventClick} />}
-      {calendar.view === "week" && <WeekGrid className="calendar-week-grid" currentDate={calendar.currentDate} selectedDate={calendar.selectedDate} events={calendar.displayedEvents} onSelectDate={calendar.handleSelectDate} onSelectSlot={calendar.handleSelectSlot} onEventClick={calendar.handleEventClick} />}
+      {calendar.view === "week" && <WeekGrid className="calendar-week-grid" currentDate={calendar.currentDate} selectedDate={calendar.selectedDate} events={calendar.displayedEvents} onSelectDate={calendar.handleSelectDate} onSelectSlot={calendar.handleSelectSlot} onEventClick={calendar.handleEventClick} onShowDay={calendar.handleShowDay} />}
       {calendar.view === "day" && <DaySchedule currentDate={calendar.selectedDate} events={calendar.displayedEvents} onSelectSlot={calendar.handleSelectSlot} onEventClick={calendar.handleEventClick} />}
     </div>}
   </>

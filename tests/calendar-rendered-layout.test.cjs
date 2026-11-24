@@ -23,7 +23,7 @@ test('real calendar drawer opens the shared sidebar and closes through its publi
   assert.equal(dom.document.querySelector('[role="dialog"][aria-label="Navigation mobile"]'), null);
 });
 
-test('real month and week grids retain bounded tracks and consumer event-title clipping', async (t) => {
+test('real month and week grids retain bounded tracks; month titles stay on one line, week titles on two (MAIR-1123)', async (t) => {
   const dom = await calendarDom(t);
   const board = dom.document.querySelector('.calendar-board');
   assert.equal(dom.style(board).gridTemplateColumns.replace(/\s+/g, ''), 'minmax(0,1fr)');
@@ -35,8 +35,14 @@ test('real month and week grids retain bounded tracks and consumer event-title c
     const titles = [...grid.querySelectorAll('[role="button"] > div')];
     assert.ok(titles.length, 'Existing BFF fixture events must reach the actual grid');
     for (const title of titles) {
-      assert.equal(dom.style(title).whiteSpace, 'nowrap'); assert.equal(dom.style(title).textOverflow, 'ellipsis');
+      assert.equal(dom.style(title).overflow, 'hidden');
+      if (view === 'Mois') {
+        assert.equal(dom.style(title).whiteSpace, 'nowrap'); assert.equal(dom.style(title).textOverflow, 'ellipsis');
+      } else if (title.classList.contains('calendar-event-title')) {
+        assert.equal(dom.style(title).whiteSpace, 'normal', 'a week title wraps instead of being cut to one letter');
+      }
     }
+    if (view === 'Semaine') assert.ok(grid.querySelector('[role="button"] > .calendar-event-title'), 'week events use the two-line title');
   }
 });
 

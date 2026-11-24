@@ -59,13 +59,13 @@ const assignLanes = (events: PositionedEventCandidate[]): PositionedCalendarEven
   }));
 };
 
-export const getPositionedEventsForDate = (
+const sortedCandidatesForDate = (
   events: CalendarEvent[],
   date: CalendarDateInput,
   visibleStartMinutes: number,
   visibleEndMinutes: number
-) => {
-  const positionedEvents = events
+) =>
+  events
     .map((event) => {
       const range = getEventTimeRangeForDate(event, date, visibleStartMinutes, visibleEndMinutes);
       return range ? { event, range } : null;
@@ -78,5 +78,37 @@ export const getPositionedEventsForDate = (
       return secondEvent.range.endMinutes - firstEvent.range.endMinutes;
     });
 
-  return groupOverlappingEvents(positionedEvents).flatMap(assignLanes);
-};
+/** Day view: the events of `date`, overlapping ones side by side in lanes of their own group only. */
+export const getPositionedEventsForDate = (
+  events: CalendarEvent[],
+  date: CalendarDateInput,
+  visibleStartMinutes: number,
+  visibleEndMinutes: number
+) => groupOverlappingEvents(sortedCandidatesForDate(events, date, visibleStartMinutes, visibleEndMinutes)).flatMap(assignLanes);
+
+export interface CalendarEventGroup extends PositionedEventCandidate {
+  /** Events of the group hidden behind « +N »: the group minus the one shown. */
+  hiddenCount: number;
+  /** Bottom of the group, in minutes from the visible start, so the shown event covers the whole slot. */
+  endOffsetMinutes: number;
+}
+
+/**
+ * MAIR-1123, week view: one readable event per group of overlapping events (the earliest, the longest on a tie)
+ * at the full width of the day, with the count of the others. A lone event is a group of one.
+ */
+export const getEventGroupsForDate = (
+  events: CalendarEvent[],
+  date: CalendarDateInput,
+  visibleStartMinutes: number,
+  visibleEndMinutes: number
+): CalendarEventGroup[] =>
+  groupOverlappingEvents(sortedCandidatesForDate(events, date, visibleStartMinutes, visibleEndMinutes)).map((group) => {
+    const [shown] = group;
+    const groupEnd = Math.max(...group.map((candidate) => candidate.range.endMinutes));
+    return {
+      ...shown,
+      hiddenCount: group.length - 1,
+      endOffsetMinutes: shown.range.offsetMinutes + (groupEnd - shown.range.startMinutes),
+    };
+  });
