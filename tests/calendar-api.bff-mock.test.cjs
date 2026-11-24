@@ -159,6 +159,43 @@ test('updateCalendarEvent patches /calendar/events/{id} with an UpdateCalendarEv
   assert.equal(saved.date, '2026-09-20');
 });
 
+test('MAIR-1179 createCalendarEvent sends the chosen visibility and keeps the one the BFF returns', async () => {
+  front.calendarBff.on('post', '/calendar/events', ({ body }) => ({ status: 201, body: calendarEvent(44, body) }));
+
+  const created = await api.createCalendarEvent(createValues({ visibility: 'private' }), people);
+  await api.createCalendarEvent(createValues({ visibility: 'public' }), people);
+
+  assert.deepEqual(front.calendarBff.requests.map((call) => call.body.visibility), ['private', 'public']);
+  assert.equal(created.visibility, 'private');
+});
+
+test('MAIR-1179 updateCalendarEvent sends the visibility of the form and omits it for an event read without one', async () => {
+  front.calendarBff.on('patch', '/calendar/events/{id}', ({ body, pathParams }) => ({ body: calendarEvent(Number(pathParams.id), { ...body, visibility: body.visibility ?? 'private' }) }));
+
+  const saved = await api.updateCalendarEvent({ ...calendarEvent(12), visibility: 'public' }, people);
+  const kept = await api.updateCalendarEvent(calendarEvent(13), people);
+
+  assert.equal(front.calendarBff.requests[0].body.visibility, 'public');
+  assert.equal(saved.visibility, 'public');
+  // Absent: the BFF keeps the stored value instead of making the event public.
+  assert.equal('visibility' in front.calendarBff.requests[1].body, false);
+  assert.equal(kept.visibility, 'private');
+});
+
+test('MAIR-1179 the bootstrap, period and detail reads keep the visibility of each event', async () => {
+  const events = [calendarEvent(5, { visibility: 'private' }), calendarEvent(6, { visibility: 'public' })];
+  front.calendarRead({ body: bootstrap({ events }) });
+  const data = await api.loadCalendarData({ from: '2026-08-31', to: '2026-10-04' });
+  assert.deepEqual(data.events.map((event) => event.visibility), ['private', 'public']);
+
+  front.calendarBff.on('get', '/calendar/period', { body: { events: [calendarEvent(7, { visibility: 'private', assignees: undefined })], users: {} } });
+  const period = await api.loadCalendarPeriodData({ from: '2026-10-01', to: '2026-10-31' }, data);
+  assert.deepEqual(period.events.map((event) => event.visibility), ['private']);
+
+  front.calendarBff.on('get', '/calendar/events/{id}', { body: calendarEvent(8, { visibility: 'private' }) });
+  assert.equal((await api.loadCalendarEvent(8, people)).visibility, 'private');
+});
+
 test('deleteCalendarEvent sends DELETE /calendar/events/{id} and accepts the empty 204', async () => {
   front.calendarBff.on('delete', '/calendar/events/{id}', { status: 204 });
 

@@ -6,7 +6,7 @@ export const noRecurrence: CreateCalendarEventValues['recurrence'] = { frequency
 /** The form draft of a new event (normalised dates, empty recurrence). */
 export function defaultEventValues(initialValues: Partial<CreateCalendarEventValues> | undefined, defaultCategory: string): CreateCalendarEventValues {
   return {
-    title: '', description: '', service: '', category: defaultCategory, startTime: '', endTime: '', location: '',
+    title: '', description: '', service: '', category: defaultCategory, startTime: '', endTime: '', location: '', visibility: 'public',
     ...initialValues,
     date: normalizeDateForServer(initialValues?.date),
     endDate: normalizeDateForServer(initialValues?.endDate),
@@ -65,6 +65,7 @@ export const eventValues = (event: CalendarEvent): CreateCalendarEventValues => 
     daysOfWeek: event.recurrence?.daysOfWeek || [],
     endsOn: normalizeDateForServer(event.recurrence?.endsOn),
   },
+  visibility: event.visibility === 'private' ? 'private' : 'public',
 });
 
 export const selectedAssignees = (people: CalendarAssignee[], value: CalendarAssigneeId[]) =>

@@ -187,8 +187,9 @@ The calendar follows the agreed V2 mockup ([Figma, journeys F1–F9](https://www
   Then « Statistiques »: « N événements en <mois> » for the displayed month and one metric card per API
   category (Réunions, Animations, Cérémonies, Autres), recomputed when the month changes.
 - **Event details (MAIR-929).** The dialog is titled with the event; under the title the category pill
-  (and « En attente » / « Refusé » when relevant) and the description; then four facts with icons: Date
-  with the recurrence (« Jeudi 12 novembre 2026 · chaque mois »), Horaire, Lieu, Participants. The training
+  (and « En attente » / « Refusé » when relevant, « Privé » for a private event) and the description; then five
+  facts with icons: Date with the recurrence (« Jeudi 12 novembre 2026 · chaque mois »), Horaire, Lieu,
+  Participants, Visibilité. The training
   link and the approve / reject actions of pending events follow. Footer: « Supprimer » on the left,
   « Fermer » and « Modifier » on the right, each only when allowed. Saving and refusals no longer show in the
   title: the dialog is busy while saving and the outcome goes to the toasts.
@@ -200,11 +201,19 @@ The calendar follows the agreed V2 mockup ([Figma, journeys F1–F9](https://www
 - **Event form (MAIR-926).** « Nouvel événement » and « Modifier l’événement » have no subtitle and save with
   « Enregistrer », which loads during the call (no double submit). Fields: Titre*, Description, Date de début* +
   Date de fin, Heure de début + Heure de fin, Catégorie + Récurrence (recurrence details below), Lieu,
-  Participants (« Les participants reçoivent l’événement dans leur calendrier. »). Errors show under their field
+  Participants (« Les participants reçoivent l’événement dans leur calendrier. »), Visibilité. Errors show under their field
   (« Donnez un titre à l’événement. », « La date de fin doit suivre la date de début. », « L’heure de fin doit
   suivre l’heure de début. ») and the first one takes the focus. A refusal shows « Impossible d’enregistrer » at
   the top of the dialog, keeps the entries and toasts the error; success closes the dialog, moves the calendar to
   the event date and toasts « Événement créé » / « Événement modifié ».
+- **Visibility.** The form ends with « Visibilité », two radio cards (lib `RadioGroup`, `card` variant): « Public »
+  (« Visible par tous les agents », the default of a new event) and « Privé » (« Visible seulement par vous et les
+  invités »). Editing starts from the event's value and every save sends `visibility`; an event read without it is
+  shown as public and its update omits the field, so BFF_Calendar keeps the stored value. The details show
+  « Public · visible par tous les agents » or « Privé · visible seulement par vous et les invités » (globe or lock
+  icon), and a private event gets a small lock before its title in the month, week and day views and in « À venir »,
+  read « (privé) » by screen readers. Who may read a private event (its creator and its participants) is the BFF's
+  decision: anyone else gets a 403.
 - **Search (MAIR-935).** The top-bar « Rechercher un événement » filters on every keystroke, ignoring case and
   accents, on the title and the location: in the month, week and day views the events that do not match fade to
   30 % and stay clickable (no match fades everything, no dedicated message); clearing it (✕ or Escape) shows

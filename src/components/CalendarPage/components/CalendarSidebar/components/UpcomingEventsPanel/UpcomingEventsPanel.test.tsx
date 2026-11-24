@@ -42,3 +42,9 @@ it('MAIR-1180: under active filters the panel says its events are filtered, also
   expect(screen.getByText('Les 3 prochains événements filtrés')).toBeVisible();
   expect(screen.getByText('Aucun événement à venir ne correspond aux filtres.')).toBeVisible();
 });
+it('MAIR-1179: a private upcoming event shows a lock and reads « (privé) »', () => {
+  const { container } = render(<UpcomingEventsPanel today={today} categories={categories} onEventClick={vi.fn()} items={[{ event: { ...event, visibility: 'private' as const }, date: today }, { event: { ...event, id: 'e2', title: 'Fête' }, date: today }]} />);
+  expect(screen.getByRole('button', { name: /Conseil\s*\(privé\)/ })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /Fête/ })).not.toHaveTextContent('privé');
+  expect(container.querySelectorAll('svg.lucide-lock')).toHaveLength(1);
+});

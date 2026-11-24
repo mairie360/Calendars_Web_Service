@@ -71,6 +71,8 @@ function eventBody(event: CreateCalendarEventValues | CalendarEventItem): BffCal
       ...event.recurrence,
       endsOn: event.recurrence.endsOn ? toDateString(event.recurrence.endsOn) : undefined,
     },
+    // Sent on every save from the form; absent (an event read without it) lets the BFF keep the stored value.
+    visibility: event.visibility,
   };
 }
 

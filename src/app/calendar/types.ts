@@ -9,6 +9,8 @@ export type CalendarUserRole = "user" | "responsable" | "mayor";
 export type CalendarEventApprovalStatus = "pending" | "approved" | "rejected";
 /** The current user's answer to the invitation to an event (absent when they are not assigned). */
 export type CalendarParticipation = "accepted" | "pending" | "declined";
+/** Who can read an event: everyone (`public`) or only its creator and its participants (`private`). */
+export type CalendarVisibility = "public" | "private";
 
 export type CalendarRecurrence = {
   frequency: "none" | "daily" | "weekly" | "monthly";
@@ -36,6 +38,7 @@ export type CalendarEventItem = {
   approvalStatus?: CalendarEventApprovalStatus;
   myParticipation?: CalendarParticipation;
   canRespond?: boolean;
+  visibility?: CalendarVisibility;
   createdById?: CalendarAssigneeId;
   canValidate?: boolean;
   canEdit?: boolean;
@@ -61,4 +64,5 @@ export type CreateCalendarEventValues = {
   location: string;
   assigneeIds: CalendarAssigneeId[];
   recurrence: CalendarRecurrence;
+  visibility: CalendarVisibility;
 };

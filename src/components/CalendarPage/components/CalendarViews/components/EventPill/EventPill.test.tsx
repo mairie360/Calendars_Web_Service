@@ -50,3 +50,15 @@ it('MAIR-1122: a meeting shows and announces my answer, struck through once decl
   expect(screen.getByRole('button', { name: /Conseil/ })).not.toHaveAttribute('data-participation');
   expect(screen.queryByText(/déclinée/)).not.toBeInTheDocument();
 });
+
+it('MAIR-1179: a private event shows a lock before its title and reads « (privé) », a public one neither', async () => {
+  const event = { id: 1, title: 'Planification', date: '2026-10-15', startTime: '09:00', endTime: '10:00', visibility: 'private' as const };
+  const { container, rerender } = render(<EventPill event={event} onClick={vi.fn()} />);
+  expect(screen.getByRole('button', { name: /Planification\s*\(privé\)/ })).toBeInTheDocument();
+  expect(container.querySelector('svg.lucide-lock')).not.toBeNull();
+  expect(container.firstElementChild).toHaveAttribute('data-visibility', 'private');
+  expect((await axe(container)).violations).toEqual([]);
+  rerender(<EventPill event={{ ...event, visibility: 'public' }} onClick={vi.fn()} />);
+  expect(container.querySelector('svg.lucide-lock')).toBeNull();
+  expect(screen.queryByText(/privé/)).not.toBeInTheDocument();
+});

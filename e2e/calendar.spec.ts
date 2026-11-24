@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type APIRequestContext, type Page } from '@playwright/test';
 import { cookieHeader, signInAs, users } from './support/session';
 
 // Critical journeys of the Calendars front (MAIR-603), on the real stack of docker-compose-e2e.yml
@@ -161,6 +161,81 @@ test('the administrator deletes the event', async ({ page, context, baseURL }) =
 
   await expect(page.getByRole('region', { name: 'Notifications du calendrier' }).getByText('Événement supprimé', { exact: true })).toBeVisible();
   await expect(page.getByText(title, { exact: true })).toHaveCount(0);
+});
+
+// Visibility: a private event stays private across a reload, is refused to an agent who is neither its
+// creator nor invited, and becomes readable once switched to public.
+const privateTitle = `Planification interne E2E ${stamp}`;
+let privateEventId = '';
+
+async function openPrivateEvent(page: Page) {
+  await page.goto('/');
+  await page.getByText(privateTitle, { exact: true }).first().click();
+  const details = page.getByRole('dialog', { name: privateTitle });
+  await expect(details).toBeVisible();
+  return details;
+}
+
+const readAsMember = (request: APIRequestContext) => request.get(`/calendar/events/${privateEventId}`, {
+  headers: { Cookie: cookieHeader(users.member), Accept: 'application/json' },
+  maxRedirects: 0,
+});
+
+test('MAIR-1179: an administrator creates a private event, it is still private after a reload', async ({ page, context, baseURL }) => {
+  await signInAs(context, baseURL!, users.manager);
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Créer', exact: true }).first().click();
+  const dialog = page.getByRole('dialog', { name: 'Nouvel événement' });
+  await dialog.getByRole('textbox', { name: 'Titre' }).fill(privateTitle);
+  await dialog.getByRole('textbox', { name: 'Date de fin' }).fill(await dialog.getByRole('textbox', { name: 'Date de début' }).inputValue());
+  await dialog.getByRole('combobox', { name: 'Heure de début' }).selectOption({ label: '09 h 00' });
+  await dialog.getByRole('combobox', { name: 'Heure de fin' }).selectOption({ label: '23 h 00' });
+  // Public is the default choice.
+  await expect(dialog.getByRole('radio', { name: /Public/ })).toBeChecked();
+  await dialog.getByRole('radio', { name: /Privé/ }).check();
+
+  const created = page.waitForResponse((r) => r.request().method() === 'POST' && new URL(r.url()).pathname.endsWith('/calendar/events'));
+  await dialog.getByRole('button', { name: 'Enregistrer' }).click();
+  const response = await created;
+  expect(response.status()).toBe(201);
+  expect(response.request().postDataJSON().visibility).toBe('private');
+  const body = await response.json();
+  privateEventId = String(body.id);
+  expect(body.visibility).toBe('private');
+  await expect(dialog).toBeHidden();
+
+  await page.reload();
+  await expect(page.locator('[data-visibility="private"]', { hasText: privateTitle }).first()).toBeVisible();
+  const details = await openPrivateEvent(page);
+  await expect(details).toContainText('Privé · visible seulement par vous et les invités');
+});
+
+test('MAIR-1179: the private event is refused to an agent who is neither its creator nor invited', async ({ request }) => {
+  expect(privateEventId).not.toBe('');
+  expect((await readAsMember(request)).status()).toBe(403);
+});
+
+test('MAIR-1179: the administrator switches the event to public, it stays public after a reload and the agent can read it', async ({ page, context, baseURL, request }) => {
+  await signInAs(context, baseURL!, users.manager);
+  const details = await openPrivateEvent(page);
+  await details.getByRole('button', { name: 'Modifier', exact: true }).click();
+  const form = page.getByRole('dialog', { name: 'Modifier l’événement' });
+  await expect(form.getByRole('radio', { name: /Privé/ })).toBeChecked();
+  await form.getByRole('radio', { name: /Public/ }).check();
+  const saved = page.waitForResponse((r) => r.request().method() === 'PATCH' && new URL(r.url()).pathname.endsWith(`/calendar/events/${privateEventId}`));
+  await form.getByRole('button', { name: 'Enregistrer' }).click();
+  const response = await saved;
+  expect(response.status()).toBe(200);
+  expect(response.request().postDataJSON().visibility).toBe('public');
+
+  await page.reload();
+  await expect(page.locator('[data-visibility="private"]', { hasText: privateTitle })).toHaveCount(0);
+  const reopened = await openPrivateEvent(page);
+  await expect(reopened).toContainText('Public · visible par tous les agents');
+  expect((await readAsMember(request)).status()).toBe(200);
+
+  // Leave the seed as it was for the next journeys.
+  expect((await request.delete(`/calendar/events/${privateEventId}`, { headers: { Cookie: cookieHeader(users.manager), Accept: 'application/json' }, maxRedirects: 0 })).status()).toBe(204);
 });
 
 test('without a session, the calendar is not served', async ({ request }) => {

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Clock } from 'lucide-react';
+import { Clock, Lock } from 'lucide-react';
 
 import { AvatarStack, Icon, Panel, StatusPill, UnavailableAlert } from '@mairie360/lib-components/primitives';
 import { getEventTone } from '@/app/calendar/constants';
@@ -54,7 +54,11 @@ export const UpcomingEventsPanel = ({
                   className={joinClasses('calendar-upcoming-item flex w-full flex-col gap-1.5 rounded-md border border-[var(--mairie-border)] bg-[var(--mairie-surface)] p-3 text-left transition-colors',
                     'hover:bg-[var(--mairie-surface-raised)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mairie-accent)]/30 disabled:cursor-default')}>
                   <span className="flex min-w-0 items-start justify-between gap-2">
-                    <span className="min-w-0 truncate text-sm font-semibold leading-5 text-[var(--mairie-text)]">{event.title}</span>
+                    <span className="min-w-0 truncate text-sm font-semibold leading-5 text-[var(--mairie-text)]">
+                      {event.visibility === 'private' && <Icon icon={Lock} size="xs" className="calendar-upcoming-private mr-1 inline-block align-[-1px] text-[var(--mairie-muted)]" />}
+                      {event.title}
+                      {event.visibility === 'private' && <span className="sr-only"> (privé)</span>}
+                    </span>
                     {category && <StatusPill size="s" dot tone={getEventTone(event.category)} label={String(category)} />}
                   </span>
                   <span className="flex items-center justify-between gap-2">

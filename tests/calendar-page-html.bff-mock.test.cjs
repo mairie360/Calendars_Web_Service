@@ -543,7 +543,7 @@ test('MAIR-929 F5: the details dialog is titled with the event, shows its catego
   const dialog = dialogHtml();
   assert.ok(view.find('Modal').some(({ props }) => props.open && props.title === 'Événement 5'), 'MAIR-929: titled with the event');
   assert.match(dialog, /data-tone="secondary-strong"[^>]*>(?:<[^>]*>)*Réunion</, 'category pill in the navy tone (MAIR-1121)');
-  assert.deepEqual(view.find('EventDetailRow').map(({ props }) => props.label), ['Date', 'Horaire', 'Lieu', 'Participants']);
+  assert.deepEqual(view.find('EventDetailRow').map(({ props }) => props.label), ['Date', 'Horaire', 'Lieu', 'Participants', 'Visibilité']);
   assert.match(view.text(), /Description 5/);
   const footer = dialog.slice(dialog.indexOf('<footer'));
   const order = ['Supprimer', 'Fermer', 'Modifier'].map((name) => footer.indexOf(`>${name}<`));
@@ -551,6 +551,35 @@ test('MAIR-929 F5: the details dialog is titled with the event, shows its catego
   assert.doesNotMatch(footer, />Valider<|>Refuser</, 'approval stays between the facts and the footer');
   await view.click((props, text, tag) => tag === 'button' && text === 'Fermer');
   await view.waitFor(() => view.props('ValidatedEventDetailsModal').isOpen === false);
+});
+
+test('MAIR-1179: a private event read from the BFF shows its lock in the grid and « Privé » in its details', async () => {
+  const events = [calendarEvent(5, { title: 'Planification interne', visibility: 'private' }), calendarEvent(6, { title: 'Permanence', visibility: 'public' })];
+  await renderLoadedPage(bootstrap({ events }));
+  const pills = view.find('EventPill').map(({ props }) => [props.event.title, props.event.visibility]);
+  assert.ok(pills.some(([title, visibility]) => title === 'Planification interne' && visibility === 'private'), 'the period keeps the visibility');
+  assert.match(view.html, /data-visibility="private"[\s\S]*?Planification interne[\s\S]*?\(privé\)/);
+
+  await openEventDetails(view.props('MonthGrid').events.find((event) => event.id === 5));
+  const dialog = dialogHtml();
+  assert.match(dialog, />Privé</);
+  assert.match(dialog, /Privé · visible seulement par vous et les invités/);
+});
+
+test('MAIR-1179: creating a private event posts visibility « private » and the created event keeps its lock', async () => {
+  await renderLoadedPage();
+  await view.act(() => view.props('CalendarHeader').onCreate());
+  const created = calendarEvent(9, { title: 'Planification interne', visibility: 'private' });
+  front.calendarRead({ body: bootstrap({ events: [created] }) });
+  front.calendarBff.on('post', '/calendar/events', ({ body }) => ({ status: 201, body: { ...created, visibility: body.visibility } }));
+  await view.act(() => view.props('ValidatedCreateEventModal').onCreate({
+    title: 'Planification interne', date: new Date(), startTime: '15:00', endTime: '16:00', category: 'meeting', service: 'direction',
+    location: 'Bureau du DGS', description: '', assigneeIds: [alice.id], visibility: 'private',
+  }));
+  await view.waitFor((html) => html.includes('Planification interne') && !isCalendarPending());
+  const post = front.calendarBff.requests.find((call) => call.method === 'POST');
+  assert.equal(post.body.visibility, 'private');
+  assert.equal(view.props('MonthGrid').events.find((event) => event.id === created.id).visibility, 'private');
 });
 
 test('MAIR-931 F7: a confirmed deletion closes every dialog, updates the page and toasts « Événement supprimé »; a recurring event mentions its repetitions', async () => {
