@@ -13,8 +13,8 @@ it('exposes an event as a keyboard action only when an owner can handle selectio
   rerender(<EventPill event={event} showTime={false} />); expect(screen.queryByRole('button')).not.toBeInTheDocument(); expect(screen.getByText('Conseil')).toBeVisible();
 });
 
-it('MAIR-905: the pill takes the tone of its category and an inline start time', () => {
-  const tones = { meeting: 'info', activity: 'success', ceremony: 'warning', other: 'neutral' } as const;
+it('MAIR-905 / MAIR-1121: the pill takes the tone of its category (no grey) and an inline start time', () => {
+  const tones = { meeting: 'secondary-strong', activity: 'success', ceremony: 'warning', other: 'purple' } as const;
   for (const [category, tone] of Object.entries(tones)) {
     const { container, unmount } = render(<EventPill event={{ id: 1, title: 'Conseil', date: '2026-10-15', startTime: '09:00', endTime: '10:00', category }} inline />);
     const pill = container.firstElementChild as HTMLElement;

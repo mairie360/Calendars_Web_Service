@@ -3,6 +3,7 @@ import type { Ref } from "react";
 import { DataState } from "@mairie360/lib-components/primitives";
 
 import { CalendarLoadingSkeleton } from '../CalendarLoadingSkeleton';
+import { CalendarLegend } from './components/CalendarLegend';
 import { CalendarToolbar } from './components/CalendarToolbar';
 import { DaySchedule } from './components/DaySchedule';
 import { MonthGrid } from './components/MonthGrid';
@@ -33,5 +34,7 @@ export const CalendarViews = ({ calendar, gridRef, state = "default" }: Calendar
       {calendar.view === "week" && <WeekGrid className="calendar-week-grid" currentDate={calendar.currentDate} selectedDate={calendar.selectedDate} events={calendar.displayedEvents} onSelectDate={calendar.handleSelectDate} onSelectSlot={calendar.handleSelectSlot} onEventClick={calendar.handleEventClick} onShowDay={calendar.handleShowDay} />}
       {calendar.view === "day" && <DaySchedule currentDate={calendar.selectedDate} events={calendar.displayedEvents} onSelectSlot={calendar.handleSelectSlot} onEventClick={calendar.handleEventClick} />}
     </div>}
+    {/* MAIR-1121: the colours of the grid, under it. */}
+    {state === "default" && <CalendarLegend className="mt-4" />}
   </>
 );

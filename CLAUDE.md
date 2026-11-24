@@ -114,7 +114,9 @@ and agree the mockup first, then code it: the sync direction is Figma → code.
   `aria-haspopup="dialog"`, the « Sélectionner le … » label stays because the today marker matches it).
   `CalendarCell` holds the day number (`.calendar-day-number`, accent pill under `aria-current="date"`) and an
   `outside` variant for adjacent-month days. Event colours come from `getEventTone` (`app/calendar/constants.ts`:
-  info / success / warning / neutral on `mairie-*` tokens, `data-tone` on `EventPill`); month pills are
+  since MAIR-1121 `secondary-strong` (meeting, navy) / success / warning / `purple` (other, and any unknown
+  category), the lib `StatusPill` tone names, `data-tone` on `EventPill`; no grey or neutral event); `CalendarLegend`
+  under the grid paints its swatches with `getEventColor`; month pills are
   `inline` and show the start time only when their day has a single event.
   **Week overlaps (MAIR-1123):** `WeekGrid` renders `getEventGroupsForDate` (`layout.ts`): one `compact`
   `EventPill` per group of overlapping events (the earliest, full width, title `line-clamp-2` + start time) and a

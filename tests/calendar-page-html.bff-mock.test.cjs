@@ -479,7 +479,7 @@ test('MAIR-929 F5: the details dialog is titled with the event, shows its catego
   await openEventDetails(view.props('MonthGrid').events[0]);
   const dialog = dialogHtml();
   assert.ok(view.find('Modal').some(({ props }) => props.open && props.title === 'Événement 5'), 'MAIR-929: titled with the event');
-  assert.match(dialog, /data-tone="info"[^>]*>(?:<[^>]*>)*Réunion</, 'category pill in the info tone');
+  assert.match(dialog, /data-tone="secondary-strong"[^>]*>(?:<[^>]*>)*Réunion</, 'category pill in the navy tone (MAIR-1121)');
   assert.deepEqual(view.find('EventDetailRow').map(({ props }) => props.label), ['Date', 'Horaire', 'Lieu', 'Participants']);
   assert.match(view.text(), /Description 5/);
   const footer = dialog.slice(dialog.indexOf('<footer'));
