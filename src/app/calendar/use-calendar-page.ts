@@ -249,9 +249,15 @@ export function useCalendarPage(initial?: InitialCalendarPage) {
     setLink({ ready: true, eventId: null });
   }, [readError, events, link.eventId, loading, openEvent]);
 
+  // Each refresh takes a token: only the latest one clears `refreshing`, so an earlier refresh that ends while a
+  // newer one still loads cannot hide its skeletons.
+  const refreshRevision = useRef(0);
   const refreshData = useCallback(async () => {
+    const token = ++refreshRevision.current;
     setRefreshing(true);
-    try { await loadData(undefined, true); } finally { setRefreshing(false); }
+    try { await loadData(undefined, true); } finally {
+      if (refreshRevision.current === token) setRefreshing(false);
+    }
   }, [loadData]);
 
   const handlePrevious = () => {

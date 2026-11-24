@@ -448,6 +448,24 @@ test('a bootstrap response started before a confirmed edit cannot restore the ea
   assert.equal(after.events[0].title, 'Confirmed after read started');
 });
 
+test('MAIR-911: an earlier refresh that ends first keeps the skeletons of the newer refresh', async () => {
+  const state = await renderLoadedPage();
+  const replies = [];
+  front.calendarRead(() => new Promise(resolve => { replies.push(resolve); }));
+  const first = state.refreshData();
+  await page.waitFor(() => replies.length === 1);
+  const latest = page.result.current.refreshData();
+  await page.waitFor(() => replies.length === 2);
+  replies[0]({ body: bootstrap() });
+  await first;
+  const waiting = await page.waitFor(current => current.loading);
+  assert.equal(waiting.panelsLoading, true, 'the newer refresh still shows the skeletons');
+  replies[1]({ body: bootstrap() });
+  await latest;
+  const after = await page.waitFor(current => !current.loading);
+  assert.equal(after.panelsLoading, false);
+});
+
 test('only the latest retry may update events, errors or the loading state', async () => {
   const state = await renderLoadedPage();
   const replies = [];

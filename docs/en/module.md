@@ -150,7 +150,7 @@ The calendar follows the agreed V2 mockup ([Figma, journeys F1–F9](https://www
   footer owned by the lib frame (the calendar no longer reshapes it), always-light theme. Action results
   float in the lib toasts (`ToastProvider`, top right): a success disappears after 5 s, a refused write
   stays until dismissed.
-- **Loading and unavailable states (MAIR-911).** The first read and « Actualiser » / « Réessayer » show
+- **Loading and unavailable states (MAIR-911).** The first read and « Réessayer » show
   skeletons in the three panels (calendar, upcoming events, statistics); a period change keeps the grid.
   When the calendar cannot be read, the toolbar stays and the panels show « Calendrier indisponible. »
   (with the error and « Réessayer »), an unavailable alert with « Réessayer » and « Statistiques
