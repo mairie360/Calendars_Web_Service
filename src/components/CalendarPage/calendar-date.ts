@@ -1,3 +1,4 @@
+import { isOccurrenceOutsideWindow } from '@/app/calendar/filters';
 import { weekDayOptions } from './calendar-constants';
 import type { CalendarDateInput, CalendarEvent, CalendarRecurrence } from './calendar-types';
 
@@ -242,7 +243,9 @@ export const getEventOccurrenceStartDate = (event: CalendarEvent, date: Calendar
   const spanInDays = getEventSpanInDays(event);
   for (let offset = 0; offset <= spanInDays; offset += 1) {
     const possibleStartDate = addDays(parseDateInput(date), -offset);
-    if (isBaseOccurrenceStart(event, possibleStartDate) || isRecurringOccurrenceStart(event, possibleStartDate)) {
+    // An occurrence outside the filter range is skipped: an earlier one may still cover this day.
+    if ((isBaseOccurrenceStart(event, possibleStartDate) || isRecurringOccurrenceStart(event, possibleStartDate))
+      && !isOccurrenceOutsideWindow(event.occurrenceWindow, possibleStartDate, spanInDays)) {
       return possibleStartDate;
     }
   }

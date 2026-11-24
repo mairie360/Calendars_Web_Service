@@ -37,3 +37,8 @@ it('MAIR-911: shows a skeleton while loading and an unavailable alert whose retr
   expect(screen.getByText('Service indisponible')).toBeVisible(); expect(screen.queryByText('Conseil')).toBeNull();
   await userEvent.click(screen.getByRole('button', { name: 'Réessayer' })); expect(onRetry).toHaveBeenCalledTimes(1);
 });
+it('MAIR-1180: under active filters the panel says its events are filtered, also when none is left', () => {
+  render(<UpcomingEventsPanel today={today} categories={categories} filtered items={[]} />);
+  expect(screen.getByText('Les 3 prochains événements filtrés')).toBeVisible();
+  expect(screen.getByText('Aucun événement à venir ne correspond aux filtres.')).toBeVisible();
+});

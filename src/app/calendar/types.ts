@@ -1,5 +1,6 @@
 import type { components } from '@/contracts/bff';
 import type { ReactNode } from "react";
+import type { CalendarOccurrenceWindow } from './filters';
 
 export type CalendarViewMode = "month" | "week" | "day";
 export type CalendarAssigneeId = string | number;
@@ -44,6 +45,8 @@ export type CalendarEventItem = {
   className?: string;
   /** MAIR-935: does not match the top-bar search (shown at 30 % opacity). */
   searchDimmed?: boolean;
+  /** Date range of the filters: only the occurrences overlapping it are shown. */
+  occurrenceWindow?: CalendarOccurrenceWindow;
 };
 
 export type CreateCalendarEventValues = {

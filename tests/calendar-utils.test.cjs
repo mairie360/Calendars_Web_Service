@@ -8,6 +8,9 @@ const dates = loadTs('app/calendar/date-utils');
 const { buildStats, eventOccursOnDate, getUpcomingOccurrences } = loadTs('app/calendar/stats');
 const { getEventColor, getEventTone, resolveAssignees } = loadTs('app/calendar/constants');
 const { applyEventSearch, matchesEventSearch } = loadTs('app/calendar/search');
+const filters = loadTs('app/calendar/filters');
+const { countOccurrencesBetween } = loadTs('app/calendar/stats');
+const calendarDate = loadTs('components/CalendarPage/calendar-date');
 
 const ymd = (date) => dates.formatDateForQuery(date);
 
@@ -167,4 +170,75 @@ test('MAIR-935: the search matches title and location, ignoring case and accents
   assert.deepEqual(applyEventSearch(events, 'conseil').map((event) => Boolean(event.searchDimmed)), [false, true]);
   assert.deepEqual(applyEventSearch(events, 'introuvable').map((event) => event.searchDimmed), [true, true], 'C2: no match dims everything');
   assert.equal(council.searchDimmed, undefined, 'the source events are not mutated');
+});
+
+const noFilter = { from: '', to: '', categories: [], service: '' };
+
+test('MAIR-1180: type and service filters hide the other events; an event without service passes only without service filter', () => {
+  const meeting = { id: 1, title: 'Conseil', date: '2026-09-16', category: 'meeting', service: 'direction' };
+  const fair = { id: 2, title: 'Fête', date: '2026-09-17', category: 'activity', service: 'culture' };
+  const loose = { id: 3, title: 'Sans service', date: '2026-09-18', category: 'meeting' };
+  const untyped = { id: 4, title: 'Sans type', date: '2026-09-18' };
+  const events = [meeting, fair, loose, untyped];
+  assert.equal(filters.applyEventFilters(events, noFilter), events, 'no filter keeps the same list');
+  const ids = (list) => list.map((event) => event.id);
+  assert.deepEqual(ids(filters.applyEventFilters(events, { ...noFilter, categories: ['meeting'] })), [1, 3]);
+  assert.deepEqual(ids(filters.applyEventFilters(events, { ...noFilter, categories: ['meeting', 'activity'] })), [1, 2, 3]);
+  assert.deepEqual(ids(filters.applyEventFilters(events, { ...noFilter, categories: ['other'] })), [4], 'an event without category is « Autre »');
+  assert.deepEqual(ids(filters.applyEventFilters(events, { ...noFilter, service: 'direction' })), [1]);
+  assert.deepEqual(ids(filters.applyEventFilters(events, { ...noFilter, categories: ['activity'], service: 'direction' })), [], 'filters combine (AND)');
+  assert.equal(filters.countActiveFilters({ from: '2026-09-01', to: '2026-09-30', categories: ['meeting', 'activity'], service: 'culture' }), 4);
+  assert.equal(filters.countActiveFilters(noFilter), 0);
+});
+
+test('MAIR-1180: the date range keeps only the occurrences overlapping it, recurrences included', () => {
+  const daily = { id: 1, title: 'Point', date: '2026-09-01', recurrence: { frequency: 'daily', interval: 1, endsOn: '2026-09-30' } };
+  const multiDay = { id: 2, title: 'Salon', date: '2026-09-09', endDate: '2026-09-11' };
+  const [windowedDaily, windowedMulti] = filters.applyEventFilters([daily, multiDay], { ...noFilter, from: '2026-09-10', to: '2026-09-12' });
+  assert.deepEqual(windowedDaily.occurrenceWindow, { from: '2026-09-10', to: '2026-09-12' });
+  assert.equal(daily.occurrenceWindow, undefined, 'the source events are not mutated');
+  for (const [day, expected] of [['2026-09-09', false], ['2026-09-10', true], ['2026-09-12', true], ['2026-09-13', false]]) {
+    assert.equal(eventOccursOnDate(windowedDaily, day), expected, `stats copy, ${day}`);
+    assert.equal(calendarDate.eventOccursOnDate(windowedDaily, day), expected, `grid copy, ${day}`);
+  }
+  assert.equal(eventOccursOnDate(windowedMulti, '2026-09-09'), true, 'an occurrence overlapping the range is shown whole');
+  const [fromOnly] = filters.applyEventFilters([daily], { ...noFilter, from: '2026-09-29' });
+  assert.equal(eventOccursOnDate(fromOnly, '2026-09-28'), false);
+  assert.equal(eventOccursOnDate(fromOnly, '2026-09-30'), true);
+  const [toOnly] = filters.applyEventFilters([daily], { ...noFilter, to: '2026-09-02' });
+  assert.equal(countOccurrencesBetween([toOnly], new Date(2026, 8, 1), new Date(2026, 8, 30)), 2);
+  assert.equal(countOccurrencesBetween([daily], new Date(2026, 8, 1), new Date(2026, 8, 30)), 30);
+});
+
+test('MAIR-1180: filters round-trip through the URL; unknown values and a reversed range are corrected', () => {
+  const categories = [{ value: 'meeting' }, { value: 'activity' }];
+  const services = [{ value: 'direction' }];
+  const read = filters.readCalendarFilters({ from: '2026-09-30', to: '2026-09-01', type: 'activity,meeting,activity,ghost', service: 'nowhere' }, categories, services);
+  assert.deepEqual(read, { from: '2026-09-01', to: '2026-09-30', categories: ['activity', 'meeting'], service: '' });
+  assert.deepEqual(filters.calendarFiltersToUrl(read), { from: '2026-09-01', to: '2026-09-30', type: 'activity,meeting', service: '' });
+  assert.deepEqual(filters.readCalendarFilters({ type: 'meeting', service: 'direction' }), { from: '', to: '', categories: ['meeting'], service: 'direction' },
+    'before the lists load, the URL values are kept');
+  const { type, service } = filters.calendarFilterUrlSchema;
+  assert.equal(type.accept('meeting,activity'), true);
+  assert.equal(type.accept('meeting;drop'), false);
+  assert.equal(service.accept('<script>'), false);
+});
+
+test('MAIR-1180: a date range outside the displayed period moves the view to it', () => {
+  assert.equal(filters.filterRangeOutsidePeriod({ ...noFilter, from: '2026-12-01', to: '2026-12-10' }, '2026-08-31', '2026-10-04'), '2026-12-01');
+  assert.equal(filters.filterRangeOutsidePeriod({ ...noFilter, to: '2026-01-10' }, '2026-08-31', '2026-10-04'), '2026-01-10');
+  assert.equal(filters.filterRangeOutsidePeriod({ ...noFilter, from: '2026-09-20', to: '2026-12-01' }, '2026-08-31', '2026-10-04'), null, 'an overlapping range stays');
+  assert.equal(filters.filterRangeOutsidePeriod(noFilter, '2026-08-31', '2026-10-04'), null);
+});
+
+test('MAIR-1180: a multi-day recurrence still covers a day after the range end, and counts as one occurrence of a period it overlaps', () => {
+  // Three-day occurrences starting every day: the one of the 12th covers the 13th and 14th.
+  const daily = { id: 1, title: 'Garde', date: '2026-09-01', endDate: '2026-09-03', recurrence: { frequency: 'daily', interval: 1, endsOn: '2026-09-30' } };
+  const [windowed] = filters.applyEventFilters([daily], { ...noFilter, from: '2026-09-10', to: '2026-09-12' });
+  assert.equal(eventOccursOnDate(windowed, '2026-09-13'), true, 'stats copy keeps scanning past a start outside the range');
+  assert.equal(calendarDate.eventOccursOnDate(windowed, '2026-09-13'), true, 'grid copy keeps scanning past a start outside the range');
+  assert.equal(eventOccursOnDate(windowed, '2026-09-15'), false);
+  const salon = { id: 2, title: 'Salon', date: '2026-09-09', endDate: '2026-09-11' };
+  assert.equal(countOccurrencesBetween([salon], new Date(2026, 8, 10), new Date(2026, 8, 10)), 1, 'an occurrence started before the period counts');
+  assert.equal(countOccurrencesBetween([salon], new Date(2026, 8, 9), new Date(2026, 8, 11)), 1, 'counted once over its days');
 });

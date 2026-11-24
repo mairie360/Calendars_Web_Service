@@ -34,7 +34,7 @@ function CalendarScreen({ initial }: { initial?: InitialCalendarPage }) {
     ? (calendar.readError ? 'unavailable' : 'loading')
     : calendar.panelsLoading ? 'loading' : calendar.readError ? 'unavailable' : 'default';
   // The grid only exists in the default state: the today marker attaches again when it comes back.
-  const gridRef = useCalendarTodayMarker(calendar.view, state === 'default' ? calendar.currentDate.getTime() : -1);
+  const gridRef = useCalendarTodayMarker(calendar.view, state === 'default' && !calendar.noMatchingEvents ? calendar.currentDate.getTime() : -1);
 
   return (
     <AppShell activeItem="calendar" search={{ value: calendar.searchQuery, onChange: calendar.setSearchQuery }}>
@@ -47,7 +47,7 @@ function CalendarScreen({ initial }: { initial?: InitialCalendarPage }) {
         <Panel title={calendar.ready ? calendar.periodTitle : 'Calendrier'} className="calendar-panel min-h-[620px] overflow-hidden" aria-busy={state === 'loading' || undefined}>
           <CalendarViews calendar={calendar} gridRef={gridRef} state={state} />
         </Panel>
-        <CalendarSidebar className="calendar-sidebar" state={state} onRetry={() => void calendar.refreshData()} upcoming={calendar.upcoming} categories={calendar.categories} today={calendarToday()} stats={calendar.stats} onEventClick={calendar.handleEventClick} />
+        <CalendarSidebar className="calendar-sidebar" state={state} onRetry={() => void calendar.refreshData()} upcoming={calendar.upcoming} upcomingFiltered={calendar.activeFilterCount > 0} categories={calendar.categories} today={calendarToday()} stats={calendar.stats} onEventClick={calendar.handleEventClick} />
       </div>
       <CalendarModals calendar={calendar} />
     </AppShell>

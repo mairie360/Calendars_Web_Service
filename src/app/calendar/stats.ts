@@ -1,4 +1,5 @@
 import { addDays, parseDateInput, startOfWeek } from "./date-utils";
+import { isOccurrenceOutsideWindow } from "./filters";
 import type { CalendarDateInput, CalendarEventItem } from "./types";
 
 function isSameDay(firstDate: CalendarDateInput, secondDate: CalendarDateInput) {
@@ -60,7 +61,9 @@ function getEventOccurrenceStartDate(event: CalendarEventItem, date: CalendarDat
 
   for (let offset = 0; offset <= spanInDays; offset += 1) {
     const possibleStartDate = addDays(date, -offset);
-    if (isBaseOccurrenceStart(event, possibleStartDate) || isRecurringOccurrenceStart(event, possibleStartDate)) {
+    // An occurrence outside the filter range is skipped: an earlier one may still cover this day.
+    if ((isBaseOccurrenceStart(event, possibleStartDate) || isRecurringOccurrenceStart(event, possibleStartDate))
+      && !isOccurrenceOutsideWindow(event.occurrenceWindow, possibleStartDate, spanInDays)) {
       return possibleStartDate;
     }
   }
@@ -109,6 +112,18 @@ function occurrencesBetween(events: CalendarEventItem[], startDate: Date, endDat
     }
   }
   return occurrences;
+}
+
+/** Number of occurrences of the events that cover at least one day between two days, inclusive. */
+export function countOccurrencesBetween(events: CalendarEventItem[], startDate: Date, endDate: Date) {
+  const seen = new Set<string>();
+  for (let date = parseDateInput(startDate); date.getTime() <= endDate.getTime(); date = addDays(date, 1)) {
+    events.forEach((event, index) => {
+      const start = getEventOccurrenceStartDate(event, date);
+      if (start) seen.add(`${index}:${start.getTime()}`);
+    });
+  }
+  return seen.size;
 }
 
 /**

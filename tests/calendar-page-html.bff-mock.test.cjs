@@ -325,6 +325,69 @@ test('MAIR-935 F8: typing in « Rechercher un événement » dims the other even
   assert.equal(search().props.value, '');
 });
 
+test('MAIR-1180: the type and service filters hide events, combine with the search, empty the grid and clear back', async () => {
+  const body = bootstrap();
+  delete body.events[1].service; // « Permanence » has no service: it passes only while no service is chosen.
+  await renderLoadedPage(body);
+  const monthIds = () => view.props('MonthGrid').events.map((event) => event.id);
+  const filters = () => view.props('CalendarFilters');
+  assert.deepEqual(filters().filters, { from: '', to: '', categories: [], service: '' });
+  assert.deepEqual(filters().categories.map(({ value }) => value), ['meeting', 'other'], 'the BFF categories feed the type filter');
+  assert.deepEqual(monthIds(), [5, 6]);
+
+  await view.act(() => filters().onChange({ categories: ['other'] }));
+  assert.deepEqual(monthIds(), [6], 'C1: a type hides the other events');
+  assert.equal(view.props('CalendarFilters').shownCount, 1);
+  assert.equal(view.props('CalendarFilters').totalCount, 2);
+  assert.match(view.text(), /1 événement sur 2 dans la période/);
+  assert.equal(view.props('CalendarSidebar').upcomingFiltered, true);
+  assert.equal(view.props('CalendarSidebar').upcoming.every(({ event }) => event.id === 6), true, '« À venir » is filtered');
+  assert.equal(view.props('StatsPanel').stats.total, 2, 'the statistics are not filtered');
+
+  await view.fire((props, _text, tag) => tag === 'input' && props.type === 'search', 'onChange', { target: { value: 'introuvable' } });
+  assert.deepEqual(view.props('MonthGrid').events.map((event) => [event.id, Boolean(event.searchDimmed)]), [[6, true]], 'C2: the search dims inside the filtered events');
+  await view.fire((props, _text, tag) => tag === 'input' && props.type === 'search', 'onChange', { target: { value: 'perma' } });
+  assert.deepEqual(view.props('MonthGrid').events.map((event) => [event.id, Boolean(event.searchDimmed)]), [[6, false]], 'a matching filtered event stays plain');
+  await view.fire((props, _text, tag) => tag === 'input' && props.type === 'search', 'onChange', { target: { value: '' } });
+
+  await view.act(() => filters().onChange({ service: 'direction' }));
+  assert.equal(view.find('MonthGrid').length, 0, 'C3: the event without service is hidden too, the grid gives way to the empty state');
+  assert.match(view.text(), /Aucun événement ne correspond aux filtres/);
+  assert.match(view.text(), /Aucun événement à venir ne correspond aux filtres\./);
+  assert.equal(view.find('CalendarLegend').length, 0);
+
+  await view.click((props, text, tag) => tag === 'button' && /Effacer les filtres/.test(text) && !props.disabled && view.find('NoMatchingEvents').length > 0);
+  await view.waitFor(() => view.find('MonthGrid').length === 1);
+  assert.deepEqual(monthIds(), [5, 6], 'C4: « Effacer les filtres » shows every event again');
+  assert.deepEqual(view.props('CalendarFilters').filters, { from: '', to: '', categories: [], service: '' });
+  assert.equal(front.calendarBff.requests.length, 1, 'type and service filters need no new BFF read');
+});
+
+test('MAIR-1180: filters are read from the URL, unknown values ignored, and an out-of-period range reloads that period', async () => {
+  window.location.search = '?type=meeting,ghost&service=nowhere';
+  await renderLoadedPage();
+  assert.deepEqual(view.props('CalendarFilters').filters, { from: '', to: '', categories: ['meeting'], service: '' });
+  assert.deepEqual(view.props('MonthGrid').events.map((event) => event.id), [5]);
+  assert.deepEqual(view.hostElements((props) => props['aria-label'] === 'Filtres actifs').length, 1);
+
+  const target = new Date(initialDate.getFullYear() + 1, 2, 10);
+  const iso = `${target.getFullYear()}-03-10`;
+  await view.act(() => view.props('CalendarFilters').onChange({ from: iso, to: `${target.getFullYear()}-03-20` }));
+  const covers = (request) => request.url.searchParams.get('from') <= iso && iso <= request.url.searchParams.get('to');
+  await view.waitFor(() => front.calendarBff.calls('/calendar/period', 'get').some(covers) && !isCalendarPending());
+  assert.equal(view.props('CalendarToolbar').title, getPeriodTitle('month', target), 'the view moved to the range');
+  assert.equal(view.props('CalendarFilters').filters.from, iso);
+});
+
+test('MAIR-1180: a link whose filter range lies outside its period opens on the range', async () => {
+  const year = initialDate.getFullYear() + 1;
+  window.location.search = `?from=${year}-03-10&to=${year}-03-20`;
+  await renderLoadedPage();
+  assert.equal(view.props('CalendarToolbar').title, getPeriodTitle('month', new Date(year, 2, 10)));
+  const period = front.calendarBff.requests[0].url.searchParams;
+  assert.ok(period.get('from') <= `${year}-03-10` && `${year}-03-10` <= period.get('to'), 'the first read covers the range');
+});
+
 test('changing the view re-renders the week grid with the reloaded events', async () => {
   await renderLoadedPage();
 

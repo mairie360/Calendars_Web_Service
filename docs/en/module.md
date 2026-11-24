@@ -209,3 +209,12 @@ The calendar follows the agreed V2 mockup ([Figma, journeys F1–F9](https://www
   accents, on the title and the location: in the month, week and day views the events that do not match fade to
   30 % and stay clickable (no match fades everything, no dedicated message); clearing it (✕ or Escape) shows
   every event again. The query survives period and view changes.
+- **Filters.** Under the toolbar, « Du » / « Au » (each optional), « Type » (several categories, with their
+  colour dots) and « Service » (« Tous les services » first) hide the events that do not match, in every view;
+  the search still dims inside what is left. An event without service only shows while no service is chosen. A
+  recurring event keeps only its occurrences overlapping the date range; a range outside the displayed period
+  moves the calendar to it (the period is read from the BFF as on any navigation). Active filters appear as
+  removable tags with « Effacer les filtres » and « N événements sur M dans la période »; when none is left the
+  grid gives way to « Aucun événement ne correspond aux filtres ». « À venir » follows the filters, the
+  statistics do not. Filters live in the URL (`from`, `to`, `type`, `service`), so a reload or a shared link
+  keeps them. On small screens they move to a « Filtres » drawer. Filtering is done by the front only.
