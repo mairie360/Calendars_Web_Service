@@ -47,7 +47,7 @@ function CalendarScreen({ initial }: { initial?: InitialCalendarPage }) {
         <Panel title={calendar.ready ? calendar.periodTitle : 'Calendrier'} className="calendar-panel min-h-[620px] overflow-hidden" aria-busy={state === 'loading' || undefined}>
           <CalendarViews calendar={calendar} gridRef={gridRef} state={state} />
         </Panel>
-        <CalendarSidebar className="calendar-sidebar" state={state} onRetry={() => void calendar.refreshData()} upcoming={calendar.upcoming} categories={calendar.categories} today={calendarToday()} stats={calendar.stats} onEventClick={calendar.handleEventClick} />
+        <CalendarSidebar className="calendar-sidebar" state={state} onRetry={() => void calendar.refreshData()} upcoming={calendar.upcoming} upcomingFiltered={calendar.activeFilterCount > 0} categories={calendar.categories} today={calendarToday()} stats={calendar.stats} onEventClick={calendar.handleEventClick} />
       </div>
       <CalendarModals calendar={calendar} />
     </AppShell>

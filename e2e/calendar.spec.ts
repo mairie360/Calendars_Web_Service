@@ -99,6 +99,37 @@ test('MAIR-935: the top-bar search dims the events that do not match and Escape 
   await expect(pill).not.toHaveAttribute('data-dimmed', 'true');
 });
 
+test('MAIR-1180: the filters keep or hide the event, survive a reload and « Effacer les filtres » brings it back', async ({ page, context, baseURL }) => {
+  await signInAs(context, baseURL!, users.manager);
+  await page.goto('/');
+  const filters = page.getByRole('search', { name: 'Filtrer les événements' });
+  const pill = page.locator('[data-tone]', { hasText: title }).first();
+  await expect(pill).toBeVisible();
+
+  // The event was created as a meeting without service.
+  await filters.getByRole('button', { name: /^Type :/ }).click();
+  await page.getByRole('group', { name: 'Types d’événement' }).getByRole('checkbox', { name: 'Réunion' }).check();
+  await page.keyboard.press('Escape');
+  await expect(page).toHaveURL(/[?&]type=meeting/);
+  await expect(pill).toBeVisible();
+  await expect(filters.getByRole('list', { name: 'Filtres actifs' })).toContainText('Réunion');
+
+  await page.reload();
+  await expect(page.getByRole('search', { name: 'Filtrer les événements' }).getByRole('button', { name: 'Type : Réunion' })).toBeVisible();
+  await expect(pill).toBeVisible();
+
+  // An event without service is hidden as soon as a service is chosen.
+  const service = page.getByRole('search', { name: 'Filtrer les événements' }).getByRole('combobox', { name: 'Service' });
+  await service.selectOption({ index: 1 });
+  await expect(page).toHaveURL(/[?&]service=/);
+  await expect(page.locator('[data-tone]', { hasText: title })).toHaveCount(0);
+  await expect(page.locator('.calendar-upcoming-panel')).not.toContainText(title);
+
+  await page.getByRole('button', { name: 'Effacer les filtres' }).first().click();
+  await expect(page).not.toHaveURL(/[?&](type|service)=/);
+  await expect(pill).toBeVisible();
+});
+
 test('the invited agent sees the event, without the actions to change it', async ({ page, context, baseURL }) => {
   await signInAs(context, baseURL!, users.member);
   const details = await openEvent(page);

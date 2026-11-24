@@ -28,12 +28,13 @@ export const UpcomingEventsPanel = ({
   items = [],
   categories = [],
   today = new Date(),
-  emptyLabel = 'Aucun événement à venir.',
+  filtered = false,
+  emptyLabel = filtered ? 'Aucun événement à venir ne correspond aux filtres.' : 'Aucun événement à venir.',
   onEventClick,
   className = '',
   ...props
 }: UpcomingEventsPanelProps) => (
-  <Panel title="À venir" description="Les 3 prochains événements" className={className}
+  <Panel title="À venir" description={filtered ? 'Les 3 prochains événements filtrés' : 'Les 3 prochains événements'} className={className}
     {...props}>
     <div>
       {/* Decorative skeleton, the page's permanent status region announces the load. */}

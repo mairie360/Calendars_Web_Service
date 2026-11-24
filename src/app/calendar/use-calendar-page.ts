@@ -24,8 +24,17 @@ import {
   getPreviousPeriod,
   parseDateInput,
 } from "./date-utils";
-import { buildStats, getUpcomingOccurrences } from "./stats";
+import { buildStats, countOccurrencesBetween, getUpcomingOccurrences } from "./stats";
 import { applyEventSearch } from "./search";
+import {
+  applyEventFilters,
+  calendarFiltersToUrl,
+  countActiveFilters,
+  emptyCalendarFilters,
+  filterRangeOutsidePeriod,
+  readCalendarFilters,
+  type CalendarEventFilters,
+} from "./filters";
 import type { CalendarReferenceOption } from "./api";
 import type {
   CalendarAssignee,
@@ -131,11 +140,19 @@ export function useCalendarPage(initial?: InitialCalendarPage) {
   const stats = useMemo(() => buildStats(events, currentDate, categories), [events, currentDate, categories]);
   // MAIR-935: the top-bar search dims, in the three views, the events whose title and location do not match.
   const [searchQuery, setSearchQuery] = useState('');
-  const displayedEvents = useMemo(() => applyEventSearch(events, searchQuery), [events, searchQuery]);
+  // The filters (date range, types, service) live in the URL and hide what does not match; the search then dims.
+  const filters = useMemo(
+    () => readCalendarFilters(pageUrl.state, categories, services),
+    [pageUrl.state, categories, services],
+  );
+  const activeFilterCount = countActiveFilters(filters);
+  const filteredEvents = useMemo(() => applyEventFilters(events, filters), [events, filters]);
+  const displayedEvents = useMemo(() => applyEventSearch(filteredEvents, searchQuery), [filteredEvents, searchQuery]);
+  // « À venir » follows the filters, the statistics do not.
   const upcoming = useMemo(() => {
     const now = new Date();
-    return getUpcomingOccurrences(events, now, calendarToday(now));
-  }, [events]);
+    return getUpcomingOccurrences(filteredEvents, now, calendarToday(now));
+  }, [filteredEvents]);
   const periodTitle = useMemo(() => getPeriodTitle(view, currentDate), [currentDate, view]);
   const periodRange = useMemo(
     () => getCalendarPeriodRange(view, currentDate),
@@ -143,6 +160,10 @@ export function useCalendarPage(initial?: InitialCalendarPage) {
   );
   const rangeFrom = useMemo(() => formatDateForQuery(periodRange.from), [periodRange.from]);
   const rangeTo = useMemo(() => formatDateForQuery(periodRange.to), [periodRange.to]);
+  const filterCounts = useMemo(() => ({
+    shown: countOccurrencesBetween(filteredEvents, periodRange.from, periodRange.to),
+    total: countOccurrencesBetween(events, periodRange.from, periodRange.to),
+  }), [events, filteredEvents, periodRange.from, periodRange.to]);
 
   useEffect(() => {
     if (!pageUrl.ready) return;
@@ -306,6 +327,22 @@ export function useCalendarPage(initial?: InitialCalendarPage) {
     setViewState(next);
     pageUrl.update({ view: next, date: formatDateForQuery(navigationDateRef.current) });
   };
+
+  // A date range outside the displayed period moves the view to it, which reads that period from the BFF.
+  const setFilters = (patch: Partial<CalendarEventFilters>) => {
+    const next = { ...filters, ...patch };
+    const urlPatch = calendarFiltersToUrl(next);
+    const outside = 'from' in patch || 'to' in patch ? filterRangeOutsidePeriod(next, rangeFrom, rangeTo) : null;
+    if (outside) {
+      const date = parseDateInput(outside);
+      selectionFollowsToday.current = false;
+      navigationDateRef.current = date;
+      setCurrentDate(date);
+      urlPatch.date = outside;
+    }
+    pageUrl.update(urlPatch, 'replace');
+  };
+  const clearFilters = () => setFilters(emptyCalendarFilters);
 
   // MAIR-1123: « +N » of the week view opens the Day view on the day of the group.
   const handleShowDay = (date: Date) => {
@@ -515,7 +552,12 @@ export function useCalendarPage(initial?: InitialCalendarPage) {
   };
 
   return {
+    activeFilterCount,
     categories,
+    clearFilters,
+    filterCounts,
+    filters,
+    setFilters,
     createInitialValues,
     createModalOpen,
     currentDate,

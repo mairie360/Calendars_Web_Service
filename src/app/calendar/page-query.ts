@@ -1,7 +1,8 @@
 import { civilDateInZone, instanceTimeZone } from '@mairie360/lib-components/shared';
 import { readPageUrlState, urlChoice, urlDate, urlText } from '@/lib/page-url-state';
+import { calendarFilterUrlSchema } from './filters';
 import type { CalendarViewMode } from './types';
-export const calendarUrlSchema = { view: urlChoice(['month', 'week', 'day'], 'month'), date: urlDate };
+export const calendarUrlSchema = { view: urlChoice(['month', 'week', 'day'], 'month'), date: urlDate, ...calendarFilterUrlSchema };
 export type CalendarPageQuery = { view: CalendarViewMode; date: string; linkedDate: boolean; eventId: string | null };
 export function readCalendarPageQuery(search: string, today: string): CalendarPageQuery {
   const state = readPageUrlState(search, calendarUrlSchema);

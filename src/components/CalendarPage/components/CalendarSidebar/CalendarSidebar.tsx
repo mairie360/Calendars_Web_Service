@@ -12,6 +12,7 @@ export const CalendarSidebar = ({
   state = 'default',
   onRetry,
   upcoming,
+  upcomingFiltered = false,
   categories = [],
   today,
   stats,
@@ -21,7 +22,7 @@ export const CalendarSidebar = ({
 }: CalendarSidebarProps) => (
   <aside className={joinClasses('flex flex-col gap-6', className)} {...props}>
     <UpcomingEventsPanel state={state} onRetry={onRetry} className="calendar-upcoming-panel"
-      items={upcoming} categories={categories} today={today} onEventClick={onEventClick} />
+      items={upcoming} filtered={upcomingFiltered} categories={categories} today={today} onEventClick={onEventClick} />
     <StatsPanel stats={stats} state={state} />
   </aside>
 );

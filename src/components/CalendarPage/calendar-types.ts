@@ -1,6 +1,7 @@
 'use client';
 
 import type React from 'react';
+import type { CalendarOccurrenceWindow } from '@/app/calendar/filters';
 
 export type CalendarViewMode = 'month' | 'week' | 'day';
 
@@ -34,6 +35,8 @@ export interface CalendarEvent {
   id: string | number;
   /** MAIR-935: does not match the top-bar search (shown at 30 % opacity, still clickable). */
   searchDimmed?: boolean;
+  /** Date range of the filters: only the occurrences overlapping it are shown. */
+  occurrenceWindow?: CalendarOccurrenceWindow;
   title: React.ReactNode;
   date: CalendarDateInput;
   endDate?: CalendarDateInput;
@@ -160,6 +163,8 @@ export interface UpcomingEventsPanelProps extends Omit<React.HTMLAttributes<HTML
   /** Today in the instance time zone, for « Aujourd’hui » / « Demain ». */
   today?: Date;
   emptyLabel?: React.ReactNode;
+  /** The events are filtered: the description and the empty text say so. */
+  filtered?: boolean;
   onEventClick?: (event: CalendarEvent) => void;
 }
 
@@ -172,6 +177,8 @@ export interface CalendarSidebarProps extends React.HTMLAttributes<HTMLElement> 
   state?: CalendarPanelState;
   onRetry?: () => void;
   upcoming: CalendarUpcomingItem[];
+  /** « À venir » follows the calendar filters (the statistics do not). */
+  upcomingFiltered?: boolean;
   categories?: CalendarCategoryOption[];
   today?: Date;
   stats: CalendarMonthStats;

@@ -214,3 +214,13 @@ Le calendrier suit la maquette V2 validée ([Figma, parcours F1–F9](https://ww
   événements qui ne correspondent pas passent à 30 % d'opacité et restent cliquables (aucun résultat : tout est
   estompé, sans message dédié) ; l'effacement (✕ ou Échap) réaffiche tout. La recherche est conservée au
   changement de période et de vue.
+- **Filtres.** Sous la barre d'outils, « Du » / « Au » (chacun facultatif), « Type » (plusieurs catégories, avec
+  leur pastille de couleur) et « Service » (« Tous les services » en tête) masquent les événements qui ne
+  correspondent pas, dans toutes les vues ; la recherche continue d'estomper parmi ceux qui restent. Un événement
+  sans service n'apparaît que si aucun service n'est choisi. Un événement récurrent ne garde que ses occurrences
+  qui chevauchent la plage de dates ; une plage hors de la période affichée y amène le calendrier (la période est
+  lue au BFF comme pour toute navigation). Les filtres actifs s'affichent en étiquettes supprimables avec
+  « Effacer les filtres » et « N événements sur M dans la période » ; quand il n'en reste aucun, la grille laisse
+  place à « Aucun événement ne correspond aux filtres ». « À venir » suit les filtres, pas les statistiques. Les
+  filtres sont dans l'URL (`from`, `to`, `type`, `service`) : un rechargement ou un lien partagé les conserve.
+  Sur petit écran, ils passent dans un tiroir « Filtres ». Le filtrage est fait par le front seul.

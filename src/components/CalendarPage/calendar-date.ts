@@ -1,3 +1,4 @@
+import { isOccurrenceOutsideWindow } from '@/app/calendar/filters';
 import { weekDayOptions } from './calendar-constants';
 import type { CalendarDateInput, CalendarEvent, CalendarRecurrence } from './calendar-types';
 
@@ -243,7 +244,7 @@ export const getEventOccurrenceStartDate = (event: CalendarEvent, date: Calendar
   for (let offset = 0; offset <= spanInDays; offset += 1) {
     const possibleStartDate = addDays(parseDateInput(date), -offset);
     if (isBaseOccurrenceStart(event, possibleStartDate) || isRecurringOccurrenceStart(event, possibleStartDate)) {
-      return possibleStartDate;
+      return isOccurrenceOutsideWindow(event.occurrenceWindow, possibleStartDate, spanInDays) ? null : possibleStartDate;
     }
   }
 
