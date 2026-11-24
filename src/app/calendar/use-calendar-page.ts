@@ -13,6 +13,7 @@ import {
   loadCalendarEvent,
   updateCalendarEvent,
   updateCalendarEventApproval,
+  updateCalendarEventParticipation,
 } from "./api";
 import {
   buildCreateInitialValues,
@@ -23,7 +24,8 @@ import {
   getPreviousPeriod,
   parseDateInput,
 } from "./date-utils";
-import { buildStats } from "./stats";
+import { buildStats, getUpcomingOccurrences } from "./stats";
+import { applyEventSearch } from "./search";
 import type { CalendarReferenceOption } from "./api";
 import type {
   CalendarAssignee,
@@ -125,7 +127,15 @@ export function useCalendarPage(initial?: InitialCalendarPage) {
     eventId: initialReceipt?.query.eventId ?? null,
   });
 
-  const stats = useMemo(() => buildStats(events, selectedDate), [events, selectedDate]);
+  // MAIR-918: statistics of the displayed month, the next three occurrences from now.
+  const stats = useMemo(() => buildStats(events, currentDate, categories), [events, currentDate, categories]);
+  // MAIR-935: the top-bar search dims, in the three views, the events whose title and location do not match.
+  const [searchQuery, setSearchQuery] = useState('');
+  const displayedEvents = useMemo(() => applyEventSearch(events, searchQuery), [events, searchQuery]);
+  const upcoming = useMemo(() => {
+    const now = new Date();
+    return getUpcomingOccurrences(events, now, calendarToday(now));
+  }, [events]);
   const periodTitle = useMemo(() => getPeriodTitle(view, currentDate), [currentDate, view]);
   const periodRange = useMemo(
     () => getCalendarPeriodRange(view, currentDate),
@@ -276,6 +286,15 @@ export function useCalendarPage(initial?: InitialCalendarPage) {
     pageUrl.update({ date: formatDateForQuery(date) });
   };
 
+  // MAIR-893: « Aujourd'hui » brings the current view back to the period holding today.
+  const handleToday = () => {
+    const date = calendarToday();
+    selectionFollowsToday.current = true;
+    navigationDateRef.current = date;
+    setCurrentDate(date);
+    pageUrl.update({ date: formatDateForQuery(date) });
+  };
+
   const handleSelectDate = (date: Date) => {
     selectionFollowsToday.current = false;
     navigationDateRef.current = date;
@@ -286,6 +305,12 @@ export function useCalendarPage(initial?: InitialCalendarPage) {
   const setView = (next: CalendarViewMode) => {
     setViewState(next);
     pageUrl.update({ view: next, date: formatDateForQuery(navigationDateRef.current) });
+  };
+
+  // MAIR-1123: « +N » of the week view opens the Day view on the day of the group.
+  const handleShowDay = (date: Date) => {
+    handleSelectDate(date);
+    setView("day");
   };
 
   const openCreateModal = (date?: Date, startTime = "09:00") => {
@@ -317,7 +342,7 @@ export function useCalendarPage(initial?: InitialCalendarPage) {
 
       preserveConfirmedMutation();
       setEvents((currentEvents) => [...currentEvents, createdEvent]);
-      if (createdEvent.id !== undefined && String(createdEvent.id).trim()) setFeedback(`Événement « ${createdEvent.title} » créé.`);
+      if (createdEvent.id !== undefined && String(createdEvent.id).trim()) setFeedback("Événement créé");
       setCreateModalOpen(false);
       selectionFollowsToday.current = false;
       setCurrentDate(parseDateInput(createdEvent.date));
@@ -358,12 +383,19 @@ export function useCalendarPage(initial?: InitialCalendarPage) {
             : event,
         ),
       );
-      if (String(savedEvent.id) === String(updatedEvent.id)) setFeedback(`Événement « ${savedEvent.title} » enregistré.`);
+      if (String(savedEvent.id) === String(updatedEvent.id)) setFeedback("Événement modifié");
       const selectionUnchanged = eventSelectionRevision.current === selection;
       if (selectionUnchanged) {
         setSelectedEventState((current) =>
           String(current?.id) === String(updatedEvent.id) ? null : current,
         );
+        // MAIR-926 C6: like a creation, the calendar moves to the date of the saved event.
+        const savedDate = parseDateInput(savedEvent.date);
+        if (!Number.isNaN(savedDate.getTime())) {
+          selectionFollowsToday.current = false;
+          setCurrentDate(savedDate);
+          pageUrl.update({ date: formatDateForQuery(savedDate) });
+        }
       }
       // A reopened or different form must not exit editing because an earlier
       // form's write completed; the official event list still receives the result.
@@ -377,8 +409,9 @@ export function useCalendarPage(initial?: InitialCalendarPage) {
     }
   };
 
+  // MAIR-931: called once the deletion is confirmed; resolves whether the event is gone.
   const handleDeleteEvent = async (eventToDelete: CalendarEventItem) => {
-    if (mutationInFlight.current) return;
+    if (mutationInFlight.current) return false;
     mutationInFlight.current = true;
 
     setSaving(true);
@@ -391,14 +424,16 @@ export function useCalendarPage(initial?: InitialCalendarPage) {
       setEvents((currentEvents) =>
         currentEvents.filter((event) => String(event.id) !== String(eventToDelete.id)),
       );
-      setFeedback(`Événement « ${eventToDelete.title} » supprimé.`);
+      setFeedback("Événement supprimé");
       // A reopened copy of the deleted event is no longer official either.
       // Never close a different event selected in the meantime.
       setSelectedEventState((current) =>
         String(current?.id) === String(eventToDelete.id) ? null : current,
       );
+      return true;
     } catch (deleteError) {
-      setMutationError(formatCalendarApiError(deleteError));
+      setMutationError(`Suppression impossible — ${formatCalendarApiError(deleteError)}`);
+      return false;
     } finally {
       mutationInFlight.current = false;
       setSaving(false);
@@ -447,11 +482,44 @@ export function useCalendarPage(initial?: InitialCalendarPage) {
     }
   };
 
+  // MAIR-1122: the current user's answer to a meeting. The saved event replaces the shown one at once; a refused
+  // answer is an error toast and leaves the previous state.
+  const handleRespond = async (eventToAnswer: CalendarEventItem, status: "accepted" | "declined") => {
+    // Display guard only: the BFF decides who may answer (403 otherwise).
+    if (mutationInFlight.current || !eventToAnswer.canRespond) return;
+    mutationInFlight.current = true;
+    const selection = eventSelectionRevision.current;
+
+    setSaving(true);
+    setMutationError(null);
+    setFeedback(null);
+
+    try {
+      const savedEvent = await updateCalendarEventParticipation(eventToAnswer.id, status, people);
+      preserveConfirmedMutation();
+      setEvents((currentEvents) =>
+        currentEvents.map((event) => (String(event.id) === String(savedEvent.id) ? savedEvent : event)),
+      );
+      setFeedback("Réponse envoyée");
+      if (eventSelectionRevision.current === selection) {
+        setSelectedEventState((current) =>
+          String(current?.id) === String(eventToAnswer.id) ? savedEvent : current,
+        );
+      }
+    } catch (answerError) {
+      setMutationError(formatCalendarApiError(answerError));
+    } finally {
+      mutationInFlight.current = false;
+      setSaving(false);
+    }
+  };
+
   return {
     categories,
     createInitialValues,
     createModalOpen,
     currentDate,
+    displayedEvents,
     error,
     events,
     handleDeleteEvent,
@@ -461,7 +529,10 @@ export function useCalendarPage(initial?: InitialCalendarPage) {
     handlePrevious,
     handleSaveEvent,
     handleSelectDate,
+    handleShowDay,
+    handleRespond,
     handleSelectSlot,
+    handleToday,
     handleValidateEvent,
     loading,
     mutationError,
@@ -477,11 +548,14 @@ export function useCalendarPage(initial?: InitialCalendarPage) {
     setCreateModalOpen,
     setSelectedEvent,
     setView,
+    searchQuery,
     services,
     saving,
+    setSearchQuery,
     feedback,
     dismissFeedback,
     stats,
+    upcoming,
     view,
   };
 }

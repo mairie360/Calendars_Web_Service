@@ -86,12 +86,14 @@ and agree the mockup first, then code it: the sync direction is Figma → code.
 - **V2 screen (epic MAIR-820)** — lib pin `2.3.2` (recorded in `tests/fixtures/shared-ui-releases.json`; since lib 2.3 the page base has no footer and the proxy forwards only declared body media types): the
   `AccessibleShell` frame of lib 2 is collapsible and self-sufficient, so `app-overrides.css` holds no shell rule
   any more (only `.calendar-*` board/grid rules) and `layout.tsx` always renders `data-theme="light"` (MAIR-933).
-  `CalendarPage` wraps the screen in the lib `ToastProvider` (`placement="top-end"`, region « Notifications du
+  `CalendarPage` wraps the screen in the lib `ToastProvider` (`placement="bottom-end"` since MAIR-1120, region « Notifications du
   calendrier »); `use-calendar-toasts.ts` turns the hook's `feedback` into `toast.success` and each new
   `mutationError` into a persistent `toast.error`. The provider keeps two hidden live regions (`role="status"` /
   `role="alert"`) mounted: page tests strip them with `withoutToastRegions` / `pageStatusRegions`
   (`tests/support/calendar-fixtures.cjs`). `server-view.cjs` stubs `document.hasFocus`, `visibilityState` and
   `HTMLElement` for it (other fronts need the same lines when they adopt the provider).
+  **Colours (MAIR-1120):** no hard-coded colour in `src/`: cards take `--mairie-shadow`, the today pill
+  `--mairie-on-module`, the training link `--mairie-border` / `--mairie-surface-raised`.
   **States (MAIR-911):** no status bar nor loading card any more. `CalendarPage` derives one panel state —
   `loading` before the browser initialisation and while `panelsLoading` (first read, or an explicit
   `refreshData()` from « Actualiser » / « Réessayer »; a period change keeps the grid), `unavailable` after a
@@ -103,8 +105,58 @@ and agree the mockup first, then code it: the sync direction is Figma → code.
   **Header (MAIR-884):** `CalendarHeader` = lib `PageHeader` with `RefreshButton` « Actualiser » (`refreshData`,
   disabled while `loading`) then `CreateButton` « Créer » (once ready). Tests and the e2e journey open the form
   with « Créer » (the dialog is still titled « Nouvel événement »).
+  **Calendar panel (MAIR-893):** `CalendarPage` puts `CalendarViews` in a lib `Panel` (`calendar-panel`) titled
+  `periodTitle` (« Calendrier » before the browser initialisation); `getPeriodTitle` follows the mockup
+  (`date-utils.ts`). `CalendarToolbar` = `PreviousIconButton` / `NextIconButton` (aria-labels « Période
+  précédente / suivante »), « Aujourd’hui » (`handleToday`) and a `SegmentedControl` (radio group « Changer de
+  vue »); the local `ViewSwitcher` and the toolbar `h2` are gone.
+  **Month grid (MAIR-905):** a month day calls `handleSelectSlot(date, '09:00')` (selection + creation;
+  `aria-haspopup="dialog"`, the « Sélectionner le … » label stays because the today marker matches it).
+  `CalendarCell` holds the day number (`.calendar-day-number`, accent pill under `aria-current="date"`) and an
+  `outside` variant for adjacent-month days. Event colours come from `getEventTone` (`app/calendar/constants.ts`:
+  since MAIR-1121 `secondary-strong` (meeting, navy) / success / warning / `purple` (other, and any unknown
+  category), the lib `StatusPill` tone names, `data-tone` on `EventPill`; no grey or neutral event); `CalendarLegend`
+  under the grid paints its swatches with `getEventColor`; MAIR-1122: `getEventColor(category, myParticipation)` gives a
+  meeting its pending (dashed) / declined (thin border, struck title in `EventPill`) look, the details show
+  `EventParticipation` (« Ma participation ») when `canRespond`, and `handleRespond` calls
+  `PUT /calendar/events/{id}/participation` (« Réponse envoyée », error toast keeps the state); month pills are
+  `inline` and show the start time only when their day has a single event.
+  **Week overlaps (MAIR-1123):** `WeekGrid` renders `getEventGroupsForDate` (`layout.ts`): one `compact`
+  `EventPill` per group of overlapping events (the earliest, full width, title `line-clamp-2` + start time) and a
+  « +N » button calling `onShowDay` = `handleShowDay` (selects the date, `setView('day')`); `DaySchedule` keeps
+  `getPositionedEventsForDate` lanes, scoped to each overlap group.
+  **Right column (MAIR-918):** the hook returns `upcoming` (`getUpcomingOccurrences`: next 3 occurrence starts
+  from now over a one-year horizon of the loaded events) and `stats` (`buildStats(events, currentDate,
+  categories)` → `{ month, total, items }`, one item per API category with plural labels). `CalendarSidebar`
+  renders `UpcomingEventsPanel` (« À venir », rows are buttons with `StatusPill`, clock, `AvatarStack`) then
+  `StatsPanel` (`MetricCard` grid). `calendar-date.ts` no longer has `getUpcomingEvents` / `getDefaultStats`.
+  **Event details (MAIR-929):** `EventDetailsModal` is titled with `event.title` (the dialog's accessible name,
+  e2e and tests open it by the event title; the ✕ is « Fermer la fenêtre »). Body: category `StatusPill`
+  (`getEventTone`), description, `EventFacts` (Date + recurrence via `eventDateWithRecurrence`, Horaire, Lieu,
+  Participants as a `dl`), `extraContent` (training link), `EventApprovalActions`. Footer `EventDetailsActions`:
+  delete left, close + edit right. `EventAssigneesList` is gone; `ValidatedEventDetailsModal` no longer puts a
+  saving / error status in the title (busy fieldset + toasts).
+  **Deletion (MAIR-931):** `EventDetailsModal` owns a lib `ConfirmModal` (`alertdialog`) nested in the details
+  dialog (the lib scopes keys and focus to the topmost dialog); « Supprimer » only opens it. `onDelete` (=
+  `handleDeleteEvent`) now resolves `true` / `false`; `false` closes the confirmation and refocuses « Supprimer ».
+  Feedback: « Événement supprimé » / « Suppression impossible — <formatCalendarApiError> ».
+  **Event form (MAIR-926):** `ValidatedModal` validates on the captured submit with `validateEventForm` (every
+  error keyed by input id, in field order), focuses the first field in error and hands the errors to its
+  render-function child, which passes them as `fieldErrors` to `CreateEventModal` (through `EventDetailsModal`
+  for the edit); the fields read them with `useEventFieldError(id)` (`EventFieldErrorsContext`, provided by
+  `CreateEventModal`, so the server-view harness, which does not propagate context, still re-renders them).
+  `CreateEventModal` takes `saving` (loading lib `SaveButton` « Enregistrer ») and `error` (`ErrorAlert`
+  « Impossible d’enregistrer »); `ModalFeedback` is gone. `RecurrenceFrequencyField` sits next to the category,
+  `EventRecurrenceFields` holds only the interval / days / end. Feedback: « Événement créé » / « Événement
+  modifié »; a saved edit also moves `currentDate` to the event date.
+  **Search (MAIR-935):** `AppShell` takes `search` and forwards it to the lib `AccessibleShell`
+  `headerProps` (`searchLabel` « Rechercher un événement », controlled `searchValue`, `onSearchChange` from
+  lib 2.1 MAIR-835). `use-calendar-page` keeps `searchQuery` and returns `displayedEvents` =
+  `applyEventSearch(events, searchQuery)` (`src/app/calendar/search.ts`: title + location, case and accent
+  insensitive), which the three grids render; `EventPill` fades `searchDimmed` events (`opacity-30`,
+  `data-dimmed="true"`). Stats, « À venir » and the hook's `events` are not filtered.
 - **On the normalised lib 1.0.3 (MAIR-608)** — the event dialogs use the lib `Modal` (focus trap, Escape, title + description). `src/components/CalendarPage/components/CalendarModals/components/CreateEventModal/components/EventFormFields/components/` splits the form into `EventTitleFields` / `EventLocationField` (lib `TextField`, `TextArea`), `EventDateRange` (local `CalendarDateField`), `EventTimeRange`, `EventCategoryField`, `EventRecurrenceFields` + `RecurrenceDayPicker` (lib `SelectField`, `NumberField`), composed by `EventFormFields`; `event-form-values.ts` holds the draft, submit and category helpers. `event-details/` holds `EventDetailRow`, `EventFacts`, `EventAssigneesList` and `EventDetailsActions` (lib button presets). From the details editor, Escape / backdrop / close dismiss the whole dialog (`onDismiss`), « Annuler » returns to the details. The page is composed in `src/app/calendar/_page/` (`CalendarHeader` on the lib `PageHeader`, `CalendarViews`, `CalendarModals`). Field ids (`event-title`, `event-date`…) are kept: the validated wrapper reads the form by id. Tests per level: `tests/component/calendar/units/*.test.tsx`. Lib pin `1.0.1`, recorded in `tests/fixtures/shared-ui-releases.json`.
-- **Calendar components owned here (MAIR-607) and laid out as a component tree (MAIR-608)** — `src/components/CalendarPage/` is the single root (see *Component tree convention*): `CalendarPage.tsx` (the former `app/calendar-client.tsx`, imported by `src/app/page.tsx`) owns `use-calendar-today-marker.ts`, `today-marker.ts`, `upcoming-scroll-region.ts` and the shared `calendar-types.ts`, `calendar-date.ts`, `calendar-constants.ts`, `calendar-style.ts`; its `components/` holds `AppShell/`, `CalendarHeader/`, `CalendarSidebar/components/{StatsPanel,UpcomingEventsPanel}/`, `CalendarViews/` (+ `layout.ts`; `components/{CalendarToolbar/components/ViewSwitcher,MonthGrid,WeekGrid,DaySchedule,CalendarCell,EventPill}/`) and `CalendarModals/` (+ `form-categories.ts`; `components/{ValidatedModal (+ validation.ts),ModalFeedback,ValidatedCreateEventModal,ValidatedEventDetailsModal/components/EventTrainingLink,CreateEventModal (+ event-form-values.ts; components/EventFormFields/components/{EventTitleFields,EventLocationField,EventDateRange,EventTimeRange,EventCategoryField,EventRecurrenceFields/components/RecurrenceDayPicker,CalendarDateField,EventAssigneeSelect}),EventDetailsModal/components/{EventFacts/components/EventDetailRow,EventAssigneesList,EventDetailsActions}}/`). The page data layer stays in `src/app/calendar/` (`use-calendar-page.ts`, `api.ts`, `date-utils.ts`, `stats.ts`, `types.ts`, `page-query.ts`, `data-cache.ts`). Every component has its co-located `Name.test.tsx`; `tests/component-tree-convention.test.cjs` checks the tree.
+- **Calendar components owned here (MAIR-607) and laid out as a component tree (MAIR-608)** — `src/components/CalendarPage/` is the single root (see *Component tree convention*): `CalendarPage.tsx` (the former `app/calendar-client.tsx`, imported by `src/app/page.tsx`) owns `use-calendar-today-marker.ts`, `today-marker.ts`, `upcoming-scroll-region.ts` and the shared `calendar-types.ts`, `calendar-date.ts`, `calendar-constants.ts`, `calendar-style.ts`; its `components/` holds `AppShell/`, `CalendarHeader/`, `CalendarSidebar/components/{StatsPanel,UpcomingEventsPanel}/`, `CalendarViews/` (+ `layout.ts`; `components/{CalendarToolbar,MonthGrid,WeekGrid,DaySchedule,CalendarCell,EventPill}/`) and `CalendarModals/` (+ `form-categories.ts`; `components/{ValidatedModal (+ validation.ts, field-errors.ts),ValidatedCreateEventModal,ValidatedEventDetailsModal/components/EventTrainingLink,CreateEventModal (+ event-form-values.ts; components/EventFormFields/components/{EventTitleFields,EventLocationField,EventDateRange,EventTimeRange,EventCategoryField,EventRecurrenceFields/components/RecurrenceDayPicker,CalendarDateField,EventAssigneeSelect}),EventDetailsModal/components/{EventFacts/components/EventDetailRow,EventAssigneesList,EventDetailsActions}}/`). The page data layer stays in `src/app/calendar/` (`use-calendar-page.ts`, `api.ts`, `date-utils.ts`, `stats.ts`, `types.ts`, `page-query.ts`, `data-cache.ts`). Every component has its co-located `Name.test.tsx`; `tests/component-tree-convention.test.cjs` checks the tree.
 - **Shell from the lib (MAIR-578)** — `src/components/CalendarPage/components/AppShell/AppShell.tsx` wraps the lib `AccessibleShell` (`@mairie360/lib-components/shell`) with the session/logout binding; `src/lib/front-urls-provider.tsx` uses the lib `configureSidebarCookieDomain`. No local `accessible-shell.tsx`, `desktop-navigation.tsx` or `sidebar-preference.ts` (pinned by `tests/lib-shell-adoption.test.cjs`; `tests/network-boundary.test.cjs` expects no credential reference left in `src`).
 
 - **Profile routing (MAIR-180 partial delivery)** — `src/app/profile/[[...path]]/page.tsx`

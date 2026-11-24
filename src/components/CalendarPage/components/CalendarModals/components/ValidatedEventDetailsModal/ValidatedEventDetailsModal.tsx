@@ -3,12 +3,12 @@ import { useState } from 'react';
 import { formatDateForQuery } from '@/app/calendar/date-utils';
 import { CreateEventModal } from '../CreateEventModal';
 import { EventDetailsModal } from '../EventDetailsModal';
-import { ModalFeedback, type SaveFeedback } from '../ModalFeedback';
 import { ValidatedModal } from '../ValidatedModal';
 import { formCategories } from '../../form-categories';
 import { EventTrainingLink, type EventTrainingSource } from './components/EventTrainingLink';
 
 type CreateProps = ComponentProps<typeof CreateEventModal>;
+type SaveFeedback = { saving?: boolean; error?: string | null };
 type DetailsProps = ComponentProps<typeof EventDetailsModal>;
 type SaveEvent = Parameters<NonNullable<DetailsProps['onSave']>>[0];
 type ControlledDetailsProps = Omit<DetailsProps, 'onSave'> & SaveFeedback & {
@@ -51,7 +51,7 @@ function EventDetailsSession({ trainingSource, ...props }: ControlledDetailsProp
   };
   return (
     <ValidatedModal isOpen={props.isOpen} resetKey={String(props.event.id)} initialFrequency={initialFrequency}>
-      <fieldset disabled={props.saving} aria-busy={Boolean(props.saving)} className="m-0 min-w-0 border-0 p-0">
+      {(fieldErrors) => (<fieldset disabled={props.saving} aria-busy={Boolean(props.saving)} className="m-0 min-w-0 border-0 p-0">
         {draft ? (
           <CreateEventModal
             isOpen
@@ -60,7 +60,9 @@ function EventDetailsSession({ trainingSource, ...props }: ControlledDetailsProp
             initialValues={draft}
             canCreateRecurringEvents={props.canCreateRecurringEvents}
             title="Modifier l’événement"
-            subtitle={<ModalFeedback subtitle="Modifier les informations de l’événement sélectionné" saving={props.saving} error={props.error} />}
+            saving={props.saving}
+            error={props.error}
+            fieldErrors={fieldErrors}
             cancelLabel={props.cancelLabel}
             submitLabel={props.saveLabel ?? 'Enregistrer'}
             onCancel={() => { if (!props.saving) setDraft(undefined); }}
@@ -74,19 +76,10 @@ function EventDetailsSession({ trainingSource, ...props }: ControlledDetailsProp
         ) : (
           <EventDetailsModal
             {...props}
+            fieldErrors={fieldErrors}
             extraContent={<EventTrainingLink key={String(props.event.id)} eventId={String(props.event.id)} source={trainingSource} />}
             categories={formCategories(props.categories)}
-            title={props.saving || props.error ? (
-              <>
-                {props.title ?? 'Détail de l’événement'}
-                <span
-                  role={props.saving ? 'status' : 'alert'}
-                  className={`mt-2 block whitespace-normal break-words text-sm font-normal leading-5 ${props.saving ? 'text-[#e2e8f0]' : 'text-[#fecaca]'}`}
-                >
-                  {props.saving ? 'Enregistrement en cours…' : props.error}
-                </span>
-              </>
-            ) : props.title}
+            // MAIR-929 C4: no saving / error status in the title any more, the outcome goes to the toasts.
             onClose={() => { if (!props.saving) props.onClose(); }}
             onSave={props.onSave ? (event) => void saveDraft({
               ...event,
@@ -94,7 +87,7 @@ function EventDetailsSession({ trainingSource, ...props }: ControlledDetailsProp
             }) : undefined}
           />
         )}
-      </fieldset>
+      </fieldset>)}
     </ValidatedModal>
   );
 }

@@ -7,33 +7,14 @@ import { CalendarSidebar } from '@/components/CalendarPage/components/CalendarSi
 import { CalendarToolbar } from '@/components/CalendarPage/components/CalendarViews/components/CalendarToolbar';
 import { DaySchedule } from '@/components/CalendarPage/components/CalendarViews/components/DaySchedule';
 import { MonthGrid } from '@/components/CalendarPage/components/CalendarViews/components/MonthGrid';
-import { ViewSwitcher } from '@/components/CalendarPage/components/CalendarViews/components/CalendarToolbar/components/ViewSwitcher';
 import { EventPill } from '@/components/CalendarPage/components/CalendarViews/components/EventPill';
 
 describe('Calendar components', () => {
-  it('changes the active value from the view switcher', () => {
-    const handleChange = vi.fn();
-
-    render(
-      <ViewSwitcher
-        value="month"
-        onChange={handleChange}
-        options={[
-          { value: 'month', label: 'Mois' },
-          { value: 'week', label: 'Semaine' },
-        ]}
-      />
-    );
-
-    fireEvent.click(screen.getByRole('tab', { name: 'Semaine' }));
-
-    expect(handleChange).toHaveBeenCalledWith('week');
-  });
-
   it('triggers toolbar navigation and view changes', () => {
     const handlePrevious = vi.fn();
     const handleNext = vi.fn();
     const handleViewChange = vi.fn();
+    const handleToday = vi.fn();
 
     render(
       <CalendarToolbar
@@ -42,13 +23,19 @@ describe('Calendar components', () => {
         onPrevious={handlePrevious}
         onNext={handleNext}
         onViewChange={handleViewChange}
+        onToday={handleToday}
       />
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'Période précédente' }));
     fireEvent.click(screen.getByRole('button', { name: 'Période suivante' }));
-    fireEvent.click(screen.getByRole('tab', { name: 'Jour' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Aujourd’hui' }));
+    // MAIR-893: the view choice is the lib SegmentedControl (a radio group).
+    expect(screen.getByRole('radiogroup', { name: 'Changer de vue' })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: 'Mois' })).toHaveAttribute('aria-checked', 'true');
+    fireEvent.click(screen.getByRole('radio', { name: 'Jour' }));
 
+    expect(handleToday).toHaveBeenCalledTimes(1);
     expect(handlePrevious).toHaveBeenCalledTimes(1);
     expect(handleNext).toHaveBeenCalledTimes(1);
     expect(handleViewChange).toHaveBeenCalledWith('day');
@@ -338,61 +325,19 @@ describe('Calendar components', () => {
     expect(onEventClick).toHaveBeenCalledWith(events[2]);
   });
 
-  it('renders sidebar panels', () => {
+  it('MAIR-918: renders « À venir » first, then the statistics of the displayed month', () => {
     const { container } = render(
-      <CalendarSidebar
-        showEmptyState
-        stats={[
-          { label: 'Ce mois', value: '12 événements' },
-          { label: 'Cette semaine', value: '3 événements' },
-        ]}
-      />
+      <CalendarSidebar upcoming={[]} stats={{ month: 'juin', total: 12, items: [{ category: 'meeting', label: 'Réunions', value: 12 }] }} />
     );
 
-    expect(screen.getByRole('heading', { name: 'Événements à venir' })).toBeInTheDocument();
-    expect(screen.getByText('Aucun événement à venir')).toBeInTheDocument();
-    expect(screen.getByText('12 événements')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'À venir' })).toBeInTheDocument();
+    expect(screen.getByText('Aucun événement à venir.')).toBeInTheDocument();
+    expect(screen.getByText('12 événements en juin')).toBeInTheDocument();
 
     const panels = container.querySelectorAll('aside > section');
     expect(panels).toHaveLength(2);
-    expect(panels[0]).toHaveTextContent('Statistiques');
-    expect(panels[1]).toHaveClass('calendar-upcoming-panel');
-    expect(panels[1]).toHaveTextContent('Événements à venir');
-  });
-
-  it('calculates sidebar stats from calendar events', () => {
-    render(
-      <CalendarSidebar
-        currentDate="2026-06-15"
-        events={[
-          {
-            id: 'single',
-            title: 'Conseil municipal',
-            date: '2026-06-15',
-          },
-          {
-            id: 'multi-day',
-            title: 'Festival',
-            date: '2026-06-15',
-            endDate: '2026-06-16',
-          },
-          {
-            id: 'weekly',
-            title: 'Permanence',
-            date: '2026-06-15',
-            recurrence: {
-              frequency: 'weekly',
-              interval: 1,
-              daysOfWeek: [1, 3],
-              endsOn: '2026-06-30',
-            },
-          },
-        ]}
-      />
-    );
-
-    expect(screen.getByText('8 événements')).toBeInTheDocument();
-    expect(screen.getByText('5 événements')).toBeInTheDocument();
-    expect(screen.getByText('3 événements')).toBeInTheDocument();
+    expect(panels[0]).toHaveClass('calendar-upcoming-panel');
+    expect(panels[0]).toHaveTextContent('Les 3 prochains événements');
+    expect(panels[1]).toHaveTextContent('Statistiques');
   });
 });

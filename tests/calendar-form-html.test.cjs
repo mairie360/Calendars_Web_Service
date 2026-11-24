@@ -25,18 +25,20 @@ function wrapper() {
   return view.hostElements((props, _text, tag) => tag === 'div' && props.className === 'calendar-validated-modal')[0];
 }
 
+const focused = [];
 function fakeForm(fields) {
   return {
     querySelector(selector) {
       const id = selector.slice(1);
-      return Object.hasOwn(fields, id) ? { value: fields[id] } : null;
+      return Object.hasOwn(fields, id) ? { value: fields[id], focus() { focused.push(id); } } : null;
     },
   };
 }
 
+// The real form always holds a title; a test that checks the empty title passes `'event-title': ''`.
 async function submit(fields) {
   const event = {
-    target: fakeForm(fields),
+    target: fakeForm({ 'event-title': 'Conseil', ...fields }),
     stopped: false,
     prevented: false,
     preventDefault() { this.prevented = true; },
@@ -71,8 +73,11 @@ test('invalid create chronology stays in the modal with an accessible error', as
   assert.equal(event.prevented, true);
   assert.deepEqual(created, []);
   assert.match(view.html, /role="alert"/);
-  assert.match(view.text(), /La date de fin doit être après/);
-  assert.match(view.text(), /Créer/);
+  // MAIR-926 C3: the error sits under « Date de fin », which takes the focus.
+  assert.match(view.html, /id="event-end-date-error" role="alert"[^>]*>La date de fin doit suivre la date de début\.</);
+  assert.match(view.html, /aria-describedby="event-end-date-error"/);
+  assert.equal(focused.at(-1), 'event-end-date');
+  assert.match(view.text(), /Enregistrer/);
 });
 
 test('switching to recurrence hides the stale end date and submits a single-day event', async () => {
@@ -129,7 +134,7 @@ test('invalid edit chronology does not close the shared edit form or invoke onSa
   assert.equal(event.stopped, true);
   assert.deepEqual(saved, []);
   assert.match(view.text(), /Modifier l’événement/);
-  assert.match(view.text(), /L’heure de fin doit être après/);
+  assert.match(view.html, /id="event-end-time-error"[^>]*>(?:<[^>]+>)*[^<]*L’heure de fin doit suivre l’heure de début\./);
 });
 
 test('pending and refused edits retain submitted values, expose in-dialog feedback and retry the confirmed draft', async () => {
@@ -167,12 +172,15 @@ test('pending and refused edits retain submitted values, expose in-dialog feedba
   await submit(fields);
   assert.equal(saved.length, 1);
   assert.match(view.html, /<fieldset[^>]*disabled=""[^>]*aria-busy="true"/);
-  assert.match(view.html, /role="status"/);
-  assert.match(view.text(), /Modifier l’événement.*Enregistrement en cours/);
+  // MAIR-926 C4: « Enregistrer » loads (busy, disabled) instead of a status text.
+  assert.match(view.html, /<button[^>]*disabled=""[^>]*aria-busy="true"[^>]*>(?:(?!<\/button>).)*Enregistrer/s);
+  assert.doesNotMatch(view.text(), /Enregistrement en cours/);
   assert.match(view.html, /value="Titre conservé"/);
   await view.act(() => finish(false));
   await view.waitFor(html => html.includes('Refus temporaire'));
+  // MAIR-926 C5: « Impossible d’enregistrer » at the top of the dialog, the entries kept.
   assert.match(view.html, /role="alert"/);
+  assert.match(view.text(), /Modifier l’événement.*Impossible d’enregistrer.*Refus temporaire, réessayez\..*Titre/);
   for (const [id, expected] of [['event-title', 'Titre conservé'], ['event-location', 'Salle conservée'],
     ['event-date', '16-09-2026'], ['event-start-time', '09:00'], ['event-end-time', '10:00']]) {
     assert.equal(view.hostElements(props => props.id === id)[0].props.value, expected);
@@ -200,7 +208,7 @@ test('cancel after refused edit discards draft and reopening uses official value
   await submit({ 'event-date': '16-09-2026', 'event-end-date': '16-09-2026', 'event-start-time': '09:00', 'event-end-time': '10:00', 'event-recurrence': 'none' });
   assert.match(view.html, /value="Brouillon abandonné"/);
   await view.click('Annuler');
-  assert.match(view.text(), /Détail de l’événement.*Conseil officiel/);
+  assert.match(view.text(), /^Conseil officiel/, 'MAIR-929: the details dialog is titled with the event');
   await view.click('Modifier');
   assert.match(view.html, /value="Conseil officiel"/);
   assert.doesNotMatch(view.html, /Brouillon abandonné/);
@@ -328,7 +336,9 @@ test('a title with < or > stays in the modal with an accessible error and is nev
   assert.deepEqual(created, []);
   assert.match(view.html, /role="alert"/);
   assert.match(view.text(), /Le titre ne doit pas contenir les caractères < ou >\./);
-  assert.doesNotMatch(view.text(), /La date de fin doit être après/);
+  // MAIR-926: each field shows its own error; the title, first in the form, takes the focus.
+  assert.match(view.text(), /La date de fin doit suivre la date de début\./);
+  assert.equal(focused.at(-1), 'event-title');
 
   const valid = await submit({
     'event-title': 'Conseil municipal',
@@ -341,4 +351,25 @@ test('a title with < or > stays in the modal with an accessible error and is nev
   });
   assert.equal(valid.stopped, true);
   assert.match(view.text(), /La description ne doit pas contenir les caractères < ou >\./);
+});
+
+test('MAIR-926: an empty title is refused under the field, which takes the focus, and typing clears it', async () => {
+  const created = [];
+  view = mount(React.createElement(CreateEventModal, { isOpen: true, initialValues, onCancel() {}, onCreate: (value) => created.push(value) }));
+  assert.doesNotMatch(view.text(), /Ajoutez une date|Ajouter un nouvel/, 'C1: no subtitle');
+  const event = await submit({ 'event-title': '   ', 'event-date': '16-09-2026', 'event-end-date': '16-09-2026', 'event-start-time': '09:00', 'event-end-time': '10:00', 'event-recurrence': 'none' });
+  assert.equal(event.stopped, true);
+  assert.deepEqual(created, []);
+  assert.match(view.html, /id="event-title-error" role="alert"[^>]*>(?:<[^>]+>)*[^<]*Donnez un titre à l’événement\./);
+  assert.equal(focused.at(-1), 'event-title');
+  await view.act(() => wrapper().props.onChangeCapture({ target: { id: 'event-title', value: 'Conseil' } }));
+  assert.doesNotMatch(view.text(), /Donnez un titre/);
+});
+
+test('MAIR-926: the fields follow the mockup order and the participants explain where the event goes', async () => {
+  view = mount(React.createElement(CreateEventModal, { isOpen: true, initialValues, onCancel() {}, onCreate() {} }));
+  const ids = view.hostElements((props, _text, tag) => ['input', 'select', 'textarea'].includes(tag) && typeof props.id === 'string' && props.id.startsWith('event-')).map(({ props }) => props.id).filter((id, index, all) => all.indexOf(id) === index);
+  assert.deepEqual(ids, ['event-title', 'event-description', 'event-date', 'event-end-date', 'event-start-time', 'event-end-time', 'event-category', 'event-recurrence', 'event-location']);
+  assert.match(view.text(), /Lieu.*Participants.*Les participants reçoivent l’événement dans leur calendrier\./);
+  assert.match(view.text(), /Annuler.*Enregistrer$/);
 });

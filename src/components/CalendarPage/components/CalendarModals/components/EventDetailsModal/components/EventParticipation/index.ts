@@ -1,0 +1,1 @@
+export { EventParticipation } from './EventParticipation';

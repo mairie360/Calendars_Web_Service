@@ -3,13 +3,13 @@ const {test,before,after,beforeEach,afterEach}=require('node:test');
 const {FrontHarness,jwtFor}=require('./support/front-harness.cjs');
 const {installReactRuntime,mount}=require('./support/server-view.cjs');
 const {loadTs}=require('./support/load-ts.cjs');
-const {installWindow,bootstrap,sessionResponse,withoutToastRegions}=require('./support/calendar-fixtures.cjs');
+const {installWindow,bootstrap,sessionResponse,withoutToastRegions,hasPageStatus}=require('./support/calendar-fixtures.cjs');
 installReactRuntime();const React=require('react');const Page=loadTs('components/CalendarPage/CalendarPage').default;
 const h=new FrontHarness();let view,window;
 before(()=>h.start());after(()=>h.stop());
 beforeEach(()=>{h.reset();window=installWindow();h.cookies.set('accessToken',jwtFor(1));h.cookies.set('refreshToken','disposable-shell-refresh');h.userBff.on('get','/me',{body:sessionResponse()});h.calendarBff.on('get','/calendar/bootstrap',{body:bootstrap()});});
 afterEach(()=>{view?.unmount();view=undefined;delete global.window;assert.deepEqual(h.allViolations(),[]);});
-async function render(){view=mount(React.createElement(Page));await view.waitFor(html=>!withoutToastRegions(html).includes('role="status"')&&view.find('Header')[0]?.props.user.name!=='Chargement…');}
+async function render(){view=mount(React.createElement(Page));await view.waitFor(html=>!hasPageStatus(html)&&view.find('Header')[0]?.props.user.name!=='Chargement…');}
 async function command(label){const button=view.hostElements((_p,text,tag)=>tag==='button'&&text===label)[0];assert.ok(button,'Visible command '+label);await view.act(()=>button.props.onClick());}
 
 test('the actual shell displays failed logout and offers an explicit successful retry',async()=>{

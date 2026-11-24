@@ -15,6 +15,8 @@ const { renderToStaticMarkup } = require('react-dom/server');
 const Page = loadTs('components/CalendarPage/CalendarPage').default;
 const initialDate = loadTs('app/calendar/date-utils').calendarToday();
 const { getPeriodTitle } = loadTs('app/calendar/date-utils');
+const { formatFullDate } = loadTs('components/CalendarPage/calendar-date');
+const ddmmyyyy = (date) => `${String(date.getDate()).padStart(2, '0')}-${String(date.getMonth() + 1).padStart(2, '0')}-${date.getFullYear()}`;
 
 const front = new FrontHarness();
 let view;
@@ -61,7 +63,9 @@ test('server renders on either side of a month boundary expose no server-local c
       };
       // Real SSR has no effects: this is not the effect-running mount harness.
       const html = renderToStaticMarkup(React.createElement(Page));
-      assert.match(html, /role="status"[^>]*>(?:<[^>]*>)*Chargement des données du calendrier…/);
+      // ARIA22: the server sends the status region empty; the browser adds the message after mounting it.
+      assert.match(html, /<p role="status"[^>]*><\/p>/);
+      assert.doesNotMatch(html, /Chargement des données du calendrier…/);
       assert.doesNotMatch(html, /calendar-month-grid|calendar-week-grid|Sélectionner le|>Créer<\/button>/);
       assert.deepEqual(front.calendarBff.sequence(), []);
     }
@@ -75,10 +79,12 @@ test('the first pass renders the loading state, the second the events answered b
   view = mount(React.createElement(Page));
 
   assert.equal(view.passes, 1);
-  // MAIR-911: the three panels start as skeletons (DataState loading, announced as a status).
-  assert.match(view.html, /role="status"[^>]*>(?:<[^>]*>)*Chargement des données du calendrier…/);
-  assert.match(view.html, /role="status"[^>]*>(?:<[^>]*>)*Chargement des statistiques…/);
-  assert.match(view.html, /role="status"[^>]*>(?:<[^>]*>)*Chargement des événements à venir…/);
+  // MAIR-911 / MAIR-484: the three panels start as decorative skeletons, the load is announced once by
+  // the page's permanent status region (RGAA 7.5), mounted empty first and filled on the next pass (ARIA22).
+  assert.match(view.html, /<p role="status"[^>]*><\/p>/);
+  assert.doesNotMatch(view.html, /Chargement des données du calendrier…/);
+  assert.equal((view.html.match(/data-calendar-skeleton=""/g) ?? []).length, 3);
+  assert.doesNotMatch(view.html, /Chargement des statistiques…|Chargement des événements à venir…/);
   assert.doesNotMatch(view.text(), /Événement 5/);
   assert.doesNotMatch(view.html, new RegExp(`<h2[^>]*>${getPeriodTitle('month', initialDate)}</h2>`), 'do not expose server-local date markup before client initialization');
   assert.equal(view.find('MonthGrid').length, 0);
@@ -91,9 +97,10 @@ test('the first pass renders the loading state, the second the events answered b
   assert.doesNotMatch(withoutToastRegions(html), /role="alert"/);
   assert.match(view.text(), /Événement 5/);
   assert.match(view.text(), /Permanence/);
-  assert.match(view.text(), /Description 5/);
-  assert.match(html, /<button type="button" role="tab" aria-selected="true"[^>]*>Mois<\/button>/);
-  assert.match(html, /<button type="button" role="tab" aria-selected="false"[^>]*>Semaine<\/button>/);
+  assert.doesNotMatch(view.text(), /Description 5/, 'MAIR-918: « À venir » no longer shows descriptions');
+  assert.match(html, /role="radiogroup" aria-label="Changer de vue"/);
+  assert.match(html, /<button type="button" role="radio" aria-checked="true"[^>]*>Mois<\/button>/);
+  assert.match(html, /<button type="button" role="radio" aria-checked="false"[^>]*>Semaine<\/button>/);
   assert.equal(view.find('MonthGrid').length, 1);
   assert.equal(view.find('WeekGrid').length, 0);
 });
@@ -177,7 +184,8 @@ test('MAIR-884 F9: « Actualiser » rereads the displayed period through skeleto
   await view.waitFor(() => Boolean(reply));
   assert.equal(view.props('RefreshButton').disabled, true, '« Actualiser » cannot be pressed twice');
   assert.equal(view.find('MonthGrid').length, 0, 'the panels show their skeletons');
-  assert.match(view.html, /role="status"[^>]*>(?:<[^>]*>)*Chargement des statistiques…/);
+  assert.equal((view.html.match(/data-calendar-skeleton=""/g) ?? []).length, 3);
+  assert.match(view.html, /role="status"[^>]*>(?:<[^>]*>)*Chargement des données du calendrier…/);
   await view.act(() => reply({ body: bootstrap() }));
   await view.waitFor(() => !isCalendarPending() && view.find('MonthGrid').length === 1);
   assert.equal(front.calendarBff.requests.length, reads + 1);
@@ -229,7 +237,7 @@ test('a successful independent read cannot hide a refused edit or reset its draf
   await view.fire(props => props.id === 'event-title', 'onChange', { target: { value: 'Draft retained' } });
   front.calendarBff.on('patch', '/calendar/events/{id}', { status: 403, body: apiError('FORBIDDEN', 'Edit refused') });
   // Submit the actual shared form so the wrapper owns the refused draft too.
-  const form = view.hostElements((props, _text, tag) => tag === 'form' && props.onSubmit)[0];
+  const form = view.hostElements((props, _text, tag) => tag === 'form' && props.onSubmit && props.role !== 'search')[0];
   await view.act(() => form.props.onSubmit({ preventDefault() {} }));
   await view.waitFor(html => html.includes('Edit refused'));
   front.calendarRead({ status: 502, body: apiError('UNAVAILABLE', 'Read unavailable') });
@@ -241,7 +249,8 @@ test('a successful independent read cannot hide a refused edit or reset its draf
   await view.click('Réessayer');
   await view.waitFor(html => !html.includes('Read unavailable') && !html.includes('Chargement des données'));
   assert.equal(view.props('ValidatedEventDetailsModal').error, 'Edit refused');
-  assert.match(view.html, /<span role="alert"[^>]*>Edit refused<\/span>/);
+  // MAIR-926 C5: the refusal sits at the top of the edit dialog as « Impossible d’enregistrer ».
+  assert.match(view.text(), /Modifier l’événement Impossible d’enregistrer Edit refused/);
   assert.equal(view.hostElements(props => props.id === 'event-title')[0].props.value, 'Draft retained');
   assert.doesNotMatch(view.text(), /Réessayer/);
   assert.equal(front.calendarBff.calls('/calendar/events/{id}', 'PATCH').length, 1);
@@ -256,7 +265,7 @@ test('pending and refused edit keeps its draft through reordered category reads,
   await view.fire(props => props.id === 'event-category', 'onChange', { target: { value: 'other' } });
   let reply;
   front.calendarBff.on('patch', '/calendar/events/{id}', () => new Promise(resolve => { reply = resolve; }));
-  const submitEdit = () => view.hostElements((props, _text, tag) => tag === 'form' && props.onSubmit)[0]
+  const submitEdit = () => view.hostElements((props, _text, tag) => tag === 'form' && props.onSubmit && props.role !== 'search')[0]
     .props.onSubmit({ preventDefault() {} });
   await view.act(submitEdit);
   await view.waitFor(() => Boolean(reply));
@@ -276,12 +285,12 @@ test('pending and refused edit keeps its draft through reordered category reads,
   await view.waitFor(() => !view.props('ValidatedEventDetailsModal').saving && view.props('ValidatedEventDetailsModal').categories[0].value === 'meeting');
   assert.equal(view.hostElements(props => props.id === 'event-title')[0].props.value, 'Combined draft');
   assert.equal(view.hostElements(props => props.id === 'event-category')[0].props.value, 'other');
-  assert.match(dialogHtml(), /role="alert"[^>]*>Combined edit refused/);
+  assert.match(dialogHtml(), /role="alert"[\s\S]*Impossible d’enregistrer[\s\S]*Combined edit refused/);
   assert.equal(front.calendarBff.calls('/calendar/events/{id}', 'PATCH').length, 1);
   const confirmed = calendarEvent(event.id, { ...event, title: 'Combined draft', category: 'other' });
   front.calendarBff.on('patch', '/calendar/events/{id}', { body: confirmed });
   await view.act(submitEdit);
-  await view.waitFor(() => !view.html.includes('Modifier l’événement') && !view.html.includes('Enregistrement en cours'));
+  await view.waitFor(() => !view.html.includes('Modifier l’événement'));
   assert.equal(front.calendarBff.calls('/calendar/events/{id}', 'PATCH').length, 2);
   assert.equal(view.props('DaySchedule').events[0].title, 'Combined draft');
   assert.equal(view.props('DaySchedule').events[0].category, 'other');
@@ -289,7 +298,31 @@ test('pending and refused edit keeps its draft through reordered category reads,
   assert.doesNotMatch(withoutToastRegions(view.html), /Combined edit refused/);
   // MAIR-879: the refused write stays in an error toast until dismissed; the confirmed one is a success toast.
   assert.match(toastTexts(), /Combined edit refused/);
-  assert.match(toastTexts(), /Événement « Combined draft » enregistré\./);
+  assert.match(toastTexts(), /Événement modifié/);
+});
+
+test('MAIR-935 F8: typing in « Rechercher un événement » dims the other events in every view, clearing restores them', async () => {
+  await renderLoadedPage();
+  const search = () => view.hostElements((props, _text, tag) => tag === 'input' && props.type === 'search' && props['aria-label'] === 'Rechercher un événement')[0];
+  const dimmed = () => view.hostElements((props) => props['data-dimmed'] === 'true').map(({ text }) => text);
+  assert.ok(search(), 'the top bar offers the calendar search');
+  assert.deepEqual(dimmed(), []);
+
+  await view.fire((props, _text, tag) => tag === 'input' && props.type === 'search', 'onChange', { target: { value: 'perma' } });
+  assert.deepEqual(dimmed().map((text) => /Événement 5/.test(text)), [true], 'C1: only the non-matching event fades');
+  assert.match(view.html, /data-dimmed="true"[^>]*class|class="[^"]*opacity-30/);
+
+  await view.act(() => view.props('CalendarToolbar').onViewChange('day'));
+  await view.waitFor(() => view.find('DaySchedule').length === 1 && !isCalendarPending());
+  assert.equal(view.props('DaySchedule').events.find((event) => event.id === 5).searchDimmed, true, 'still filtered after a view change');
+  assert.equal(view.props('DaySchedule').events.find((event) => event.id === 6).searchDimmed, undefined);
+
+  await view.fire((props, _text, tag) => tag === 'input' && props.type === 'search', 'onChange', { target: { value: 'introuvable' } });
+  assert.equal(view.props('DaySchedule').events.every((event) => event.searchDimmed), true, 'C2: no match dims everything');
+
+  await view.fire((props, _text, tag) => tag === 'input' && props.type === 'search', 'onKeyDown', { key: 'Escape', preventDefault() {} });
+  assert.deepEqual(dimmed(), [], 'C3: Escape clears the search and restores every event');
+  assert.equal(search().props.value, '');
 });
 
 test('changing the view re-renders the week grid with the reloaded events', async () => {
@@ -300,7 +333,7 @@ test('changing the view re-renders the week grid with the reloaded events', asyn
 
   assert.equal(view.find('WeekGrid').length, 1);
   assert.equal(view.find('MonthGrid').length, 0);
-  assert.match(html, /<button type="button" role="tab" aria-selected="true"[^>]*>Semaine<\/button>/);
+  assert.match(html, /<button type="button" role="radio" aria-checked="true"[^>]*>Semaine<\/button>/);
   assert.match(view.text(), /Événement 5/);
 });
 
@@ -310,13 +343,73 @@ test('day arrows render the navigated date in the actual schedule, statistics an
   await view.act(() => view.props('CalendarToolbar').onViewChange('day'));
   await view.waitFor(() => !isCalendarPending());
   await view.act(() => view.props('CalendarToolbar').onNext());
-  const html = await view.waitFor(() => !isCalendarPending() && view.props('CalendarToolbar').title === '1 janvier 2027');
+  const html = await view.waitFor(() => !isCalendarPending() && view.props('CalendarToolbar').title === 'Vendredi 1 janvier 2027');
+  assert.ok(view.find('Panel').some(({ props }) => props.title === 'Vendredi 1 janvier 2027'), 'MAIR-893: the period is the title of the calendar panel');
   assert.match(html, /aria-label="1 Janvier 2027 à 09:00"/);
   assert.doesNotMatch(html, /aria-label="31 Décembre 2026 à/);
-  assert.equal(view.props('CalendarSidebar').stats[2].value, '1 événement');
+  assert.equal(view.props('CalendarSidebar').stats.total, 1, 'MAIR-918: statistics of the displayed month (January)');
   await view.act(() => view.props('CalendarHeader').onCreate());
   assert.equal(view.props('ValidatedCreateEventModal').initialValues.date, '01-01-2027');
   assert.ok(front.calendarBff.sequence().every((call) => /^GET \/calendar\/(bootstrap|period)\?/.test(call)));
+});
+
+for (const mode of ['month', 'week', 'day']) {
+  test(`MAIR-893 F3 (${mode}): Précédent / Suivant move one period, « Aujourd’hui » comes back, the panel title follows`, async () => {
+    await renderLoadedPage();
+    if (mode !== 'month') {
+      await view.act(() => view.props('SegmentedControl').onChange(mode));
+      await view.waitFor(() => !isCalendarPending() && view.props('CalendarToolbar').view === mode);
+    }
+    const today = getPeriodTitle(mode, initialDate);
+    const panelTitles = () => view.find('Panel').map(({ props }) => props.title);
+    assert.ok(panelTitles().includes(today));
+    const iconButton = (name) => (props) => props['aria-label'] === name;
+    await view.click(iconButton('Période suivante'));
+    await view.click(iconButton('Période suivante'));
+    await view.waitFor(() => !isCalendarPending() && view.props('CalendarToolbar').title !== today);
+    const ahead = view.props('CalendarToolbar').title;
+    assert.ok(panelTitles().includes(ahead));
+    assert.equal(view.html.includes('aria-current="date"'), false, 'today is not highlighted outside its period');
+    await view.click(iconButton('Période précédente'));
+    await view.waitFor(() => !isCalendarPending() && view.props('CalendarToolbar').title !== ahead);
+    await view.click('Aujourd’hui');
+    await view.waitFor(() => !isCalendarPending() && view.props('CalendarToolbar').title === today);
+    assert.ok(panelTitles().includes(today));
+    assert.ok(front.calendarBff.sequence().every((call) => /^GET \/calendar\/(bootstrap|period)\?/.test(call)));
+  });
+}
+
+test('MAIR-905 F4: a month day opens « Nouvel événement » on that day at 09:00 – 10:00, a pill opens its details', async () => {
+  await renderLoadedPage();
+  const day = new Date(initialDate.getFullYear(), initialDate.getMonth(), 12);
+  const label = (props) => props['aria-label'] === `Sélectionner le ${formatFullDate(day)}`;
+  await view.click(label);
+  await view.waitFor(() => view.props('ValidatedCreateEventModal').isOpen === true);
+  const values = view.props('ValidatedCreateEventModal').initialValues;
+  assert.equal(values.date, ddmmyyyy(day));
+  assert.equal(values.startTime, '09:00');
+  assert.equal(values.endTime, '10:00');
+  assert.equal(view.props('MonthGrid').selectedDate.getDate(), 12, 'the clicked day stays selected for navigation');
+  await view.act(() => view.props('ValidatedCreateEventModal').onCancel());
+  await view.waitFor(() => view.props('ValidatedCreateEventModal').isOpen === false);
+  await openEventDetails(view.props('MonthGrid').events[0]);
+  assert.equal(view.props('ValidatedEventDetailsModal').isOpen, true);
+  assert.equal(view.props('ValidatedCreateEventModal').isOpen, false, 'a pill never starts a creation');
+  assert.ok(front.calendarBff.sequence().every((call) => /^GET \/calendar\//.test(call)));
+});
+
+test('MAIR-918 F5: « À venir » lists the next occurrences first and a row opens the event details', async () => {
+  const inThreeDays = new Date(initialDate.getFullYear(), initialDate.getMonth(), initialDate.getDate() + 3);
+  const ymd = `${inThreeDays.getFullYear()}-${String(inThreeDays.getMonth() + 1).padStart(2, '0')}-${String(inThreeDays.getDate()).padStart(2, '0')}`;
+  await renderLoadedPage(bootstrap({ events: [calendarEvent(7, { title: 'Conseil à venir', date: ymd, startTime: '18:00', endTime: '19:30' })] }));
+  const sidebar = view.props('CalendarSidebar');
+  assert.deepEqual(sidebar.upcoming.map(({ event }) => event.title), ['Conseil à venir']);
+  assert.deepEqual(view.find('Panel').map(({ props }) => props.title).slice(-2), ['À venir', 'Statistiques'], 'À venir comes first');
+  assert.match(view.text(), /Conseil à venir\s*Réunion/);
+  assert.match(view.text(), /18:00 – 19:30/);
+  await view.click((props, text, tag) => tag === 'button' && /Conseil à venir/.test(text));
+  await view.waitFor(() => view.props('ValidatedEventDetailsModal')?.event?.canEdit !== undefined);
+  assert.equal(view.props('ValidatedEventDetailsModal').event.id, 7);
 });
 
 test('calendar layout uses responsive grids and a bounded sidebar with BFF-backed events', async () => {
@@ -326,7 +419,7 @@ test('calendar layout uses responsive grids and a bounded sidebar with BFF-backe
   assert.match(monthHtml, /class="calendar-grid-viewport mt-9"/);
   assert.equal(view.props('MonthGrid').className, 'calendar-month-grid');
   assert.equal(view.props('CalendarSidebar').className, 'calendar-sidebar');
-  assert.deepEqual(view.props('CalendarSidebar').events.map((event) => event.id), [5, 6]);
+  assert.deepEqual(view.props('CalendarSidebar').stats.items.map((item) => [item.label, item.value]), [['Réunions', 1], ['Autres', 1]]);
   assert.deepEqual(front.calendarBff.sequence().map((line) => line.split('?')[0]), ['GET /calendar/bootstrap']);
 
   await view.act(() => view.props('CalendarToolbar').onViewChange('week'));
@@ -338,10 +431,13 @@ test('calendar layout uses responsive grids and a bounded sidebar with BFF-backe
 
 test('the create modal opens from the title bar and the created event appears in the page', async () => {
   await renderLoadedPage();
-  assert.doesNotMatch(view.html, /Ajoutez une date au calendrier de la mairie\./);
+  assert.doesNotMatch(view.html, /role="dialog"/);
 
   await view.act(() => view.props('CalendarHeader').onCreate());
-  assert.match(view.html, /Ajoutez une date au calendrier de la mairie\./);
+  // MAIR-926 C1: « Nouvel événement » without subtitle, saved with « Enregistrer ».
+  assert.match(dialogHtml(), /Nouvel événement/);
+  assert.doesNotMatch(dialogHtml(), /Ajoutez une date au calendrier de la mairie\./);
+  assert.match(dialogHtml(), /Enregistrer/);
   assert.equal(view.props('ValidatedCreateEventModal').isOpen, true);
 
   const created = calendarEvent(9, { title: 'Conseil municipal', date: '2026-09-18' });
@@ -356,7 +452,9 @@ test('the create modal opens from the title bar and the created event appears in
   const html = await view.waitFor((current) => current.includes('Conseil municipal') && !isCalendarPending());
 
   assert.equal(front.calendarBff.sequence().filter((line) => line.startsWith('POST')).length, 1);
-  assert.doesNotMatch(html, /Ajoutez une date au calendrier de la mairie\./);
+  // MAIR-926 C6: the dialog closes and « Événement créé » is toasted.
+  assert.doesNotMatch(withoutToastRegions(html), /role="dialog"/);
+  await view.waitFor(() => toastTexts().includes('Événement créé'));
   assert.match(view.text(), /Conseil municipal/);
   assert.equal(view.props('MonthGrid').events.some((event) => event.id === created.id), true);
 });
@@ -376,12 +474,50 @@ test('clicking an event opens its details with the BFF permissions', async () =>
   assert.match(view.html, />Modifier</);
 });
 
+test('MAIR-929 F5: the details dialog is titled with the event, shows its category and facts, and orders its actions', async () => {
+  await renderLoadedPage();
+  await openEventDetails(view.props('MonthGrid').events[0]);
+  const dialog = dialogHtml();
+  assert.ok(view.find('Modal').some(({ props }) => props.open && props.title === 'Événement 5'), 'MAIR-929: titled with the event');
+  assert.match(dialog, /data-tone="secondary-strong"[^>]*>(?:<[^>]*>)*Réunion</, 'category pill in the navy tone (MAIR-1121)');
+  assert.deepEqual(view.find('EventDetailRow').map(({ props }) => props.label), ['Date', 'Horaire', 'Lieu', 'Participants']);
+  assert.match(view.text(), /Description 5/);
+  const footer = dialog.slice(dialog.indexOf('<footer'));
+  const order = ['Supprimer', 'Fermer', 'Modifier'].map((name) => footer.indexOf(`>${name}<`));
+  assert.ok(order.every((index) => index > 0) && order[0] < order[1] && order[1] < order[2], `footer order ${order}`);
+  assert.doesNotMatch(footer, />Valider<|>Refuser</, 'approval stays between the facts and the footer');
+  await view.click((props, text, tag) => tag === 'button' && text === 'Fermer');
+  await view.waitFor(() => view.props('ValidatedEventDetailsModal').isOpen === false);
+});
+
+test('MAIR-931 F7: a confirmed deletion closes every dialog, updates the page and toasts « Événement supprimé »; a recurring event mentions its repetitions', async () => {
+  await renderLoadedPage(bootstrap({ events: [calendarEvent(5, { recurrence: { frequency: 'daily', interval: 1, daysOfWeek: [] } }), calendarEvent(6, { title: 'Permanence', category: 'other' })] }));
+  await openEventDetails(view.props('MonthGrid').events[0]);
+  const exact = (name) => (props, text, tag) => tag === 'button' && text === name;
+  await view.click(exact('Supprimer'));
+  assert.match(view.html, /role="alertdialog"/);
+  assert.match(view.text(), /« Événement 5 » sera retiré du calendrier, avec toutes ses répétitions\. Cette action est définitive\./);
+  assert.equal(front.calendarBff.calls('/calendar/events/{id}', 'DELETE').length, 0);
+  let reply;
+  front.calendarBff.on('delete', '/calendar/events/{id}', () => new Promise(resolve => { reply = resolve; }));
+  const confirming = view.click(exact('Confirmer la suppression'));
+  await view.waitFor(() => Boolean(reply));
+  assert.ok(view.find('ConfirmModal').some(({ props }) => props.open && props.busy), 'the confirm button loads during the call');
+  await view.act(() => reply({ status: 204 }));
+  await confirming;
+  await view.waitFor(() => view.props('ValidatedEventDetailsModal').isOpen === false && toastTexts().includes('Événement supprimé'));
+  assert.doesNotMatch(view.html, /role="alertdialog"|role="dialog"/);
+  assert.deepEqual(view.props('MonthGrid').events.map((event) => event.id), [6]);
+  assert.equal(view.props('CalendarSidebar').stats.total > 0, true);
+  assert.equal(view.props('CalendarSidebar').upcoming.some(({ event }) => event.id === 5), false);
+});
+
 for (const [label, method, route, approvalStatus] of [
   ['Supprimer', 'delete', '/calendar/events/{id}', null],
   ['Valider', 'patch', '/calendar/events/{id}/approval', 'approved'],
   ['Refuser', 'patch', '/calendar/events/{id}/approval', 'rejected'],
 ]) {
-  test(`${label}: pending and refused outcomes are announced inside the real details dialog, then a confirmed retry alone changes the event`, async () => {
+  test(`${label}: the details dialog is busy while pending, a refusal goes to an error toast, then a confirmed retry alone changes the event`, async () => {
     await renderLoadedPage();
     const event = view.props('MonthGrid').events[0];
     await openEventDetails(event);
@@ -389,32 +525,41 @@ for (const [label, method, route, approvalStatus] of [
     front.calendarBff.on(method, route, () => new Promise(resolve => { reply = resolve; }));
     // Delete returns its promise, unlike the void approval handlers. Keep the
     // click pending so this assertion observes the UI before either response.
-    const pendingClick = view.click(label);
+    const exact = (name) => (props, text, tag) => tag === 'button' && text === name;
+    // MAIR-931: a deletion goes through the confirmation first.
+    const act = async () => {
+      if (label !== 'Supprimer') return view.click(exact(label));
+      await view.click(exact(label));
+      return view.click(exact('Confirmer la suppression'));
+    };
+    const pendingClick = act();
     await view.waitFor(() => Boolean(reply));
     let dialog = dialogHtml();
-    assert.match(dialog, /role="status"[^>]*>Enregistrement en cours…/);
+    // MAIR-929 C4: no saving status in the title any more; the dialog is disabled and busy.
+    assert.doesNotMatch(dialog, /Enregistrement en cours…/);
     assert.match(view.html, /<fieldset[^>]*disabled=""[^>]*aria-busy="true"/);
-    assert.doesNotMatch(dialog, />Supprimer<|>Valider<|>Refuser<|>Modifier</);
     assert.equal(view.props('MonthGrid').events[0].approvalStatus, event.approvalStatus);
     await view.act(() => reply({ status: 403, body: apiError('FORBIDDEN', `${label} refusé`) }));
     await pendingClick;
-    await view.waitFor(html => html.includes(`${label} refusé`));
+    const refusal = label === 'Supprimer' ? `Suppression impossible — ${label} refusé` : `${label} refusé`;
+    await view.waitFor(() => toastTexts().includes(refusal));
+    if (label === 'Supprimer') assert.doesNotMatch(view.html, /role="alertdialog"/, 'a refused deletion returns to the details');
     dialog = dialogHtml();
-    assert.match(dialog, new RegExp(`role="alert"[^>]*>${label} refusé`));
+    assert.doesNotMatch(dialog, new RegExp(`${label} refusé`), 'the refusal is a toast, not a title status');
     assert.match(dialog, /Événement 5/);
     assert.equal(view.props('MonthGrid').events[0].approvalStatus, event.approvalStatus);
     // A read is not an acknowledgement of this refused detail action.
     await view.act(() => view.props('CalendarToolbar').onViewChange('week'));
     // bootstrap, the opened event's detail (MAIR-557), the refused action and the week read.
     await view.waitFor(() => front.calendarBff.requests.length === 4 && !isCalendarPending());
-    assert.match(dialogHtml(), new RegExp(`role="alert"[^>]*>${label} refusé`));
+    assert.ok(toastTexts().includes(`${label} refusé`), 'the error toast stays until dismissed');
     assert.equal(front.calendarBff.calls(route, method.toUpperCase()).length, 1);
     front.calendarBff.on(method, route, approvalStatus
       ? { body: calendarEvent(5, { approvalStatus }) }
       : { status: 204 });
-    await view.click(label);
-    await view.waitFor(() => !isCalendarPending());
-    assert.equal(front.calendarBff.calls(route, method.toUpperCase()).length, 2);
+    // The error toast also contains « <label> refusé »: target the dialog button by its exact text.
+    await act();
+    await view.waitFor(() => !isCalendarPending() && front.calendarBff.calls(route, method.toUpperCase()).length === 2 && !view.props('ValidatedEventDetailsModal')?.saving);
     if (approvalStatus) {
       assert.equal(view.props('WeekGrid').events[0].approvalStatus, approvalStatus);
       assert.doesNotMatch(dialogHtml(), /role="alert"/);
@@ -463,4 +608,23 @@ test('MAIR-557: the details dialog offers the actions granted by the event detai
   assert.match(dialog, />Valider</);
   assert.match(dialog, /Description 5/);
   assert.deepEqual(front.calendarBff.calls('/calendar/events/{id}', 'GET').map((call) => call.pathParams.id), ['5']);
+});
+
+test('MAIR-484: one main landmark and one status region, mounted before its text, across load and refresh (RGAA 9.2, 12.6, 7.5)', async () => {
+  const statuses = (html) => withoutToastRegions(html).match(/<[a-z]+\b[^>]*role="status"[^>]*>[\s\S]*?<\/[a-z]+>/g) ?? [];
+  const html = await renderLoadedPage();
+  assert.equal((html.match(/<main\b/g) ?? []).length, 1, 'only the AppShell main landmark');
+  // Loaded: the region is already there, empty, so the next load only changes its text.
+  assert.deepEqual(statuses(html).map(tag => tag.replace(/<[^>]*>/g, '')), ['']);
+
+  let reply;
+  front.calendarBff.on('get', '/calendar/bootstrap', () => new Promise(resolve => { reply = resolve; }));
+  await view.click('Actualiser');
+  await view.waitFor(() => Boolean(reply));
+  assert.deepEqual(statuses(view.html).map(tag => tag.replace(/<[^>]*>/g, '')), ['Chargement des données du calendrier…']);
+  assert.equal((view.html.match(/<main\b/g) ?? []).length, 1);
+
+  await view.act(() => reply({ body: bootstrap() }));
+  await view.waitFor(() => !isCalendarPending() && view.find('MonthGrid').length === 1);
+  assert.deepEqual(statuses(view.html).map(tag => tag.replace(/<[^>]*>/g, '')), ['']);
 });

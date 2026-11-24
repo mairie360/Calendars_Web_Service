@@ -38,7 +38,7 @@ export function validateEventChronology(values: EventChronology): string | null 
   const recurring = values.recurrence.frequency !== 'none';
   const end = recurring ? start : dayNumber(values.endDate || values.date);
   if (end === null) return 'La date de fin est invalide.';
-  if (end < start) return 'La date de fin doit être après la date de début.';
+  if (end < start) return 'La date de fin doit suivre la date de début.';
 
   if (recurring && values.recurrence.endsOn) {
     const recurrenceEnd = dayNumber(String(values.recurrence.endsOn));
@@ -50,7 +50,7 @@ export function validateEventChronology(values: EventChronology): string | null 
     const startTime = timeNumber(values.startTime);
     const endTime = timeNumber(values.endTime);
     if (startTime === null || endTime === null || endTime <= startTime) {
-      return 'L’heure de fin doit être après l’heure de début.';
+      return 'L’heure de fin doit suivre l’heure de début.';
     }
   }
 
@@ -75,4 +75,46 @@ export function validateEventTexts(values: EventTexts): string | null {
     if (typeof value === 'string' && /[<>]/.test(value)) return `${label} ne doit pas contenir les caractères < ou >.`;
   }
   return null;
+}
+
+/** MAIR-926: one error under one field, keyed by the field's input id. */
+export interface EventFieldError {
+  field: string;
+  message: string;
+}
+
+export type EventFormInput = EventTexts & EventChronology;
+
+const TEXT_FIELDS: Record<keyof EventTexts, string> = {
+  title: 'event-title',
+  description: 'event-description',
+  location: 'event-location',
+  service: 'event-service',
+};
+
+function chronologyField(message: string) {
+  if (/date de début/.test(message) && !/suivre/.test(message) && !/récurrence/.test(message)) return 'event-date';
+  if (/récurrence/.test(message)) return 'event-recurrence-end';
+  if (/heure/.test(message)) return 'event-end-time';
+  return 'event-end-date';
+}
+
+/**
+ * MAIR-926 C3: every error of the form, in the order of the fields — « Donnez un titre à l’événement. »,
+ * the forbidden `<` / `>` of the free texts, then the chronology (« La date de fin doit suivre la date de
+ * début. », « L’heure de fin doit suivre l’heure de début. »…).
+ */
+export function validateEventForm(values: EventFormInput): EventFieldError[] {
+  const errors: EventFieldError[] = [];
+  if (!String(values.title ?? '').trim()) errors.push({ field: TEXT_FIELDS.title, message: 'Donnez un titre à l’événement.' });
+  for (const [field, label] of TEXT_LABELS) {
+    const value = values[field];
+    if (typeof value === 'string' && /[<>]/.test(value)) {
+      errors.push({ field: TEXT_FIELDS[field], message: `${label} ne doit pas contenir les caractères < ou >.` });
+    }
+  }
+  const chronology = validateEventChronology(values);
+  if (chronology) errors.push({ field: chronologyField(chronology), message: chronology });
+  const order = ['event-title', 'event-description', 'event-date', 'event-end-date', 'event-start-time', 'event-end-time', 'event-recurrence-end', 'event-location', 'event-service'];
+  return errors.sort((first, second) => order.indexOf(first.field) - order.indexOf(second.field));
 }

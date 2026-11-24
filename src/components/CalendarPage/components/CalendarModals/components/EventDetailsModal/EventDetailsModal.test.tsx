@@ -23,10 +23,12 @@ const event = {
 };
 
 describe('EventDetailsModal component', () => {
-  it('displays event details', () => {
-    render(<EventDetailsModal isOpen event={event} people={people} onClose={vi.fn()} />);
+  it('MAIR-929: is titled with the event, shows its category pill, description and facts', () => {
+    render(<EventDetailsModal isOpen event={event} people={people} categories={[{ value: 'meeting', label: 'Réunion' }]} onClose={vi.fn()} />);
 
-    expect(screen.getByText('Conseil municipal')).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Conseil municipal' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Conseil municipal' })).toBeInTheDocument();
+    expect(screen.getByText('Réunion').closest('[data-tone]')).toHaveAttribute('data-tone', 'secondary-strong');
     expect(screen.getByText('Préparer la séance')).toBeInTheDocument();
     expect(screen.getByText('Salle du conseil')).toBeInTheDocument();
     expect(screen.getByText('09:00 – 10:30')).toBeInTheDocument();
@@ -51,7 +53,7 @@ describe('EventDetailsModal component', () => {
       />
     );
 
-    expect(screen.getByText('Chaque semaine (Lun, Mar, Mer, Jeu, Ven) jusqu’au 15 Juillet 2026')).toBeInTheDocument();
+    expect(screen.getByText('Lundi 15 juin 2026 · chaque semaine (Lun, Mar, Mer, Jeu, Ven) jusqu’au 15 Juillet 2026')).toBeInTheDocument();
   });
 
   it('edits and saves event details', () => {
@@ -119,5 +121,29 @@ describe('EventDetailsModal component', () => {
         assignees: [people[0], people[1]],
       })
     );
+  });
+
+  it('MAIR-931: never deletes without confirmation, and a refused deletion comes back to the details', async () => {
+    const onDelete = vi.fn().mockResolvedValueOnce(false).mockResolvedValueOnce(true);
+    render(<EventDetailsModal isOpen event={event} people={people} canDelete onClose={vi.fn()} onDelete={onDelete} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Supprimer' }));
+    expect(onDelete).not.toHaveBeenCalled();
+    const confirm = screen.getByRole('alertdialog', { name: 'Supprimer cet événement ?' });
+    expect(confirm).toHaveTextContent('« Conseil municipal » sera retiré du calendrier. Cette action est définitive.');
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmer la suppression' }));
+    expect(onDelete).toHaveBeenCalledWith(event);
+    await vi.waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
+    expect(screen.getByRole('button', { name: 'Supprimer' })).toHaveFocus();
+    fireEvent.click(screen.getByRole('button', { name: 'Supprimer' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmer la suppression' }));
+    expect(onDelete).toHaveBeenCalledTimes(2);
+  });
+
+  it('MAIR-931: the confirm button loads while the deletion runs', () => {
+    const { rerender } = render(<EventDetailsModal isOpen event={event} people={people} canDelete onClose={vi.fn()} onDelete={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Supprimer' }));
+    rerender(<EventDetailsModal isOpen event={event} people={people} canDelete saving onClose={vi.fn()} onDelete={vi.fn()} />);
+    expect(screen.getByRole('button', { name: /Confirmer la suppression/ })).toHaveAttribute('aria-busy', 'true');
+    expect(screen.getByRole('button', { name: 'Annuler' })).toBeDisabled();
   });
 });

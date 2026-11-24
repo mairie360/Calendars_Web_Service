@@ -47,7 +47,7 @@ function toCalendarEventItem(event: BffCalendarEvent, people: CalendarAssignee[]
     id: event.id as CalendarAssigneeId,
     assigneeIds,
     assignees: event.assignees?.length ? event.assignees : resolveAssignees(assigneeIds, people),
-    colorClassName: getEventColor(event.category),
+    colorClassName: getEventColor(event.category, event.myParticipation),
   };
 }
 
@@ -146,6 +146,16 @@ export async function updateCalendarEvent(
 
 export async function deleteCalendarEvent(eventId: CalendarAssigneeId) {
   await bffCalendar.deleteCalendarEventsId(encodeURIComponent(String(eventId)));
+}
+
+/** MAIR-1122: the current user's answer to the invitation; the BFF returns the event read again. */
+export async function updateCalendarEventParticipation(
+  eventId: CalendarAssigneeId,
+  status: Schemas['UpdateCalendarEventParticipationBody']['status'],
+  people: CalendarAssignee[],
+) {
+  const { data: savedEvent } = await bffCalendar.putCalendarEventsIdParticipation(encodeURIComponent(String(eventId)), { status });
+  return toCalendarEventItem(savedEvent, people);
 }
 
 export async function updateCalendarEventApproval(

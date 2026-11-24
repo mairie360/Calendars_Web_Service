@@ -302,6 +302,7 @@ services:
     environment:
       <<: *common-env
       PORT: 3000
+      INSTANCE_TIMEZONE: Europe/Paris
       BFF_CALENDAR_BASE_URL: http://bff-calendar:4002
       USER_BFF_URL: http://bff-user:4000
       # Force React/Vite à surveiller les fichiers correctement dans Docker

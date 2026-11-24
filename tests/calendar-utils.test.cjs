@@ -5,8 +5,9 @@ const { loadTs } = require('./support/load-ts.cjs');
 // Logique pure du calendrier (dates, statistiques, couleurs) et navigation entre modules : aucune requête réseau.
 
 const dates = loadTs('app/calendar/date-utils');
-const { buildStats, eventOccursOnDate } = loadTs('app/calendar/stats');
-const { getEventColor, resolveAssignees } = loadTs('app/calendar/constants');
+const { buildStats, eventOccursOnDate, getUpcomingOccurrences } = loadTs('app/calendar/stats');
+const { getEventColor, getEventTone, resolveAssignees } = loadTs('app/calendar/constants');
+const { applyEventSearch, matchesEventSearch } = loadTs('app/calendar/search');
 
 const ymd = (date) => dates.formatDateForQuery(date);
 
@@ -43,8 +44,12 @@ test('period navigation and titles follow the view', () => {
   assert.equal(ymd(dates.getNextPeriod('2026-12-31', 'day')), '2027-01-01');
   assert.equal(ymd(dates.getPreviousPeriod('2026-03-01', 'day')), '2026-02-28');
   assert.equal(dates.getPeriodTitle('month', '2026-09-16'), 'Septembre 2026');
-  assert.equal(dates.getPeriodTitle('week', '2026-09-16'), 'Semaine du 14 septembre 2026');
-  assert.equal(dates.getPeriodTitle('day', '2026-09-16'), '16 septembre 2026');
+  // MAIR-893: the mockup titles of the calendar panel.
+  assert.equal(dates.getPeriodTitle('week', '2026-09-16'), '14 – 20 septembre 2026');
+  assert.equal(dates.getPeriodTitle('week', '2026-12-02'), '30 novembre – 6 décembre 2026');
+  assert.equal(dates.getPeriodTitle('week', '2026-12-30'), '28 décembre 2026 – 3 janvier 2027');
+  assert.equal(dates.getPeriodTitle('day', '2026-09-16'), 'Mercredi 16 septembre 2026');
+  assert.equal(dates.getPeriodTitle('day', '2026-11-12'), 'Jeudi 12 novembre 2026');
 });
 
 test('buildCreateInitialValues prefills a one-hour slot', () => {
@@ -76,24 +81,57 @@ test('eventOccursOnDate handles multi-day events and daily, weekly and monthly r
   assert.equal(eventOccursOnDate({ ...monthly, recurrence: { frequency: 'none' } }, '2026-04-15'), false);
 });
 
-test('buildStats counts occurrences for the month, the week and the selected day', () => {
+test('MAIR-918: buildStats counts the occurrences of the displayed month per API category', () => {
   const events = [
-    { id: 1, title: 'A', date: '2026-09-16' },
-    { id: 2, title: 'B', date: '2026-09-14', endDate: '2026-09-15' },
-    { id: 3, title: 'C', date: '2026-09-01', recurrence: { frequency: 'weekly', daysOfWeek: [3] } },
+    { id: 1, title: 'A', date: '2026-09-16', category: 'meeting' },
+    { id: 2, title: 'B', date: '2026-09-14', endDate: '2026-09-15', category: 'activity' },
+    { id: 3, title: 'C', date: '2026-09-01', category: 'ceremony', recurrence: { frequency: 'weekly', daysOfWeek: [3] } },
+    { id: 4, title: 'D', date: '2026-10-02', category: 'meeting' },
   ];
+  const categories = [{ value: 'meeting', label: 'Réunion' }, { value: 'activity', label: 'Animation' }, { value: 'ceremony', label: 'Cérémonie' }, { value: 'other', label: 'Autre' }, { value: 'vote', label: 'Scrutin' }];
+  // September: A, B once (an occurrence counts once, on its first day), C on Tuesday 1st (base date) and the 5 Wednesdays.
+  assert.deepEqual(buildStats(events, new Date(2026, 8, 16), categories), {
+    month: 'septembre', total: 8,
+    items: [
+      { category: 'meeting', label: 'Réunions', value: 1 }, { category: 'activity', label: 'Animations', value: 1 },
+      { category: 'ceremony', label: 'Cérémonies', value: 6 }, { category: 'other', label: 'Autres', value: 0 },
+      { category: 'vote', label: 'Scrutin', value: 0 },
+    ],
+  });
+  // F3: moving to October recomputes them.
+  const october = buildStats(events, new Date(2026, 9, 1), categories);
+  assert.equal(october.month, 'octobre');
+  assert.equal(october.items.find((item) => item.category === 'meeting').value, 1);
+  assert.equal(buildStats([], new Date(2026, 8, 16)).total, 0);
+});
 
-  // Mois : A + B sur 2 jours + C le mardi 1er (date de base) et les 5 mercredis.
-  assert.deepEqual(buildStats(events, new Date(2026, 8, 16)), [
-    { label: 'Ce mois', value: '9 événements' },
-    { label: 'Cette semaine', value: '4 événements' },
-    { label: "Aujourd'hui", value: '2 événements' },
-  ]);
-  assert.equal(buildStats([], new Date(2026, 8, 16))[2].value, '0 événement');
+test('MAIR-918: getUpcomingOccurrences lists the next three occurrences from now, recurrences included', () => {
+  const events = [
+    { id: 1, title: 'Fini', date: '2026-11-18', startTime: '08:00', endTime: '09:00' },
+    { id: 2, title: 'En cours', date: '2026-11-18', startTime: '09:30', endTime: '11:00' },
+    { id: 3, title: 'Permanence', date: '2026-11-02', startTime: '14:00', endTime: '16:00', recurrence: { frequency: 'weekly', daysOfWeek: [4] } },
+    { id: 4, title: 'Passé', date: '2026-11-10' },
+  ];
+  const now = new Date(2026, 10, 18, 10, 0), today = new Date(2026, 10, 18);
+  const upcoming = getUpcomingOccurrences(events, now, today);
+  assert.deepEqual(upcoming.map(({ event, date }) => [event.title, date.getDate()]), [['En cours', 18], ['Permanence', 19], ['Permanence', 26]]);
+  assert.deepEqual(getUpcomingOccurrences([], now, today), []);
 });
 
 test('event colours and assignee resolution', () => {
-  assert.equal(getEventColor('ceremony'), 'bg-[#fff5d8] text-[#8a5d00]');
+  // MAIR-905: one tone per category (Figma Calendrier/EventPill), on the mairie-* tokens.
+  // MAIR-1121: no grey nor neutral event: meetings navy, « Autre » (and any unknown category) purple.
+  assert.deepEqual(['meeting', 'activity', 'ceremony', 'other', 'unknown', undefined].map(getEventTone), ['secondary-strong', 'success', 'warning', 'purple', 'purple', 'purple']);
+  assert.equal(getEventColor('meeting'), 'bg-[var(--mairie-secondary)] text-[var(--mairie-on-secondary)]');
+  assert.equal(getEventColor('other'), 'bg-[var(--mairie-purple-surface)] text-[var(--mairie-purple-text)]');
+  for (const category of ['meeting', 'activity', 'ceremony', 'other']) assert.doesNotMatch(getEventColor(category), /neutral|surface-raised|muted/);
+  // MAIR-1122: a meeting follows the current user's answer; other categories never do.
+  assert.equal(getEventColor('meeting', 'accepted'), getEventColor('meeting'));
+  assert.match(getEventColor('meeting', 'pending'), /border-dashed border-\[var\(--mairie-secondary\)\] bg-\[var\(--mairie-surface\)\]/);
+  assert.match(getEventColor('meeting', 'declined'), /^border border-\[var\(--mairie-secondary\)\] bg-\[var\(--mairie-surface\)\]/);
+  assert.doesNotMatch(getEventColor('meeting', 'declined'), /dashed/);
+  for (const state of ['pending', 'declined']) assert.equal(getEventColor('ceremony', state), getEventColor('ceremony'));
+  assert.equal(getEventColor('ceremony'), 'bg-[var(--mairie-warning-surface)] text-[var(--mairie-warning-text)]');
   assert.equal(getEventColor('unknown'), getEventColor('other'));
   assert.equal(getEventColor(), getEventColor('other'));
   const people = [{ id: 7, name: 'Alice' }, { id: 'user-3', name: 'Marie' }];
@@ -115,4 +153,18 @@ test('addMonths anchors navigation on the first day across year and short-month 
   assert.equal(source.getDate(), 31);
   const previous = dates.addMonths('2026-01-31', -13);
   assert.deepEqual([previous.getFullYear(), previous.getMonth(), previous.getDate()], [2024, 11, 1]);
+});
+
+test('MAIR-935: the search matches title and location, ignoring case and accents, and dims the others', () => {
+  const council = { id: 1, title: 'Réunion du Conseil', date: '2026-09-16', location: 'Mairie' };
+  const market = { id: 2, title: 'Marché', date: '2026-09-16', location: 'Place de l’Église' };
+  assert.equal(matchesEventSearch(council, 'REUNION'), true);
+  assert.equal(matchesEventSearch(market, 'eglise'), true);
+  assert.equal(matchesEventSearch(market, 'conseil'), false);
+  assert.equal(matchesEventSearch({ id: 3, title: 'Sans lieu', date: '2026-09-16' }, 'mairie'), false);
+  const events = [council, market];
+  assert.equal(applyEventSearch(events, '  '), events, 'C3: an empty query keeps every event');
+  assert.deepEqual(applyEventSearch(events, 'conseil').map((event) => Boolean(event.searchDimmed)), [false, true]);
+  assert.deepEqual(applyEventSearch(events, 'introuvable').map((event) => event.searchDimmed), [true, true], 'C2: no match dims everything');
+  assert.equal(council.searchDimmed, undefined, 'the source events are not mutated');
 });

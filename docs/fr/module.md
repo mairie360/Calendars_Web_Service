@@ -146,7 +146,7 @@ Le calendrier suit la maquette V2 validée ([Figma, parcours F1–F9](https://ww
 
 - **Socle (MAIR-879).** Lib 2.1.0 : bandeau de navigation vert d'eau repliable, barre du haut et pied de page
   teintés fournis par le cadre de la lib (le calendrier ne le redessine plus), thème toujours clair. Les
-  retours d'action s'affichent dans les toasts de la lib (`ToastProvider`, en haut à droite) : un succès
+  retours d'action s'affichent dans les toasts de la lib (`ToastProvider`, en bas à droite) : un succès
   disparaît après 5 s, une écriture refusée reste jusqu'à sa fermeture.
 - **États chargement et indisponible (MAIR-911).** Le premier chargement et « Réessayer »
   affichent des squelettes dans les trois panneaux (calendrier, À venir, statistiques) ; un changement de
@@ -157,3 +157,60 @@ Le calendrier suit la maquette V2 validée ([Figma, parcours F1–F9](https://ww
 - **En-tête de page (MAIR-884).** Sous-titre « Planifiez et organisez les activités de la mairie » ; actions
   « Actualiser » (relit la période affichée, désactivé tant qu'une lecture court) puis « Créer » (ouvre
   « Nouvel événement », visible dès que les données sont prêtes).
+- **Panneau calendrier (MAIR-893).** Le calendrier est dans un `Panel` de la lib dont le titre est la
+  période affichée (« Novembre 2026 », « 9 – 15 novembre 2026 », « Jeudi 12 novembre 2026 »). Barre
+  d'outils : Précédent / Suivant de la lib (un mois, une semaine ou un jour), « Aujourd’hui » (retour à la
+  période du jour) et le choix de vue en `SegmentedControl` de la lib (Mois / Semaine / Jour, flèches du
+  clavier). L'URL suit toujours `view` et `date`.
+- **Rendez-vous qui se chevauchent (MAIR-1123).** En vue Semaine, chaque groupe de rendez-vous qui se
+  chevauchent n'en montre qu'un, lisible et sur toute la largeur du jour (titre sur deux lignes au plus, heure de
+  début), avec un bouton « +N » (libellé « N autres rendez-vous le …, ouvrir la vue Jour ») qui ouvre la vue Jour
+  à cette date ; un rendez-vous seul garde toute la largeur. La vue Jour place les rendez-vous qui se
+  chevauchent côte à côte.
+- **Grille du mois (MAIR-905).** Un clic sur un jour (ou Entrée / Espace) le garde sélectionné et ouvre
+  « Nouvel événement » à cette date, 09:00 – 10:00 ; un clic sur une pastille ouvre toujours la fiche. Les
+  cellules suivent la maquette : Normal, Sélectionné, Aujourd'hui (bordure accent, numéro sur pastille
+  accent) et Hors mois (jours des mois voisins sur `surface-raised`, non interactifs). Les pastilles prennent
+  le ton de leur catégorie et n'affichent l'heure de début que si le jour n'a qu'un événement.
+- **Couleurs et légende (MAIR-1121).** Aucun événement gris ou neutre : réunion marine (`secondary` /
+  `on-secondary`), animation succès, cérémonie avertissement, autre violet (`purple-surface` / `purple-text`),
+  dans les trois vues et sur les `StatusPill` (tons `secondary-strong` et `purple` de la lib 2.3). Une légende
+  « Légende du calendrier » sous la grille reprend exactement ces couleurs.
+- **Ma participation (MAIR-1122).** Une réunion suit ma réponse à l'invitation, dans les trois vues : je participe
+  = marine plein ; en attente = fond surface et bordure marine en pointillés ; déclinée = fond surface, bordure
+  marine fine et titre barré (l'état est aussi lu par les lecteurs d'écran). La fiche d'une réunion où je suis
+  invité affiche le bloc « Ma participation » (état, « Je décline » / « Je participe ») ; la réponse donne le
+  toast « Réponse envoyée » et la pastille change aussitôt, un refus donne un toast d'erreur et garde l'état
+  précédent. La légende montre les trois aspects.
+- **Colonne de droite (MAIR-918).** « À venir » d'abord : les trois prochaines occurrences à partir de
+  maintenant (récurrences comprises, un événement du jour reste jusqu'à son heure de fin), chaque ligne avec
+  titre, pastille de catégorie, jour (« Aujourd’hui », « Demain », « ven. 20 nov. ») et horaires, et
+  participants ; une ligne ouvre la fiche. Puis « Statistiques » : « N événements en <mois> » pour le mois
+  affiché et une carte par catégorie de l'API (Réunions, Animations, Cérémonies, Autres), recalculées au
+  changement de mois.
+- **Fiche de l'événement (MAIR-929).** La fenêtre a pour titre l'événement ; dessous, la pastille de
+  catégorie (et « En attente » / « Refusé » le cas échéant) et la description ; puis quatre lignes avec
+  icône : Date avec la récurrence (« Jeudi 12 novembre 2026 · chaque mois »), Horaire, Lieu, Participants.
+  Le lien vers la formation et les actions Valider / Refuser des événements en attente suivent. Pied :
+  « Supprimer » à gauche, « Fermer » et « Modifier » à droite, chacun seulement si le droit est accordé.
+  L'enregistrement et les refus ne s'affichent plus dans le titre : la fenêtre est occupée pendant
+  l'enregistrement et le résultat part dans les toasts.
+- **Suppression (MAIR-931).** « Supprimer » ouvre une confirmation danger (« Supprimer cet événement ? »,
+  « « <titre> » sera retiré du calendrier[, avec toutes ses répétitions]. Cette action est définitive. »).
+  « Annuler », ✕ ou Échap ramènent à la fiche, focus sur « Supprimer » ; « Confirmer la suppression » est en
+  chargement pendant l'appel. Le succès ferme toutes les fenêtres avec le toast « Événement supprimé » ; un
+  refus ramène à la fiche avec le toast « Suppression impossible — <raison> ».
+- **Formulaire d'événement (MAIR-926).** « Nouvel événement » et « Modifier l’événement » n'ont plus de
+  sous-titre et s'enregistrent avec « Enregistrer », en chargement pendant l'appel (pas de double envoi). Champs :
+  Titre*, Description, Date de début* + Date de fin, Heure de début + Heure de fin, Catégorie + Récurrence
+  (détails de récurrence en dessous), Lieu, Participants (« Les participants reçoivent l’événement dans leur
+  calendrier. »). Les erreurs s'affichent sous leur champ (« Donnez un titre à l’événement. », « La date de fin
+  doit suivre la date de début. », « L’heure de fin doit suivre l’heure de début. ») et la première prend le
+  focus. Un refus affiche « Impossible d’enregistrer » en haut de la fenêtre, garde la saisie et l'erreur part en
+  toast ; le succès ferme la fenêtre, amène le calendrier à la date de l'événement et affiche « Événement créé » /
+  « Événement modifié ».
+- **Recherche (MAIR-935).** « Rechercher un événement » dans le bandeau haut filtre à chaque frappe, sans tenir
+  compte de la casse ni des accents, sur le titre et le lieu : dans les vues Mois, Semaine et Jour, les
+  événements qui ne correspondent pas passent à 30 % d'opacité et restent cliquables (aucun résultat : tout est
+  estompé, sans message dédié) ; l'effacement (✕ ou Échap) réaffiche tout. La recherche est conservée au
+  changement de période et de vue.

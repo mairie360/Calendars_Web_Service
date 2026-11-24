@@ -14,11 +14,13 @@ import { getActiveFrontHrefs } from '@/app/navigation';
 
 type AppShellProps = {
   activeItem: string;
+  /** MAIR-935: the top-bar « Rechercher un événement », filtered on every keystroke ('' once cleared). */
+  search?: { value: string; onChange: (query: string) => void };
   children: ReactNode | ((session: AuthSession) => ReactNode);
 };
 
 /** Bind the existing BFF session and calendar viewport to the shared frontend shell. */
-export function AppShell({ activeItem, children }: AppShellProps) {
+export function AppShell({ activeItem, search, children }: AppShellProps) {
   const session = useAuthSession();
   const [logoutError, setLogoutError] = useState<string | null>(null);
   async function logout() {
@@ -36,6 +38,7 @@ export function AppShell({ activeItem, children }: AppShellProps) {
       onLogout={() => void logout()}
       hrefs={{ ...frontHrefs, calendar: frontHrefs.calendar ?? "/" }}
       sidebarProps={{ brandLogoSrc: "/mairie360-logo.png" }}
+      headerProps={search ? { searchLabel: "Rechercher un événement", searchValue: search.value, onSearchChange: search.onChange } : undefined}
     >
       {logoutError && <div className="mb-4">
         <ErrorAlert title={logoutError} onDismiss={() => setLogoutError(null)} />

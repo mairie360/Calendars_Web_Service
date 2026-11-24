@@ -148,7 +148,7 @@ The calendar follows the agreed V2 mockup ([Figma, journeys F1–F9](https://www
 
 - **Foundation (MAIR-879).** Lib 2.1.0: collapsible teal navigation band, tinted top bar and full-width
   footer owned by the lib frame (the calendar no longer reshapes it), always-light theme. Action results
-  float in the lib toasts (`ToastProvider`, top right): a success disappears after 5 s, a refused write
+  float in the lib toasts (`ToastProvider`, bottom right): a success disappears after 5 s, a refused write
   stays until dismissed.
 - **Loading and unavailable states (MAIR-911).** The first read and « Réessayer » show
   skeletons in the three panels (calendar, upcoming events, statistics); a period change keeps the grid.
@@ -158,3 +158,54 @@ The calendar follows the agreed V2 mockup ([Figma, journeys F1–F9](https://www
 - **Page header (MAIR-884).** Subtitle « Planifiez et organisez les activités de la mairie »; actions
   « Actualiser » (rereads the displayed period, disabled while a read runs) then « Créer » (opens « Nouvel
   événement », shown once the data is ready).
+- **Calendar panel (MAIR-893).** The calendar sits in a lib `Panel` titled with the displayed period
+  (« Novembre 2026 », « 9 – 15 novembre 2026 », « Jeudi 12 novembre 2026 »). Toolbar: lib Précédent /
+  Suivant (one month, week or day), « Aujourd’hui » (back to the period holding today) and the view choice
+  as a lib `SegmentedControl` (Mois / Semaine / Jour, arrow keys). The URL keeps following `view` and `date`.
+- **Overlapping meetings (MAIR-1123).** In the week view, each group of overlapping meetings shows one of them,
+  readable at the full width of the day (title on two lines at most, start time), with a « +N » button (label « N
+  autres rendez-vous le …, ouvrir la vue Jour ») that opens the Day view on that date; a lone meeting keeps the
+  full width. The Day view lays overlapping meetings side by side.
+- **Month grid (MAIR-905).** Clicking a day (or Enter / Space on it) keeps it selected and opens « Nouvel
+  événement » on that day, 09:00 – 10:00; clicking a pill still opens its details. Cells follow the mockup:
+  Default, Selected, Today (accent border, number on an accent pill) and Outside (days of the adjacent
+  months on `surface-raised`, not interactive). Pills take the tone of their category and show their start
+  time only while their day holds a single event.
+- **Colours and legend (MAIR-1121).** No grey nor neutral event: meeting navy (`secondary` / `on-secondary`),
+  activity success, ceremony warning, other purple (`purple-surface` / `purple-text`), in the three views and
+  on the `StatusPill`s (lib 2.3 tones `secondary-strong` and `purple`). A « Légende du calendrier » under the
+  grid shows exactly these colours.
+- **My participation (MAIR-1122).** A meeting follows my answer to its invitation, in the three views: accepted =
+  solid navy; pending = surface with a dashed navy border; declined = surface, thin navy border and struck-through
+  title (the state is also read by screen readers). The details of a meeting I am invited to show the « Ma
+  participation » block (state, « Je décline » / « Je participe »); an answer gives the « Réponse envoyée » toast
+  and the pill changes at once, a refusal gives an error toast and keeps the previous state. The legend shows the
+  three looks.
+- **Right column (MAIR-918).** « À venir » comes first: the next three occurrences from now (recurrences
+  included, an event of today stays until its end time), each row with its title, category pill, day
+  (« Aujourd’hui », « Demain », « ven. 20 nov. ») and hours, and participants; a row opens the event details.
+  Then « Statistiques »: « N événements en <mois> » for the displayed month and one metric card per API
+  category (Réunions, Animations, Cérémonies, Autres), recomputed when the month changes.
+- **Event details (MAIR-929).** The dialog is titled with the event; under the title the category pill
+  (and « En attente » / « Refusé » when relevant) and the description; then four facts with icons: Date
+  with the recurrence (« Jeudi 12 novembre 2026 · chaque mois »), Horaire, Lieu, Participants. The training
+  link and the approve / reject actions of pending events follow. Footer: « Supprimer » on the left,
+  « Fermer » and « Modifier » on the right, each only when allowed. Saving and refusals no longer show in the
+  title: the dialog is busy while saving and the outcome goes to the toasts.
+- **Deletion (MAIR-931).** « Supprimer » opens a danger confirmation (« Supprimer cet événement ? », « « <titre> »
+  sera retiré du calendrier[, avec toutes ses répétitions]. Cette action est définitive. »). « Annuler », ✕ or
+  Escape return to the details with focus on « Supprimer »; « Confirmer la suppression » loads during the call.
+  Success closes every dialog and toasts « Événement supprimé »; a refusal returns to the details and toasts
+  « Suppression impossible — <raison> ».
+- **Event form (MAIR-926).** « Nouvel événement » and « Modifier l’événement » have no subtitle and save with
+  « Enregistrer », which loads during the call (no double submit). Fields: Titre*, Description, Date de début* +
+  Date de fin, Heure de début + Heure de fin, Catégorie + Récurrence (recurrence details below), Lieu,
+  Participants (« Les participants reçoivent l’événement dans leur calendrier. »). Errors show under their field
+  (« Donnez un titre à l’événement. », « La date de fin doit suivre la date de début. », « L’heure de fin doit
+  suivre l’heure de début. ») and the first one takes the focus. A refusal shows « Impossible d’enregistrer » at
+  the top of the dialog, keeps the entries and toasts the error; success closes the dialog, moves the calendar to
+  the event date and toasts « Événement créé » / « Événement modifié ».
+- **Search (MAIR-935).** The top-bar « Rechercher un événement » filters on every keystroke, ignoring case and
+  accents, on the title and the location: in the month, week and day views the events that do not match fade to
+  30 % and stay clickable (no match fades everything, no dedicated message); clearing it (✕ or Escape) shows
+  every event again. The query survives period and view changes.

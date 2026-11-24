@@ -2,26 +2,6 @@ const assert = require('node:assert/strict');
 const { test } = require('node:test');
 const { calendarDom } = require('./support/calendar-dom.cjs');
 
-function shadow(window, value) {
-  return value.split(/,(?![^()]*\))/).map((part) => {
-    const tokens = part.trim().split(/\s+(?![^()]*\))/);
-    const lengths = tokens.filter((token) => Number.isFinite(Number.parseFloat(token)));
-    const colors = tokens.filter((token) => !Number.isFinite(Number.parseFloat(token)));
-    assert.ok([3, 4].includes(lengths.length));
-    assert.equal(colors.length, 1);
-    const pixels = lengths.map((token) => {
-      const number = Number.parseFloat(token);
-      assert.ok(number === 0 || token.endsWith('px'));
-      return number;
-    });
-    if (pixels.length === 3) pixels.push(0);
-    const color = window.document.createElement('span');
-    color.style.color = colors[0]; window.document.body.append(color);
-    try { return { lengths: pixels, color: window.getComputedStyle(color).color }; }
-    finally { color.remove(); }
-  });
-}
-
 test('MAIR-879: the shared lib-components 2 frame is not reshaped by calendar rules', async (t) => {
   const dom = await calendarDom(t);
   const navigation = dom.document.querySelector('aside.app-desktop-navigation[aria-label="Navigation principale"]');
@@ -43,7 +23,7 @@ test('real calendar drawer opens the shared sidebar and closes through its publi
   assert.equal(dom.document.querySelector('[role="dialog"][aria-label="Navigation mobile"]'), null);
 });
 
-test('real month and week grids retain bounded tracks and consumer event-title clipping', async (t) => {
+test('real month and week grids retain bounded tracks; month titles stay on one line, week titles on two (MAIR-1123)', async (t) => {
   const dom = await calendarDom(t);
   const board = dom.document.querySelector('.calendar-board');
   assert.equal(dom.style(board).gridTemplateColumns.replace(/\s+/g, ''), 'minmax(0,1fr)');
@@ -55,8 +35,14 @@ test('real month and week grids retain bounded tracks and consumer event-title c
     const titles = [...grid.querySelectorAll('[role="button"] > div')];
     assert.ok(titles.length, 'Existing BFF fixture events must reach the actual grid');
     for (const title of titles) {
-      assert.equal(dom.style(title).whiteSpace, 'nowrap'); assert.equal(dom.style(title).textOverflow, 'ellipsis');
+      assert.equal(dom.style(title).overflow, 'hidden');
+      if (view === 'Mois') {
+        assert.equal(dom.style(title).whiteSpace, 'nowrap'); assert.equal(dom.style(title).textOverflow, 'ellipsis');
+      } else if (title.classList.contains('calendar-event-title')) {
+        assert.equal(dom.style(title).whiteSpace, 'normal', 'a week title wraps instead of being cut to one letter');
+      }
     }
+    if (view === 'Semaine') assert.ok(grid.querySelector('[role="button"] > .calendar-event-title'), 'week events use the two-line title');
   }
 });
 
@@ -82,20 +68,12 @@ test('MAIR-879: the lib main area keeps its own scroll, insets and typography', 
   assert.ok(skip);
 });
 
-test('real cards reference the consumer shadow token in the always-light theme', async (t) => {
+test('MAIR-1120: real cards take the lib shadow token, the calendar defines no colour of its own', async (t) => {
   const dom = await calendarDom(t);
   const cards = [...dom.document.querySelectorAll('.calendar-board > section, .calendar-sidebar > section')];
   assert.ok(cards.length >= 3);
-  for (const card of cards) assert.equal(dom.style(card).boxShadow, 'var(--calendar-card-shadow)');
-  const token = () => shadow(dom.window, dom.style(dom.document.documentElement).getPropertyValue('--calendar-card-shadow'));
-  const light = [
-    { lengths: [0, 5, 15, 0], color: 'rgba(23, 32, 51, 0.14)' },
-    { lengths: [0, 1, 3, 0], color: 'rgba(23, 32, 51, 0.12)' },
-  ];
-  assert.deepEqual(token(), light);
-  // MAIR-933 (lib 2): the fronts are always light, a dark attribute no longer swaps the calendar token.
-  dom.document.documentElement.setAttribute('data-theme', 'dark');
-  assert.deepEqual(token(), light);
+  for (const card of cards) assert.equal(dom.style(card).boxShadow, 'var(--mairie-shadow)');
+  assert.equal(dom.style(dom.document.documentElement).getPropertyValue('--calendar-card-shadow'), '');
 });
 
 test('real page marks today after bootstrap, keeps selection independent and reattaches in week view', async (t) => {
@@ -103,12 +81,19 @@ test('real page marks today after bootstrap, keeps selection independent and rea
   const today = () => [...dom.document.querySelectorAll('button[aria-current="date"]')];
   assert.deepEqual(today().map((button) => button.getAttribute('aria-label')), ['Sélectionner le 9 Octobre 2026']);
   assert.equal(dom.style(today()[0]).borderTopWidth, '2px');
-  assert.equal(dom.style(today()[0]).borderTopStyle, 'dashed');
+  assert.equal(dom.style(today()[0]).borderTopStyle, 'solid');
+  // MAIR-905: Today cell — the number sits on an accent pill.
+  assert.match(dom.style(today()[0].querySelector('.calendar-day-number')).backgroundColor, /var\(--mairie-accent\)|rgb\(45, 120, 108\)/);
   assert.equal(dom.style(today()[0]).borderTopColor, 'rgb(45, 120, 108)' /* lib 1.2.0+ accent */);
   assert.equal(dom.style(dom.document.documentElement).getPropertyValue('--mairie-accent').trim(), '#2d786c');
   const other = dom.button('Sélectionner le 8 Octobre 2026');
   const beforeOther = other.className, beforeToday = today()[0].className;
   await dom.click(other);
+  // MAIR-905 C1: a day click keeps the selection and opens « Nouvel événement » on that day, 09:00 – 10:00.
+  const dialog = dom.document.querySelector('[role="dialog"]');
+  assert.match(dialog?.textContent ?? '', /Nouvel événement/);
+  assert.equal(dom.document.getElementById('event-date')?.value ?? dialog.querySelector('input[value="08-10-2026"]')?.value, '08-10-2026');
+  await dom.click(dom.button('Annuler'));
   assert.notEqual(other.className, beforeOther, 'The real selected-day presentation changes');
   assert.notEqual(today()[0].className, beforeToday, 'The previous selection presentation clears');
   assert.equal(today()[0].getAttribute('aria-label'), 'Sélectionner le 9 Octobre 2026');

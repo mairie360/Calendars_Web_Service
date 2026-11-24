@@ -45,12 +45,27 @@ describe('CalendarPage', () => {
     expect(screen.getByText('grille default')).toBeInTheDocument();
   });
 
-  it('MAIR-879: announces a confirmed action in a success toast and acknowledges it', () => {
+  it('MAIR-484: one status region, mounted with the page, whose text alone follows the loading state (RGAA 7.5)', () => {
+    page.state = loaded();
+    const { rerender } = render(<CalendarPage />);
+    const region = screen.getByText((_, element) => element?.tagName === 'P' && element.getAttribute('role') === 'status');
+    expect(region).toHaveTextContent('');
+    page.state = loaded({ panelsLoading: true, loading: true });
+    rerender(<CalendarPage />);
+    expect(region).toBeInTheDocument();
+    expect(region).toHaveTextContent('Chargement des données du calendrier…');
+    page.state = loaded();
+    rerender(<CalendarPage />);
+    expect(region).toBeInTheDocument();
+    expect(region).toHaveTextContent('');
+  });
+
+  it('MAIR-879 / MAIR-1120: announces a confirmed action in a success toast at the bottom right and acknowledges it', () => {
     const dismissFeedback = vi.fn();
     page.state = loaded({ feedback: 'Événement « Conseil » créé.', dismissFeedback });
     render(<CalendarPage />);
     const region = screen.getByRole('region', { name: 'Notifications du calendrier' });
-    expect(region).toHaveAttribute('data-placement', 'top-end');
+    expect(region).toHaveAttribute('data-placement', 'bottom-end');
     expect(within(region).getByText('Événement « Conseil » créé.')).toBeInTheDocument();
     expect(dismissFeedback).toHaveBeenCalledTimes(1);
   });

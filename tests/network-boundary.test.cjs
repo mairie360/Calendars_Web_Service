@@ -59,10 +59,10 @@ test('the calendar client only calls generated operations of the published contr
   const source = fs.readFileSync(path.join(SRC, 'app/calendar/api.ts'), 'utf8');
   assert.doesNotMatch(source, /requestBff|["'`]\/(?:calendar|api|bff)\b/);
   const operations = [...source.matchAll(/bffCalendar\.(\w+)\(/g)].map(([, name]) => name);
-  assert.equal(operations.length, 7);
+  assert.equal(operations.length, 8);
   const generated = fs.readFileSync(path.join(path.dirname(require.resolve('@mairie360/bff-calendar-openapi/package.json')), 'endpoints/bffCalendar.ts'), 'utf8');
   operations.forEach((name) => assert.match(generated, new RegExp(`const ${name} = \\(`), `${name} is not a generated operation`));
-  // Exercise the actual seven client operations through the existing contract-gated HTTP harness.
+  // Exercise the actual eight client operations through the existing contract-gated HTTP harness.
   const api = loadTs('app/calendar/api');
   front.calendarRead({ body: bootstrap() });
   front.calendarBff.on('get', '/calendar/events/{id}', { body: calendarEvent(12) });
@@ -70,6 +70,7 @@ test('the calendar client only calls generated operations of the published contr
   front.calendarBff.on('patch', '/calendar/events/{id}', { body: calendarEvent(12) });
   front.calendarBff.on('delete', '/calendar/events/{id}', { status: 204 });
   front.calendarBff.on('patch', '/calendar/events/{id}/approval', { body: calendarEvent(12, { approvalStatus: 'approved' }) });
+  front.calendarBff.on('put', '/calendar/events/{id}/participation', { body: calendarEvent(12, { category: 'meeting', myParticipation: 'accepted', canRespond: true }) });
   await api.loadCalendarData({ from: '2026-09-01', to: '2026-09-30' });
   await api.loadCalendarPeriodData({ from: '2026-09-01', to: '2026-09-30' }, await api.loadCalendarData({ from: '2026-09-01', to: '2026-09-30' }));
   await api.loadCalendarEvent(12, [admin, alice]);
@@ -77,7 +78,8 @@ test('the calendar client only calls generated operations of the published contr
   await api.updateCalendarEvent(calendarEvent(12), [admin, alice]);
   await api.deleteCalendarEvent(12);
   await api.updateCalendarEventApproval(12, 'approved', [admin, alice]);
-  assert.deepEqual(front.calendarBff.requests.map(call => `${call.method} ${call.template}`), ['GET /calendar/bootstrap', 'GET /calendar/bootstrap', 'GET /calendar/period', 'GET /calendar/events/{id}', 'POST /calendar/events', 'PATCH /calendar/events/{id}', 'DELETE /calendar/events/{id}', 'PATCH /calendar/events/{id}/approval']);
+  await api.updateCalendarEventParticipation(12, 'accepted', [admin, alice]);
+  assert.deepEqual(front.calendarBff.requests.map(call => `${call.method} ${call.template}`), ['GET /calendar/bootstrap', 'GET /calendar/bootstrap', 'GET /calendar/period', 'GET /calendar/events/{id}', 'POST /calendar/events', 'PATCH /calendar/events/{id}', 'DELETE /calendar/events/{id}', 'PATCH /calendar/events/{id}/approval', 'PUT /calendar/events/{id}/participation']);
 });
 
 test('the session hook and logout only call the dedicated /api routes, which exist in src/app/api', () => {
@@ -117,6 +119,7 @@ const OPERATION_FIXTURES = {
   'PATCH /calendar/events/{id}': { path: '/calendar/events/2', body: { title: 'Conseil' }, reply: { body: calendarEvent(2) } },
   'DELETE /calendar/events/{id}': { path: '/calendar/events/2', reply: { status: 204 } },
   'PATCH /calendar/events/{id}/approval': { path: '/calendar/events/2/approval', body: { approvalStatus: 'approved' }, reply: { body: calendarEvent(2, { approvalStatus: 'approved' }) } },
+  'PUT /calendar/events/{id}/participation': { path: '/calendar/events/2/participation', body: { status: 'accepted' }, reply: { body: calendarEvent(2, { category: 'meeting', myParticipation: 'accepted', canRespond: true }) } },
   'GET /calendar/assignees': { path: '/calendar/assignees', reply: { body: [admin, alice] } },
   'GET /calendar/categories': { path: '/calendar/categories', reply: { body: [{ label: 'Réunion', value: 'meeting' }] } },
   'GET /calendar/services': { path: '/calendar/services', reply: { body: [{ label: 'Direction générale', value: 'direction' }] } },

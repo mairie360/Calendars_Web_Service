@@ -11,14 +11,18 @@ const make = (overrides: Record<string, unknown> = {}) => ({ ready: true, readEr
 describe('CalendarViews', () => {
   it('renders the toolbar and the month grid of the current view', () => {
     const { container } = render(<CalendarViews calendar={make()} gridRef={React.createRef()} />);
-    expect(screen.getByText('Octobre 2026')).toBeInTheDocument();
+    // MAIR-893: the period is the title of the surrounding panel, the toolbar group names it.
+    expect(screen.getByRole('group', { name: 'Navigation : Octobre 2026' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Aujourd’hui' })).toBeInTheDocument();
     expect(container.querySelector('.calendar-month-grid')).not.toBeNull();
     expect(screen.getByRole('button', { name: /précédent/i })).toBeInTheDocument();
   });
 
   it('MAIR-911: keeps the toolbar and shows a skeleton while the calendar loads', () => {
     const { container } = render(<CalendarViews calendar={make()} gridRef={React.createRef()} state="loading" />);
-    expect(screen.getByRole('status')).toHaveTextContent('Chargement des données du calendrier…');
+    // MAIR-484: the skeleton is decorative, the page's permanent region announces the load (RGAA 7.5).
+    expect(screen.queryByRole('status')).toBeNull();
+    expect(container.querySelector('[data-calendar-skeleton][aria-busy="true"]')).not.toBeNull();
     expect(screen.getByRole('button', { name: /précédent/i })).toBeInTheDocument();
     expect(container.querySelector('.calendar-month-grid')).toBeNull();
   });
@@ -35,6 +39,6 @@ describe('CalendarViews', () => {
 
   it('does not render a server-dated toolbar before the browser initialisation', () => {
     render(<CalendarViews calendar={make({ ready: false })} gridRef={React.createRef()} state="loading" />);
-    expect(screen.queryByText('Octobre 2026')).toBeNull();
+    expect(screen.queryByRole('group', { name: /Octobre 2026/ })).toBeNull();
   });
 });

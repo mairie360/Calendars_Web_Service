@@ -4,5 +4,5 @@ export function prepareUpcomingScrollRegion(board: HTMLDivElement | null) {
   if (!region) return;
   region.tabIndex = 0;
   region.setAttribute('role', 'region');
-  region.setAttribute('aria-label', 'Événements à venir');
+  region.setAttribute('aria-label', 'À venir');
 }

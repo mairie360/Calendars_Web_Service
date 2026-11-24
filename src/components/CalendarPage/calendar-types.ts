@@ -13,6 +13,7 @@ export type CalendarRecurrenceFrequency = 'none' | 'daily' | 'weekly' | 'monthly
 export type CalendarUserRole = 'user' | 'responsable' | 'mayor';
 
 export type CalendarEventApprovalStatus = 'pending' | 'approved' | 'rejected';
+export type CalendarParticipation = 'accepted' | 'pending' | 'declined';
 
 export interface CalendarRecurrence {
   frequency: CalendarRecurrenceFrequency;
@@ -31,6 +32,8 @@ export interface CalendarAssignee {
 
 export interface CalendarEvent {
   id: string | number;
+  /** MAIR-935: does not match the top-bar search (shown at 30 % opacity, still clickable). */
+  searchDimmed?: boolean;
   title: React.ReactNode;
   date: CalendarDateInput;
   endDate?: CalendarDateInput;
@@ -44,20 +47,20 @@ export interface CalendarEvent {
   assignees?: CalendarAssignee[];
   recurrence?: CalendarRecurrence;
   approvalStatus?: CalendarEventApprovalStatus;
+  /** MAIR-1122: the current user's answer to the invitation, absent when they are not assigned. */
+  myParticipation?: CalendarParticipation;
+  /** MAIR-1122: the current user may answer (an assigned member, BFF decision). */
+  canRespond?: boolean;
   createdById?: CalendarAssigneeId;
   visibleToRoles?: CalendarUserRole[];
   colorClassName?: string;
   className?: string;
 }
 
-export interface CalendarStat {
-  label: React.ReactNode;
-  value: React.ReactNode;
-}
-
+/** A view of the calendar offered by the toolbar SegmentedControl (MAIR-893). */
 export interface ViewSwitcherOption<T extends string = string> {
   value: T;
-  label: React.ReactNode;
+  label: string;
 }
 
 export interface CardProps extends Omit<React.HTMLAttributes<HTMLElement>, 'title'> {
@@ -74,17 +77,11 @@ export interface PageTitleBarProps extends Omit<React.HTMLAttributes<HTMLDivElem
   onAction?: () => void;
 }
 
-export interface ViewSwitcherProps<T extends string = string> {
-  options: ViewSwitcherOption<T>[];
-  value: T;
-  onChange?: (value: T) => void;
-  className?: string;
-  'aria-label'?: string;
-}
-
-export interface CalendarToolbarProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'title'> {
-  title: React.ReactNode;
+export interface CalendarToolbarProps extends React.HTMLAttributes<HTMLDivElement> {
+  /** MAIR-893: the period is the title of the calendar panel; the toolbar only names its controls. */
+  title?: string;
   view: CalendarViewMode;
+  onToday?: () => void;
   viewOptions?: ViewSwitcherOption<CalendarViewMode>[];
   onViewChange?: (view: CalendarViewMode) => void;
   onPrevious?: () => void;
@@ -96,6 +93,10 @@ export interface CalendarToolbarProps extends Omit<React.HTMLAttributes<HTMLDivE
 export interface CalendarCellProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   selected?: boolean;
   muted?: boolean;
+  /** MAIR-905: a day of the previous or next month (not interactive). */
+  outside?: boolean;
+  /** Day number shown in the top-left corner. */
+  day?: number;
   children?: React.ReactNode;
 }
 
@@ -119,6 +120,8 @@ export interface WeekGridProps extends React.HTMLAttributes<HTMLDivElement> {
   onSelectDate?: (date: Date) => void;
   onSelectSlot?: (date: Date, time: string) => void;
   onEventClick?: (event: CalendarEvent) => void;
+  /** MAIR-1123: « +N » of an overlapping group opens the Day view on that date. */
+  onShowDay?: (date: Date) => void;
 }
 
 export interface DayScheduleProps extends React.HTMLAttributes<HTMLDivElement> {
@@ -132,30 +135,46 @@ export interface DayScheduleProps extends React.HTMLAttributes<HTMLDivElement> {
 /** MAIR-911: what a calendar panel shows instead of its data while it loads or after a failed read. */
 export type CalendarPanelState = 'default' | 'loading' | 'unavailable';
 
+/** MAIR-918: one upcoming occurrence (recurrences expanded) and the month statistics. */
+export interface CalendarUpcomingItem {
+  event: CalendarEvent;
+  date: Date;
+}
+
+export interface CalendarMonthStats {
+  month: string;
+  total: number;
+  items: Array<{ category: string; label: string; value: number }>;
+}
+
+export interface CalendarCategoryOption {
+  value: string;
+  label: string;
+}
+
 export interface UpcomingEventsPanelProps extends Omit<React.HTMLAttributes<HTMLElement>, 'title'> {
   state?: CalendarPanelState;
   onRetry?: () => void;
-  events?: CalendarEvent[];
-  title?: React.ReactNode;
+  items?: CalendarUpcomingItem[];
+  categories?: CalendarCategoryOption[];
+  /** Today in the instance time zone, for « Aujourd’hui » / « Demain ». */
+  today?: Date;
   emptyLabel?: React.ReactNode;
-  showEmptyState?: boolean;
   onEventClick?: (event: CalendarEvent) => void;
 }
 
 export interface StatsPanelProps extends Omit<React.HTMLAttributes<HTMLElement>, 'title'> {
   state?: CalendarPanelState;
-  stats: CalendarStat[];
-  title?: React.ReactNode;
+  stats: CalendarMonthStats;
 }
 
 export interface CalendarSidebarProps extends React.HTMLAttributes<HTMLElement> {
   state?: CalendarPanelState;
   onRetry?: () => void;
-  events?: CalendarEvent[];
-  currentDate?: CalendarDateInput;
-  upcomingEvents?: CalendarEvent[];
-  stats?: CalendarStat[];
-  showEmptyState?: boolean;
+  upcoming: CalendarUpcomingItem[];
+  categories?: CalendarCategoryOption[];
+  today?: Date;
+  stats: CalendarMonthStats;
   onEventClick?: (event: CalendarEvent) => void;
 }
 
@@ -205,9 +224,16 @@ export interface CreateEventModalProps {
   initialValues?: Partial<CreateCalendarEventValues>;
   canCreateRecurringEvents?: boolean;
   title?: React.ReactNode;
+  /** MAIR-926: the mockup windows have no subtitle; kept for callers that still pass one. */
   subtitle?: React.ReactNode;
   cancelLabel?: string;
   submitLabel?: string;
+  /** MAIR-926 C4: « Enregistrer » loads while the write runs. */
+  saving?: boolean;
+  /** MAIR-926 C5: the refused write, shown as « Impossible d’enregistrer » at the top of the window. */
+  error?: string | null;
+  /** MAIR-926 C3: validation errors keyed by input id (`event-title`…), shown under their fields. */
+  fieldErrors?: Record<string, string>;
   onCancel: () => void;
   /** Escape, the backdrop and the header close; defaults to `onCancel`. The details editor closes the whole dialog with it. */
   onDismiss?: () => void;
@@ -216,6 +242,8 @@ export interface CreateEventModalProps {
 
 export interface EventDetailsModalProps {
   extraContent?: React.ReactNode;
+  /** MAIR-926: validation errors of the edit form, forwarded to it. */
+  fieldErrors?: Record<string, string>;
   isOpen: boolean;
   event?: CalendarEvent | null;
   people?: CalendarAssignee[];
@@ -234,7 +262,12 @@ export interface EventDetailsModalProps {
   saveLabel?: string;
   onClose: () => void;
   onSave?: (event: CalendarEvent) => void;
-  onDelete?: (event: CalendarEvent) => void;
+  /** MAIR-931: runs after the confirmation; resolves `false` when the deletion was refused (back to the details). */
+  onDelete?: (event: CalendarEvent) => void | boolean | Promise<void | boolean>;
+  /** A write is running: the delete confirmation shows its button loading. */
+  saving?: boolean;
   onApprove?: (event: CalendarEvent) => void;
   onReject?: (event: CalendarEvent) => void;
+  /** MAIR-1122: answers the invitation (« Je participe » / « Je décline »). */
+  onRespond?: (event: CalendarEvent, status: 'accepted' | 'declined') => void;
 }
