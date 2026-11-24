@@ -1,7 +1,5 @@
 import http from 'k6/http';
 import { check, sleep, group } from 'k6';
-import crypto from 'k6/crypto';
-import encoding from 'k6/encoding';
 
 // ---------------------------------------------------------------------------
 // k6 load test of the Calendars front (Calendars_Web_Service).
@@ -16,10 +14,9 @@ import encoding from 'k6/encoding';
 // ---------------------------------------------------------------------------
 
 const BASE_URL = __ENV.BASE_URL || 'http://localhost:5002';
-// Must match the JWT_SECRET of the core-api / bff-user / API services of the test stack.
-const JWT_SECRET = __ENV.JWT_SECRET || 'b"secret"';
-// User inserted by init-test.sql (token `sub`).
-const USER_ID = __ENV.PERF_USER_ID || '2';
+// Session of the user of init-test.sql (sub=2): an EdDSA JWT signed like Core by stack_secrets.sh with
+// the run's key (MAIR-680). k6 cannot sign Ed25519, so the token is passed in.
+const ACCESS_TOKEN = __ENV.ACCESS_TOKEN;
 
 const STAGES = [
   { duration: '30s', target: 20 }, // ramp up
@@ -45,18 +42,9 @@ export const options = {
   },
 };
 
-function b64url(value) {
-  return encoding.b64encode(value, 'rawurl');
-}
-
-// JWT HS256 minimal accepté par Core API / BFF User (claims sub + role + exp).
-function mintJwt() {
-  const header = b64url(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
-  const now = Math.floor(Date.now() / 1000);
-  const payload = b64url(JSON.stringify({ sub: USER_ID, role: 'user', exp: now + 3600 }));
-  const signingInput = `${header}.${payload}`;
-  const signature = crypto.hmac('sha256', JWT_SECRET, signingInput, 'base64rawurl');
-  return `${signingInput}.${signature}`;
+function sessionToken() {
+  if (!ACCESS_TOKEN) throw new Error('ACCESS_TOKEN is not set: run ./performance_test.sh, which signs it.');
+  return ACCESS_TOKEN;
 }
 
 function monthRange() {
@@ -67,7 +55,7 @@ function monthRange() {
 }
 
 export function setup() {
-  return { token: mintJwt() };
+  return { token: sessionToken() };
 }
 
 export function reads(data) {
