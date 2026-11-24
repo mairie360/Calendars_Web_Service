@@ -68,6 +68,16 @@ button {
   white-space: nowrap;
 }
 
+/* MAIR-1123: a week event shows its title on two lines at most, then its start time. */
+.calendar-week-grid [role="button"] > .calendar-event-title {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
 .calendar-sidebar {
   display: grid;
   grid-template-columns: minmax(0, 1fr);

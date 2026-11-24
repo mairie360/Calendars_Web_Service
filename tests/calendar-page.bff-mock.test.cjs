@@ -116,6 +116,20 @@ test('period navigation uses the period contract and a cached return avoids anot
   assert.ok(front.calendarBff.sequence().slice(1).every(call => call.startsWith('GET /calendar/period?')));
 });
 
+test('MAIR-1123: « +N » of the week view opens the Day view on the date of the group, reading only', async () => {
+  await renderLoadedPage();
+  page.result.current.setView('week');
+  await page.waitFor(state => !state.loading && state.view === 'week');
+  const day = new Date(page.result.current.currentDate);
+  day.setDate(day.getDate() + 1);
+  page.result.current.handleShowDay(day);
+  const state = await page.waitFor(state => !state.loading && state.view === 'day');
+  assert.equal(formatDateForQuery(state.currentDate), formatDateForQuery(day));
+  assert.equal(formatDateForQuery(state.selectedDate), formatDateForQuery(day));
+  assert.equal(state.createModalOpen, false, '« +N » never opens the creation form');
+  assert.ok(front.calendarBff.requests.every(request => request.method === 'GET'));
+});
+
 test('MAIR-911: skeletons cover the first read and an explicit refresh, never a period change', async () => {
   front.calendarRead({ body: bootstrap() });
   page = renderHook(useCalendarPage);

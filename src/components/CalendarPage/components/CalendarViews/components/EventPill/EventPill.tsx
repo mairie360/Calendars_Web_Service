@@ -13,10 +13,12 @@ interface EventPillProps {
   showTime?: boolean;
   /** MAIR-905: one line « 09:00 Titre » (month cells) instead of the title above the time range. */
   inline?: boolean;
+  /** MAIR-1123 (week view): the title on two lines at most, then the start time only. */
+  compact?: boolean;
 }
 
-export const EventPill = ({ event, onClick, className, style, showTime = true, inline = false }: EventPillProps) => {
-  const timeLabel = showTime ? getEventTimeLabel(event) : null;
+export const EventPill = ({ event, onClick, className, style, showTime = true, inline = false, compact = false }: EventPillProps) => {
+  const timeLabel = showTime ? (compact ? event.startTime || null : getEventTimeLabel(event)) : null;
   const startLabel = showTime && inline ? event.startTime || null : null;
   const clickableProps = onClick
     ? {
@@ -53,7 +55,7 @@ export const EventPill = ({ event, onClick, className, style, showTime = true, i
       style={style}
       {...clickableProps}
     >
-      <div className="min-w-0 truncate text-left">
+      <div className={joinClasses('min-w-0 text-left', compact ? 'calendar-event-title line-clamp-2 break-words' : 'truncate')}>
         {startLabel && <span className="calendar-event-time mr-1 font-semibold tabular-nums">{startLabel}</span>}
         {startLabel ? <span className="calendar-event-title">{event.title}</span> : event.title}
       </div>

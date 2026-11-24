@@ -116,6 +116,10 @@ and agree the mockup first, then code it: the sync direction is Figma → code.
   `outside` variant for adjacent-month days. Event colours come from `getEventTone` (`app/calendar/constants.ts`:
   info / success / warning / neutral on `mairie-*` tokens, `data-tone` on `EventPill`); month pills are
   `inline` and show the start time only when their day has a single event.
+  **Week overlaps (MAIR-1123):** `WeekGrid` renders `getEventGroupsForDate` (`layout.ts`): one `compact`
+  `EventPill` per group of overlapping events (the earliest, full width, title `line-clamp-2` + start time) and a
+  « +N » button calling `onShowDay` = `handleShowDay` (selects the date, `setView('day')`); `DaySchedule` keeps
+  `getPositionedEventsForDate` lanes, scoped to each overlap group.
   **Right column (MAIR-918):** the hook returns `upcoming` (`getUpcomingOccurrences`: next 3 occurrence starts
   from now over a one-year horizon of the loaded events) and `stats` (`buildStats(events, currentDate,
   categories)` → `{ month, total, items }`, one item per API category with plural labels). `CalendarSidebar`

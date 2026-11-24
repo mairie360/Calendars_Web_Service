@@ -306,6 +306,12 @@ export function useCalendarPage(initial?: InitialCalendarPage) {
     pageUrl.update({ view: next, date: formatDateForQuery(navigationDateRef.current) });
   };
 
+  // MAIR-1123: « +N » of the week view opens the Day view on the day of the group.
+  const handleShowDay = (date: Date) => {
+    handleSelectDate(date);
+    setView("day");
+  };
+
   const openCreateModal = (date?: Date, startTime = "09:00") => {
     if (!link.ready) return;
     setFeedback(null);
@@ -490,6 +496,7 @@ export function useCalendarPage(initial?: InitialCalendarPage) {
     handlePrevious,
     handleSaveEvent,
     handleSelectDate,
+    handleShowDay,
     handleSelectSlot,
     handleToday,
     handleValidateEvent,

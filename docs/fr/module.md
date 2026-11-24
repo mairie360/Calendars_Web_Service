@@ -162,6 +162,11 @@ Le calendrier suit la maquette V2 validée ([Figma, parcours F1–F9](https://ww
   d'outils : Précédent / Suivant de la lib (un mois, une semaine ou un jour), « Aujourd’hui » (retour à la
   période du jour) et le choix de vue en `SegmentedControl` de la lib (Mois / Semaine / Jour, flèches du
   clavier). L'URL suit toujours `view` et `date`.
+- **Rendez-vous qui se chevauchent (MAIR-1123).** En vue Semaine, chaque groupe de rendez-vous qui se
+  chevauchent n'en montre qu'un, lisible et sur toute la largeur du jour (titre sur deux lignes au plus, heure de
+  début), avec un bouton « +N » (libellé « N autres rendez-vous le …, ouvrir la vue Jour ») qui ouvre la vue Jour
+  à cette date ; un rendez-vous seul garde toute la largeur. La vue Jour place les rendez-vous qui se
+  chevauchent côte à côte.
 - **Grille du mois (MAIR-905).** Un clic sur un jour (ou Entrée / Espace) le garde sélectionné et ouvre
   « Nouvel événement » à cette date, 09:00 – 10:00 ; un clic sur une pastille ouvre toujours la fiche. Les
   cellules suivent la maquette : Normal, Sélectionné, Aujourd'hui (bordure accent, numéro sur pastille

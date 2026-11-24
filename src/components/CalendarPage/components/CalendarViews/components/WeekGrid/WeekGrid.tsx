@@ -11,7 +11,7 @@ import {
   timeToMinutes,
 } from '@/components/CalendarPage/calendar-date';
 import { EventPill } from '../EventPill';
-import { calendarHourHeight, getPositionedEventsForDate } from '../../layout';
+import { calendarHourHeight, getEventGroupsForDate } from '../../layout';
 import { joinClasses } from '@/components/CalendarPage/calendar-style';
 import type { WeekGridProps } from '@/components/CalendarPage/calendar-types';
 
@@ -27,6 +27,7 @@ export const WeekGrid = ({
   onSelectDate,
   onSelectSlot,
   onEventClick,
+  onShowDay,
   className = '',
   ...props
 }: WeekGridProps) => {
@@ -69,7 +70,7 @@ export const WeekGrid = ({
         </div>
 
         {weekDates.map((date) => {
-          const positionedEvents = getPositionedEventsForDate(events, date, visibleStartMinutes, visibleEndMinutes);
+          const groups = getEventGroupsForDate(events, date, visibleStartMinutes, visibleEndMinutes);
 
           return (
             <div key={dateKey(date)} className="relative" style={{ height: timelineHeight }}>
@@ -84,28 +85,36 @@ export const WeekGrid = ({
                 />
               ))}
 
-              {positionedEvents.map(({ event, range, lane, laneCount }) => {
-                const width = 100 / laneCount;
+              {/* MAIR-1123: one readable event per overlapping group, at full width; « +N » opens the day. */}
+              {groups.map(({ event, range, hiddenCount, endOffsetMinutes }) => {
                 const top = (range.offsetMinutes / 60) * calendarHourHeight;
-                const height = Math.max(32, (range.durationMinutes / 60) * calendarHourHeight - 4);
+                const height = Math.max(40, ((hiddenCount ? endOffsetMinutes - range.offsetMinutes : range.durationMinutes) / 60) * calendarHourHeight - 4);
 
                 return (
-                  <EventPill
-                    key={`${event.id}-${dateKey(date)}-${range.startMinutes}-${lane}`}
-                    event={event}
-                    onClick={onEventClick}
-                    className={joinClasses(
-                      'absolute z-10 shadow-sm',
-                      !range.isStart && 'rounded-l-sm border-l-4 border-l-[var(--mairie-accent)]',
-                      !range.isEnd && 'rounded-r-sm border-r-4 border-r-[var(--mairie-accent)]'
+                  <React.Fragment key={`${event.id}-${dateKey(date)}-${range.startMinutes}`}>
+                    <EventPill
+                      event={event}
+                      onClick={onEventClick}
+                      compact
+                      className={joinClasses(
+                        'absolute z-10 shadow-sm',
+                        !range.isStart && 'rounded-l-sm border-l-4 border-l-[var(--mairie-accent)]',
+                        !range.isEnd && 'rounded-r-sm border-r-4 border-r-[var(--mairie-accent)]'
+                      )}
+                      style={{ top, height, left: 2, right: 2, paddingRight: hiddenCount ? '2.5rem' : undefined }}
+                    />
+                    {hiddenCount > 0 && (
+                      <button
+                        type="button"
+                        className="calendar-more-events absolute z-20 rounded-full border border-[var(--mairie-border)] bg-[var(--mairie-surface)] px-1.5 text-xs font-semibold leading-5 text-[var(--mairie-text)] hover:bg-[var(--mairie-surface-raised)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mairie-accent)]"
+                        style={{ top: top + 4, right: 6 }}
+                        aria-label={`${hiddenCount} autre${hiddenCount > 1 ? 's' : ''} rendez-vous le ${formatFullDate(date)}, ouvrir la vue Jour`}
+                        onClick={() => onShowDay?.(date)}
+                      >
+                        +{hiddenCount}
+                      </button>
                     )}
-                    style={{
-                      top,
-                      height,
-                      left: `calc(${lane * width}% + 2px)`,
-                      width: `calc(${width}% - 4px)`,
-                    }}
-                  />
+                  </React.Fragment>
                 );
               })}
             </div>

@@ -162,6 +162,10 @@ The calendar follows the agreed V2 mockup ([Figma, journeys F1–F9](https://www
   (« Novembre 2026 », « 9 – 15 novembre 2026 », « Jeudi 12 novembre 2026 »). Toolbar: lib Précédent /
   Suivant (one month, week or day), « Aujourd’hui » (back to the period holding today) and the view choice
   as a lib `SegmentedControl` (Mois / Semaine / Jour, arrow keys). The URL keeps following `view` and `date`.
+- **Overlapping meetings (MAIR-1123).** In the week view, each group of overlapping meetings shows one of them,
+  readable at the full width of the day (title on two lines at most, start time), with a « +N » button (label « N
+  autres rendez-vous le …, ouvrir la vue Jour ») that opens the Day view on that date; a lone meeting keeps the
+  full width. The Day view lays overlapping meetings side by side.
 - **Month grid (MAIR-905).** Clicking a day (or Enter / Space on it) keeps it selected and opens « Nouvel
   événement » on that day, 09:00 – 10:00; clicking a pill still opens its details. Cells follow the mockup:
   Default, Selected, Today (accent border, number on an accent pill) and Outside (days of the adjacent
