@@ -63,7 +63,9 @@ test('server renders on either side of a month boundary expose no server-local c
       };
       // Real SSR has no effects: this is not the effect-running mount harness.
       const html = renderToStaticMarkup(React.createElement(Page));
-      assert.match(html, /role="status"[^>]*>(?:<[^>]*>)*Chargement des données du calendrier…/);
+      // ARIA22: the server sends the status region empty; the browser adds the message after mounting it.
+      assert.match(html, /<p role="status"[^>]*><\/p>/);
+      assert.doesNotMatch(html, /Chargement des données du calendrier…/);
       assert.doesNotMatch(html, /calendar-month-grid|calendar-week-grid|Sélectionner le|>Créer<\/button>/);
       assert.deepEqual(front.calendarBff.sequence(), []);
     }
@@ -78,8 +80,9 @@ test('the first pass renders the loading state, the second the events answered b
 
   assert.equal(view.passes, 1);
   // MAIR-911 / MAIR-484: the three panels start as decorative skeletons, the load is announced once by
-  // the page's permanent status region (RGAA 7.5).
-  assert.match(view.html, /role="status"[^>]*>(?:<[^>]*>)*Chargement des données du calendrier…/);
+  // the page's permanent status region (RGAA 7.5), mounted empty first and filled on the next pass (ARIA22).
+  assert.match(view.html, /<p role="status"[^>]*><\/p>/);
+  assert.doesNotMatch(view.html, /Chargement des données du calendrier…/);
   assert.equal((view.html.match(/data-calendar-skeleton=""/g) ?? []).length, 3);
   assert.doesNotMatch(view.html, /Chargement des statistiques…|Chargement des événements à venir…/);
   assert.doesNotMatch(view.text(), /Événement 5/);
