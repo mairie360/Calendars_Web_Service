@@ -342,8 +342,10 @@ test('MAIR-1180: the type and service filters hide events, combine with the sear
   assert.equal(view.props('CalendarSidebar').upcoming.every(({ event }) => event.id === 6), true, '« À venir » is filtered');
   assert.equal(view.props('StatsPanel').stats.total, 2, 'the statistics are not filtered');
 
-  await view.fire((props, _text, tag) => tag === 'input' && props.type === 'search', 'onChange', { target: { value: 'conseil' } });
+  await view.fire((props, _text, tag) => tag === 'input' && props.type === 'search', 'onChange', { target: { value: 'introuvable' } });
   assert.deepEqual(view.props('MonthGrid').events.map((event) => [event.id, Boolean(event.searchDimmed)]), [[6, true]], 'C2: the search dims inside the filtered events');
+  await view.fire((props, _text, tag) => tag === 'input' && props.type === 'search', 'onChange', { target: { value: 'perma' } });
+  assert.deepEqual(view.props('MonthGrid').events.map((event) => [event.id, Boolean(event.searchDimmed)]), [[6, false]], 'a matching filtered event stays plain');
   await view.fire((props, _text, tag) => tag === 'input' && props.type === 'search', 'onChange', { target: { value: '' } });
 
   await view.act(() => filters().onChange({ service: 'direction' }));
