@@ -326,7 +326,9 @@ test('MAIR-935 F8: typing in « Rechercher un événement » dims the other even
 });
 
 test('MAIR-1180: the type and service filters hide events, combine with the search, empty the grid and clear back', async () => {
-  await renderLoadedPage();
+  const body = bootstrap();
+  delete body.events[1].service; // « Permanence » has no service: it passes only while no service is chosen.
+  await renderLoadedPage(body);
   const monthIds = () => view.props('MonthGrid').events.map((event) => event.id);
   const filters = () => view.props('CalendarFilters');
   assert.deepEqual(filters().filters, { from: '', to: '', categories: [], service: '' });
@@ -349,7 +351,7 @@ test('MAIR-1180: the type and service filters hide events, combine with the sear
   await view.fire((props, _text, tag) => tag === 'input' && props.type === 'search', 'onChange', { target: { value: '' } });
 
   await view.act(() => filters().onChange({ service: 'direction' }));
-  assert.equal(view.find('MonthGrid').length, 0, 'C3: no event left, the grid gives way to the empty state');
+  assert.equal(view.find('MonthGrid').length, 0, 'C3: the event without service is hidden too, the grid gives way to the empty state');
   assert.match(view.text(), /Aucun événement ne correspond aux filtres/);
   assert.match(view.text(), /Aucun événement à venir ne correspond aux filtres\./);
   assert.equal(view.find('CalendarLegend').length, 0);
