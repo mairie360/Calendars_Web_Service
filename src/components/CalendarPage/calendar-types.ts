@@ -55,9 +55,10 @@ export interface CalendarStat {
   value: React.ReactNode;
 }
 
+/** A view of the calendar offered by the toolbar SegmentedControl (MAIR-893). */
 export interface ViewSwitcherOption<T extends string = string> {
   value: T;
-  label: React.ReactNode;
+  label: string;
 }
 
 export interface CardProps extends Omit<React.HTMLAttributes<HTMLElement>, 'title'> {
@@ -74,17 +75,11 @@ export interface PageTitleBarProps extends Omit<React.HTMLAttributes<HTMLDivElem
   onAction?: () => void;
 }
 
-export interface ViewSwitcherProps<T extends string = string> {
-  options: ViewSwitcherOption<T>[];
-  value: T;
-  onChange?: (value: T) => void;
-  className?: string;
-  'aria-label'?: string;
-}
-
-export interface CalendarToolbarProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'title'> {
-  title: React.ReactNode;
+export interface CalendarToolbarProps extends React.HTMLAttributes<HTMLDivElement> {
+  /** MAIR-893: the period is the title of the calendar panel; the toolbar only names its controls. */
+  title?: string;
   view: CalendarViewMode;
+  onToday?: () => void;
   viewOptions?: ViewSwitcherOption<CalendarViewMode>[];
   onViewChange?: (view: CalendarViewMode) => void;
   onPrevious?: () => void;

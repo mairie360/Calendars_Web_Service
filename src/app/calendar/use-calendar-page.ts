@@ -276,6 +276,15 @@ export function useCalendarPage(initial?: InitialCalendarPage) {
     pageUrl.update({ date: formatDateForQuery(date) });
   };
 
+  // MAIR-893: « Aujourd'hui » brings the current view back to the period holding today.
+  const handleToday = () => {
+    const date = calendarToday();
+    selectionFollowsToday.current = true;
+    navigationDateRef.current = date;
+    setCurrentDate(date);
+    pageUrl.update({ date: formatDateForQuery(date) });
+  };
+
   const handleSelectDate = (date: Date) => {
     selectionFollowsToday.current = false;
     navigationDateRef.current = date;
@@ -462,6 +471,7 @@ export function useCalendarPage(initial?: InitialCalendarPage) {
     handleSaveEvent,
     handleSelectDate,
     handleSelectSlot,
+    handleToday,
     handleValidateEvent,
     loading,
     mutationError,
