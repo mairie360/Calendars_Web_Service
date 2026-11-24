@@ -59,7 +59,7 @@ test('loadCalendarData reads GET /calendar/bootstrap once with the declared from
   assert.equal(data.assigneeScope, 'all');
   assert.equal(data.events.length, 2);
   // L'événement du BFF est repris tel quel (droits compris), seule la couleur d'affichage est ajoutée.
-  assert.deepEqual(data.events[0], { ...calendarEvent(5), colorClassName: 'bg-[var(--mairie-info-surface)] text-[var(--mairie-info-text)]' });
+  assert.deepEqual(data.events[0], { ...calendarEvent(5), colorClassName: 'bg-[var(--mairie-secondary)] text-[var(--mairie-on-secondary)]' /* MAIR-1121: meetings navy */ });
   // Sans objets `assignees`, le front les reconstruit depuis l'annuaire du bootstrap.
   assert.deepEqual(data.events[1].assignees, [marie]);
   assert.equal(data.events[1].colorClassName, 'bg-[var(--mairie-surface-raised)] text-[var(--mairie-text)]');
