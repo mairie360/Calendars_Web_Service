@@ -44,7 +44,13 @@ button {
 }
 
 .calendar-grid-viewport button[aria-current="date"][aria-label^="Sélectionner le "] {
-  border: 2px dashed var(--mairie-accent);
+  border: 2px solid var(--mairie-accent);
+}
+
+/* MAIR-905: Today cell — the day number sits on an accent pill. */
+.calendar-grid-viewport button[aria-current="date"] .calendar-day-number {
+  background-color: var(--mairie-accent);
+  color: #fff;
 }
 
 .calendar-grid-viewport button[aria-current="date"]:focus-visible {

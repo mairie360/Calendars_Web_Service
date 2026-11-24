@@ -162,3 +162,9 @@ The calendar follows the agreed V2 mockup ([Figma, journeys F1–F9](https://www
   (« Novembre 2026 », « 9 – 15 novembre 2026 », « Jeudi 12 novembre 2026 »). Toolbar: lib Précédent /
   Suivant (one month, week or day), « Aujourd’hui » (back to the period holding today) and the view choice
   as a lib `SegmentedControl` (Mois / Semaine / Jour, arrow keys). The URL keeps following `view` and `date`.
+- **Month grid (MAIR-905).** Clicking a day (or Enter / Space on it) keeps it selected and opens « Nouvel
+  événement » on that day, 09:00 – 10:00; clicking a pill still opens its details. Cells follow the mockup:
+  Default, Selected, Today (accent border, number on an accent pill) and Outside (days of the adjacent
+  months on `surface-raised`, not interactive). Pills take the tone of their category (meeting info,
+  activity success, ceremony warning, other neutral, on the `mairie-*` tokens) and show their start time
+  only while their day holds a single event.

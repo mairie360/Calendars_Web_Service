@@ -15,6 +15,8 @@ const { renderToStaticMarkup } = require('react-dom/server');
 const Page = loadTs('components/CalendarPage/CalendarPage').default;
 const initialDate = loadTs('app/calendar/date-utils').calendarToday();
 const { getPeriodTitle } = loadTs('app/calendar/date-utils');
+const { formatFullDate } = loadTs('components/CalendarPage/calendar-date');
+const ddmmyyyy = (date) => `${String(date.getDate()).padStart(2, '0')}-${String(date.getMonth() + 1).padStart(2, '0')}-${date.getFullYear()}`;
 
 const front = new FrontHarness();
 let view;
@@ -346,6 +348,25 @@ for (const mode of ['month', 'week', 'day']) {
     assert.ok(front.calendarBff.sequence().every((call) => /^GET \/calendar\/(bootstrap|period)\?/.test(call)));
   });
 }
+
+test('MAIR-905 F4: a month day opens « Nouvel événement » on that day at 09:00 – 10:00, a pill opens its details', async () => {
+  await renderLoadedPage();
+  const day = new Date(initialDate.getFullYear(), initialDate.getMonth(), 12);
+  const label = (props) => props['aria-label'] === `Sélectionner le ${formatFullDate(day)}`;
+  await view.click(label);
+  await view.waitFor(() => view.props('ValidatedCreateEventModal').isOpen === true);
+  const values = view.props('ValidatedCreateEventModal').initialValues;
+  assert.equal(values.date, ddmmyyyy(day));
+  assert.equal(values.startTime, '09:00');
+  assert.equal(values.endTime, '10:00');
+  assert.equal(view.props('MonthGrid').selectedDate.getDate(), 12, 'the clicked day stays selected for navigation');
+  await view.act(() => view.props('ValidatedCreateEventModal').onCancel());
+  await view.waitFor(() => view.props('ValidatedCreateEventModal').isOpen === false);
+  await openEventDetails(view.props('MonthGrid').events[0]);
+  assert.equal(view.props('ValidatedEventDetailsModal').isOpen, true);
+  assert.equal(view.props('ValidatedCreateEventModal').isOpen, false, 'a pill never starts a creation');
+  assert.ok(front.calendarBff.sequence().every((call) => /^GET \/calendar\//.test(call)));
+});
 
 test('calendar layout uses responsive grids and a bounded sidebar with BFF-backed events', async () => {
   const monthHtml = await renderLoadedPage();
