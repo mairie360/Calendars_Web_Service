@@ -29,7 +29,7 @@ test('calendar action feedback waits for its actual write and a new refused acti
   settle(Response.json(event));
   await pending;
   await page.waitFor(state => !state.saving);
-  assert.equal(page.result.current.feedback, 'Événement « Réunion confirmée » créé.');
+  assert.equal(page.result.current.feedback, 'Événement créé');
   assert.equal(page.result.current.events.filter(item => item.id === 42).length, 1);
 
   const refused = page.result.current.handleCreateEvent({ ...event, title: 'Brouillon conservé' });

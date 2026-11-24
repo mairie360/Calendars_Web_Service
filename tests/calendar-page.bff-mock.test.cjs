@@ -368,6 +368,17 @@ test('handleSaveEvent patches the event and merges the saved version', async () 
   assert.equal(saved.events[0].title, 'Conseil renommé');
   assert.equal(saved.events[0].colorClassName, 'bg-[var(--mairie-success-surface)] text-[var(--mairie-success-text)]');
   assert.equal(saved.selectedEvent, null);
+  assert.equal(saved.feedback, 'Événement modifié');
+});
+
+test('MAIR-926 C6: a saved edit that moves the event takes the calendar to its new date', async () => {
+  const state = await renderLoadedPage();
+  front.calendarBff.on('patch', '/calendar/events/{id}', ({ body, pathParams }) => ({ body: calendarEvent(Number(pathParams.id), { ...body, date: '2026-11-05', endDate: '2026-11-05' }) }));
+  state.handleEventClick(state.events[0]);
+  assert.equal(await page.result.current.handleSaveEvent({ ...state.events[0], date: '2026-11-05', endDate: '2026-11-05' }), true);
+  const moved = await page.waitFor((current) => !current.saving && formatDateForQuery(current.currentDate) === '2026-11-05');
+  assert.equal(moved.feedback, 'Événement modifié');
+  assert.equal(moved.selectedEvent, null);
 });
 
 test('handleSaveEvent reports a missing event', async () => {

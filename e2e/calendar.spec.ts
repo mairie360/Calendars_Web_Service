@@ -39,14 +39,16 @@ test('an administrator creates an event and invites an agent', async ({ page, co
   await page.keyboard.press('Escape');
 
   const created = page.waitForResponse((r) => r.request().method() === 'POST' && new URL(r.url()).pathname.endsWith('/calendar/events'));
-  await dialog.getByRole('button', { name: 'Créer' }).click();
+  await dialog.getByRole('button', { name: 'Enregistrer' }).click();
   const response = await created;
   expect(response.status()).toBe(201);
   const body = await response.json();
   eventId = String(body.id);
   expect(body.assigneeIds).toContain(`user-${users.member.id}`);
 
+  // MAIR-926 C6: the dialog closes on the event's date with the « Événement créé » toast.
   await expect(dialog).toBeHidden();
+  await expect(page.getByText('Événement créé', { exact: true })).toBeVisible();
   await expect(page.getByText(title, { exact: true }).first()).toBeVisible();
 });
 

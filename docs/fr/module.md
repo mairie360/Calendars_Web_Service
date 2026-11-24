@@ -186,3 +186,12 @@ Le calendrier suit la maquette V2 validée ([Figma, parcours F1–F9](https://ww
   « Annuler », ✕ ou Échap ramènent à la fiche, focus sur « Supprimer » ; « Confirmer la suppression » est en
   chargement pendant l'appel. Le succès ferme toutes les fenêtres avec le toast « Événement supprimé » ; un
   refus ramène à la fiche avec le toast « Suppression impossible — <raison> ».
+- **Formulaire d'événement (MAIR-926).** « Nouvel événement » et « Modifier l’événement » n'ont plus de
+  sous-titre et s'enregistrent avec « Enregistrer », en chargement pendant l'appel (pas de double envoi). Champs :
+  Titre*, Description, Date de début* + Date de fin, Heure de début + Heure de fin, Catégorie + Récurrence
+  (détails de récurrence en dessous), Lieu, Participants (« Les participants reçoivent l’événement dans leur
+  calendrier. »). Les erreurs s'affichent sous leur champ (« Donnez un titre à l’événement. », « La date de fin
+  doit suivre la date de début. », « L’heure de fin doit suivre l’heure de début. ») et la première prend le
+  focus. Un refus affiche « Impossible d’enregistrer » en haut de la fenêtre, garde la saisie et l'erreur part en
+  toast ; le succès ferme la fenêtre, amène le calendrier à la date de l'événement et affiche « Événement créé » /
+  « Événement modifié ».
