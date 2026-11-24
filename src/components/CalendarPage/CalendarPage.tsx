@@ -18,7 +18,7 @@ import type { InitialCalendarPage } from '../../lib/calendar-bootstrap-receipt';
 /** The calendar page: header, status bar, the grid of the current view, the side panels and the dialogs. */
 export default function CalendarClient({ initial }: { initial?: InitialCalendarPage }) {
   return (
-    <ToastProvider regionLabel="Notifications du calendrier" placement="top-end">
+    <ToastProvider regionLabel="Notifications du calendrier" placement="bottom-end">
       <CalendarScreen initial={initial} />
     </ToastProvider>
   );

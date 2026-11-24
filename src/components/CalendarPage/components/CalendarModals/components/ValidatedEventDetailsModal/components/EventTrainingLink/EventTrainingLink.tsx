@@ -31,5 +31,5 @@ export function EventTrainingLink({ eventId, source, baseUrl = frontUrl('ELEARNI
   const href = trainingDestination(baseUrl, training);
   if (error) return <p role="alert">{error}</p>;
   if (!training) return null;
-  return <section className="rounded border border-[#d8d2ca] bg-[#f8fafc] p-4 [overflow-wrap:anywhere]"><h3 className="font-semibold">Formation associée</h3><p>{training.title}</p>{href ? <a className="mt-2 inline-block underline" href={href}>Ouvrir la formation</a> : <p>Le module Formation est temporairement inaccessible.</p>}</section>;
+  return <section className="rounded border border-[var(--mairie-border)] bg-[var(--mairie-surface-raised)] p-4 [overflow-wrap:anywhere]"><h3 className="font-semibold">Formation associée</h3><p>{training.title}</p>{href ? <a className="mt-2 inline-block underline" href={href}>Ouvrir la formation</a> : <p>Le module Formation est temporairement inaccessible.</p>}</section>;
 }
