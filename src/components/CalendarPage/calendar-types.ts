@@ -13,6 +13,7 @@ export type CalendarRecurrenceFrequency = 'none' | 'daily' | 'weekly' | 'monthly
 export type CalendarUserRole = 'user' | 'responsable' | 'mayor';
 
 export type CalendarEventApprovalStatus = 'pending' | 'approved' | 'rejected';
+export type CalendarParticipation = 'accepted' | 'pending' | 'declined';
 
 export interface CalendarRecurrence {
   frequency: CalendarRecurrenceFrequency;
@@ -46,6 +47,10 @@ export interface CalendarEvent {
   assignees?: CalendarAssignee[];
   recurrence?: CalendarRecurrence;
   approvalStatus?: CalendarEventApprovalStatus;
+  /** MAIR-1122: the current user's answer to the invitation, absent when they are not assigned. */
+  myParticipation?: CalendarParticipation;
+  /** MAIR-1122: the current user may answer (an assigned member, BFF decision). */
+  canRespond?: boolean;
   createdById?: CalendarAssigneeId;
   visibleToRoles?: CalendarUserRole[];
   colorClassName?: string;
@@ -263,4 +268,6 @@ export interface EventDetailsModalProps {
   saving?: boolean;
   onApprove?: (event: CalendarEvent) => void;
   onReject?: (event: CalendarEvent) => void;
+  /** MAIR-1122: answers the invitation (« Je participe » / « Je décline »). */
+  onRespond?: (event: CalendarEvent, status: 'accepted' | 'declined') => void;
 }

@@ -742,3 +742,38 @@ test('MAIR-557: rights an older list still carries are not shown before the deta
   assert.equal(refused.selectedEvent.canDelete, undefined);
   assert.equal(refused.selectedEvent.canValidate, undefined);
 });
+
+test('MAIR-1122: an answer replaces the event at once with its new look and is acknowledged', async () => {
+  const state = await renderLoadedPage();
+  front.calendarBff.on('put', '/calendar/events/{id}/participation', ({ body, pathParams }) => ({
+    body: calendarEvent(Number(pathParams.id), { category: 'meeting', myParticipation: body.status, canRespond: true }),
+  }));
+
+  await page.result.current.handleRespond({ ...state.events[1], canRespond: false }, 'accepted');
+  assert.equal(front.calendarBff.calls('/calendar/events/{id}/participation').length, 0, 'display guard: no answer without canRespond');
+
+  state.handleEventClick(state.events[0]);
+  await page.result.current.handleRespond({ ...state.events[0], canRespond: true }, 'declined');
+  const after = await page.waitFor((current) => !current.saving);
+
+  assert.deepEqual(front.calendarBff.calls('/calendar/events/{id}/participation').map((call) => call.body), [{ status: 'declined' }]);
+  assert.equal(after.events[0].myParticipation, 'declined');
+  assert.match(after.events[0].colorClassName, /bg-\[var\(--mairie-surface\)\]/, 'the pill takes the declined look without a reload');
+  assert.equal(after.selectedEvent.myParticipation, 'declined');
+  assert.equal(after.feedback, 'Réponse envoyée');
+  assert.equal(after.mutationError, null);
+});
+
+test('MAIR-1122: a refused answer is an error and keeps the previous state', async () => {
+  const state = await renderLoadedPage();
+  const before = state.events[0];
+  front.calendarBff.on('put', '/calendar/events/{id}/participation', { status: 403, body: apiError('FORBIDDEN', 'Réponse refusée') });
+
+  await page.result.current.handleRespond({ ...before, canRespond: true }, 'accepted');
+  const after = await page.waitFor((current) => !current.saving);
+
+  assert.equal(after.mutationError, 'Réponse refusée');
+  assert.equal(after.feedback, null);
+  assert.equal(after.events[0].myParticipation, before.myParticipation);
+  assert.equal(after.events[0].colorClassName, before.colorClassName);
+});

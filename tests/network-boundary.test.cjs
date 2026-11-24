@@ -117,6 +117,7 @@ const OPERATION_FIXTURES = {
   'PATCH /calendar/events/{id}': { path: '/calendar/events/2', body: { title: 'Conseil' }, reply: { body: calendarEvent(2) } },
   'DELETE /calendar/events/{id}': { path: '/calendar/events/2', reply: { status: 204 } },
   'PATCH /calendar/events/{id}/approval': { path: '/calendar/events/2/approval', body: { approvalStatus: 'approved' }, reply: { body: calendarEvent(2, { approvalStatus: 'approved' }) } },
+  'PUT /calendar/events/{id}/participation': { path: '/calendar/events/2/participation', body: { status: 'accepted' }, reply: { body: calendarEvent(2, { category: 'meeting', myParticipation: 'accepted', canRespond: true }) } },
   'GET /calendar/assignees': { path: '/calendar/assignees', reply: { body: [admin, alice] } },
   'GET /calendar/categories': { path: '/calendar/categories', reply: { body: [{ label: 'Réunion', value: 'meeting' }] } },
   'GET /calendar/services': { path: '/calendar/services', reply: { body: [{ label: 'Direction générale', value: 'direction' }] } },

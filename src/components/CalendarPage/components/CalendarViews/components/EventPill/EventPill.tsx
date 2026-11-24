@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { getEventTone } from '@/app/calendar/constants';
+import { getEventTone, getShownParticipation, participationLabels } from '@/app/calendar/constants';
 import { getEventTimeLabel } from '@/components/CalendarPage/calendar-date';
 import { joinClasses } from '@/components/CalendarPage/calendar-style';
 import type { CalendarEvent } from '@/components/CalendarPage/calendar-types';
@@ -20,6 +20,10 @@ interface EventPillProps {
 export const EventPill = ({ event, onClick, className, style, showTime = true, inline = false, compact = false }: EventPillProps) => {
   const timeLabel = showTime ? (compact ? event.startTime || null : getEventTimeLabel(event)) : null;
   const startLabel = showTime && inline ? event.startTime || null : null;
+  const participation = getShownParticipation(event.category, event.myParticipation);
+  const declined = participation === 'declined';
+  // MAIR-1122: the state of a meeting is read after its title, it is otherwise only its look.
+  const stateLabel = participation && <span className="sr-only"> ({participationLabels[participation]})</span>;
   const clickableProps = onClick
     ? {
         role: 'button',
@@ -50,6 +54,7 @@ export const EventPill = ({ event, onClick, className, style, showTime = true, i
         event.searchDimmed && 'opacity-30'
       )}
       data-tone={getEventTone(event.category)}
+      data-participation={participation}
       data-dimmed={event.searchDimmed ? 'true' : undefined}
       title={typeof event.title === 'string' ? event.title : undefined}
       style={style}
@@ -57,7 +62,10 @@ export const EventPill = ({ event, onClick, className, style, showTime = true, i
     >
       <div className={joinClasses('min-w-0 text-left', compact ? 'calendar-event-title line-clamp-2 break-words' : 'truncate')}>
         {startLabel && <span className="calendar-event-time mr-1 font-semibold tabular-nums">{startLabel}</span>}
-        {startLabel ? <span className="calendar-event-title">{event.title}</span> : event.title}
+        {startLabel
+          ? <span className={joinClasses('calendar-event-title', declined && 'line-through')}>{event.title}</span>
+          : declined ? <span className="line-through">{event.title}</span> : event.title}
+        {stateLabel}
       </div>
       {timeLabel && !inline && (
         <div className="break-words text-[11px] font-normal opacity-75">{timeLabel}</div>

@@ -7,6 +7,7 @@ import { defaultEventCategories } from '@/components/CalendarPage/calendar-const
 import { normalizeDateForServer } from '@/components/CalendarPage/calendar-date';
 import { EventApprovalActions, EventDetailsActions } from './components/EventDetailsActions';
 import { EventFacts, approvalStatusLabels } from './components/EventFacts';
+import { EventParticipation } from './components/EventParticipation';
 import { defaultEventValues, eventValues, selectedAssignees } from '../CreateEventModal';
 import type { CreateCalendarEventValues, EventDetailsModalProps } from '@/components/CalendarPage/calendar-types';
 
@@ -23,7 +24,7 @@ const approvalTones = { pending: 'warning', approved: 'success', rejected: 'dang
 export const EventDetailsModal = ({
   isOpen, extraContent, event, people = [], categories = defaultEventCategories, canEdit, canDelete = false, canValidate = false, canCreateRecurringEvents = true,
   title, closeLabel = 'Fermer', editLabel = 'Modifier', deleteLabel = 'Supprimer', approveLabel = 'Valider', rejectLabel = 'Refuser',
-  cancelLabel = 'Annuler', saveLabel = 'Enregistrer', onClose, onSave, onDelete, onApprove, onReject, saving = false, fieldErrors,
+  cancelLabel = 'Annuler', saveLabel = 'Enregistrer', onClose, onSave, onDelete, onApprove, onReject, onRespond, saving = false, fieldErrors,
 }: EventDetailsModalProps) => {
   // MAIR-931: « Supprimer » asks first; cancelling (or a refused deletion) comes back to « Supprimer ».
   const [confirmingDelete, setConfirmingDelete] = React.useState(false);
@@ -98,6 +99,7 @@ export const EventDetailsModal = ({
         </div>
         <EventFacts event={event} assignees={selectedAssignees(people, values.assigneeIds)} />
         {extraContent}
+        {onRespond && <EventParticipation event={event} busy={saving} onRespond={onRespond} />}
         <EventApprovalActions event={event} labels={{ close: closeLabel, edit: editLabel, delete: deleteLabel, approve: approveLabel, reject: rejectLabel }}
           showValidation={canValidate && event.approvalStatus === 'pending'} onApprove={onApprove} onReject={onReject} />
       </div>

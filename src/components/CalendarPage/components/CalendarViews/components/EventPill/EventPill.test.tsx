@@ -35,3 +35,18 @@ it('MAIR-935: an event outside the search fades to 30 % and stays clickable', as
   await userEvent.click(pill);
   expect(onClick).toHaveBeenCalledWith(event);
 });
+
+it('MAIR-1122: a meeting shows and announces my answer, struck through once declined; other categories do not', () => {
+  const meeting = { id: 'm', title: 'Conseil', date: '2026-10-15', startTime: '09:00', endTime: '10:00', category: 'meeting' };
+  const { rerender } = render(<EventPill event={{ ...meeting, myParticipation: 'declined' }} onClick={() => undefined} />);
+  const pill = screen.getByRole('button', { name: /Conseil/ });
+  expect(pill).toHaveAttribute('data-participation', 'declined');
+  expect(screen.getByText('Conseil')).toHaveClass('line-through');
+  expect(pill).toHaveAccessibleName(expect.stringContaining('(déclinée)'));
+  rerender(<EventPill event={{ ...meeting, myParticipation: 'pending' }} onClick={() => undefined} />);
+  expect(screen.getByRole('button', { name: /Conseil/ })).toHaveAccessibleName(expect.stringContaining('(en attente de ma réponse)'));
+  expect(screen.getByText('Conseil')).not.toHaveClass('line-through');
+  rerender(<EventPill event={{ ...meeting, category: 'ceremony', myParticipation: 'declined' }} onClick={() => undefined} />);
+  expect(screen.getByRole('button', { name: /Conseil/ })).not.toHaveAttribute('data-participation');
+  expect(screen.queryByText(/déclinée/)).not.toBeInTheDocument();
+});
