@@ -63,7 +63,9 @@ test('server renders on either side of a month boundary expose no server-local c
       };
       // Real SSR has no effects: this is not the effect-running mount harness.
       const html = renderToStaticMarkup(React.createElement(Page));
-      assert.match(html, /role="status"[^>]*>(?:<[^>]*>)*Chargement des données du calendrier…/);
+      // ARIA22: the server sends the status region empty; the browser adds the message after mounting it.
+      assert.match(html, /<p role="status"[^>]*><\/p>/);
+      assert.doesNotMatch(html, /Chargement des données du calendrier…/);
       assert.doesNotMatch(html, /calendar-month-grid|calendar-week-grid|Sélectionner le|>Créer<\/button>/);
       assert.deepEqual(front.calendarBff.sequence(), []);
     }
@@ -77,10 +79,12 @@ test('the first pass renders the loading state, the second the events answered b
   view = mount(React.createElement(Page));
 
   assert.equal(view.passes, 1);
-  // MAIR-911: the three panels start as skeletons (DataState loading, announced as a status).
-  assert.match(view.html, /role="status"[^>]*>(?:<[^>]*>)*Chargement des données du calendrier…/);
-  assert.match(view.html, /role="status"[^>]*>(?:<[^>]*>)*Chargement des statistiques…/);
-  assert.match(view.html, /role="status"[^>]*>(?:<[^>]*>)*Chargement des événements à venir…/);
+  // MAIR-911 / MAIR-484: the three panels start as decorative skeletons, the load is announced once by
+  // the page's permanent status region (RGAA 7.5), mounted empty first and filled on the next pass (ARIA22).
+  assert.match(view.html, /<p role="status"[^>]*><\/p>/);
+  assert.doesNotMatch(view.html, /Chargement des données du calendrier…/);
+  assert.equal((view.html.match(/data-calendar-skeleton=""/g) ?? []).length, 3);
+  assert.doesNotMatch(view.html, /Chargement des statistiques…|Chargement des événements à venir…/);
   assert.doesNotMatch(view.text(), /Événement 5/);
   assert.doesNotMatch(view.html, new RegExp(`<h2[^>]*>${getPeriodTitle('month', initialDate)}</h2>`), 'do not expose server-local date markup before client initialization');
   assert.equal(view.find('MonthGrid').length, 0);
@@ -180,7 +184,8 @@ test('MAIR-884 F9: « Actualiser » rereads the displayed period through skeleto
   await view.waitFor(() => Boolean(reply));
   assert.equal(view.props('RefreshButton').disabled, true, '« Actualiser » cannot be pressed twice');
   assert.equal(view.find('MonthGrid').length, 0, 'the panels show their skeletons');
-  assert.match(view.html, /role="status"[^>]*>(?:<[^>]*>)*Chargement des statistiques…/);
+  assert.equal((view.html.match(/data-calendar-skeleton=""/g) ?? []).length, 3);
+  assert.match(view.html, /role="status"[^>]*>(?:<[^>]*>)*Chargement des données du calendrier…/);
   await view.act(() => reply({ body: bootstrap() }));
   await view.waitFor(() => !isCalendarPending() && view.find('MonthGrid').length === 1);
   assert.equal(front.calendarBff.requests.length, reads + 1);
@@ -603,4 +608,23 @@ test('MAIR-557: the details dialog offers the actions granted by the event detai
   assert.match(dialog, />Valider</);
   assert.match(dialog, /Description 5/);
   assert.deepEqual(front.calendarBff.calls('/calendar/events/{id}', 'GET').map((call) => call.pathParams.id), ['5']);
+});
+
+test('MAIR-484: one main landmark and one status region, mounted before its text, across load and refresh (RGAA 9.2, 12.6, 7.5)', async () => {
+  const statuses = (html) => withoutToastRegions(html).match(/<[a-z]+\b[^>]*role="status"[^>]*>[\s\S]*?<\/[a-z]+>/g) ?? [];
+  const html = await renderLoadedPage();
+  assert.equal((html.match(/<main\b/g) ?? []).length, 1, 'only the AppShell main landmark');
+  // Loaded: the region is already there, empty, so the next load only changes its text.
+  assert.deepEqual(statuses(html).map(tag => tag.replace(/<[^>]*>/g, '')), ['']);
+
+  let reply;
+  front.calendarBff.on('get', '/calendar/bootstrap', () => new Promise(resolve => { reply = resolve; }));
+  await view.click('Actualiser');
+  await view.waitFor(() => Boolean(reply));
+  assert.deepEqual(statuses(view.html).map(tag => tag.replace(/<[^>]*>/g, '')), ['Chargement des données du calendrier…']);
+  assert.equal((view.html.match(/<main\b/g) ?? []).length, 1);
+
+  await view.act(() => reply({ body: bootstrap() }));
+  await view.waitFor(() => !isCalendarPending() && view.find('MonthGrid').length === 1);
+  assert.deepEqual(statuses(view.html).map(tag => tag.replace(/<[^>]*>/g, '')), ['']);
 });

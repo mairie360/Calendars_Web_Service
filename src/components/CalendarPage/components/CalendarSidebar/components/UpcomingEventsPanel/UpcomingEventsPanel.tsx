@@ -5,6 +5,7 @@ import { AvatarStack, Icon, Panel, StatusPill, UnavailableAlert } from '@mairie3
 import { getEventTone } from '@/app/calendar/constants';
 import { addDays, getEventTimeLabel, isSameDay } from '@/components/CalendarPage/calendar-date';
 import { joinClasses } from '@/components/CalendarPage/calendar-style';
+import { CalendarLoadingSkeleton } from '@/components/CalendarPage/components/CalendarLoadingSkeleton';
 import type { UpcomingEventsPanelProps } from '@/components/CalendarPage/calendar-types';
 
 export type { CalendarUpcomingItem, UpcomingEventsPanelProps } from '@/components/CalendarPage/calendar-types';
@@ -33,9 +34,12 @@ export const UpcomingEventsPanel = ({
   ...props
 }: UpcomingEventsPanelProps) => (
   <Panel title="À venir" description="Les 3 prochains événements" className={className}
-    state={state === 'loading' ? 'loading' : 'default'} stateProps={{ title: 'Chargement des événements à venir…' }} {...props}>
+    {...props}>
     <div>
-      {state === 'unavailable' ? (
+      {/* Decorative skeleton, the page's permanent status region announces the load. */}
+      {state === 'loading' ? (
+        <CalendarLoadingSkeleton padding="0" />
+      ) : state === 'unavailable' ? (
         <UnavailableAlert size="s" onAction={onRetry} />
       ) : items.length > 0 ? (
         <ul className="space-y-2">

@@ -2,6 +2,7 @@
 import type { Ref } from "react";
 import { DataState } from "@mairie360/lib-components/primitives";
 
+import { CalendarLoadingSkeleton } from '../CalendarLoadingSkeleton';
 import { CalendarToolbar } from './components/CalendarToolbar';
 import { DaySchedule } from './components/DaySchedule';
 import { MonthGrid } from './components/MonthGrid';
@@ -21,7 +22,8 @@ export const CalendarViews = ({ calendar, gridRef, state = "default" }: Calendar
   <>
     {/* Before the browser initialisation the period would be the server's date: no toolbar yet. */}
     {calendar.ready && <CalendarToolbar title={calendar.periodTitle} view={calendar.view} onPrevious={calendar.handlePrevious} onNext={calendar.handleNext} onToday={calendar.handleToday} onViewChange={calendar.setView} />}
-    {state === "loading" && <DataState className="mt-9" state="loading" title="Chargement des données du calendrier…" />}
+    {/* Decorative skeleton, the load is announced by the page's permanent status region. */}
+    {state === "loading" && <CalendarLoadingSkeleton className="mt-9" padding="var(--mairie-space-l)" />}
     {state === "unavailable" && (
       <DataState className="mt-9" state="unavailable" title="Calendrier indisponible."
         description={<span role="alert">Calendrier : {calendar.readError}</span>} onRetry={() => void calendar.refreshData()} />
