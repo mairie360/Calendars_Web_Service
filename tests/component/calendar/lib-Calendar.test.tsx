@@ -325,61 +325,19 @@ describe('Calendar components', () => {
     expect(onEventClick).toHaveBeenCalledWith(events[2]);
   });
 
-  it('renders sidebar panels', () => {
+  it('MAIR-918: renders « À venir » first, then the statistics of the displayed month', () => {
     const { container } = render(
-      <CalendarSidebar
-        showEmptyState
-        stats={[
-          { label: 'Ce mois', value: '12 événements' },
-          { label: 'Cette semaine', value: '3 événements' },
-        ]}
-      />
+      <CalendarSidebar upcoming={[]} stats={{ month: 'juin', total: 12, items: [{ category: 'meeting', label: 'Réunions', value: 12 }] }} />
     );
 
-    expect(screen.getByRole('heading', { name: 'Événements à venir' })).toBeInTheDocument();
-    expect(screen.getByText('Aucun événement à venir')).toBeInTheDocument();
-    expect(screen.getByText('12 événements')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'À venir' })).toBeInTheDocument();
+    expect(screen.getByText('Aucun événement à venir.')).toBeInTheDocument();
+    expect(screen.getByText('12 événements en juin')).toBeInTheDocument();
 
     const panels = container.querySelectorAll('aside > section');
     expect(panels).toHaveLength(2);
-    expect(panels[0]).toHaveTextContent('Statistiques');
-    expect(panels[1]).toHaveClass('calendar-upcoming-panel');
-    expect(panels[1]).toHaveTextContent('Événements à venir');
-  });
-
-  it('calculates sidebar stats from calendar events', () => {
-    render(
-      <CalendarSidebar
-        currentDate="2026-06-15"
-        events={[
-          {
-            id: 'single',
-            title: 'Conseil municipal',
-            date: '2026-06-15',
-          },
-          {
-            id: 'multi-day',
-            title: 'Festival',
-            date: '2026-06-15',
-            endDate: '2026-06-16',
-          },
-          {
-            id: 'weekly',
-            title: 'Permanence',
-            date: '2026-06-15',
-            recurrence: {
-              frequency: 'weekly',
-              interval: 1,
-              daysOfWeek: [1, 3],
-              endsOn: '2026-06-30',
-            },
-          },
-        ]}
-      />
-    );
-
-    expect(screen.getByText('8 événements')).toBeInTheDocument();
-    expect(screen.getByText('5 événements')).toBeInTheDocument();
-    expect(screen.getByText('3 événements')).toBeInTheDocument();
+    expect(panels[0]).toHaveClass('calendar-upcoming-panel');
+    expect(panels[0]).toHaveTextContent('Les 3 prochains événements');
+    expect(panels[1]).toHaveTextContent('Statistiques');
   });
 });

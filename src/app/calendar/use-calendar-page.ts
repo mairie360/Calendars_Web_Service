@@ -23,7 +23,7 @@ import {
   getPreviousPeriod,
   parseDateInput,
 } from "./date-utils";
-import { buildStats } from "./stats";
+import { buildStats, getUpcomingOccurrences } from "./stats";
 import type { CalendarReferenceOption } from "./api";
 import type {
   CalendarAssignee,
@@ -125,7 +125,12 @@ export function useCalendarPage(initial?: InitialCalendarPage) {
     eventId: initialReceipt?.query.eventId ?? null,
   });
 
-  const stats = useMemo(() => buildStats(events, selectedDate), [events, selectedDate]);
+  // MAIR-918: statistics of the displayed month, the next three occurrences from now.
+  const stats = useMemo(() => buildStats(events, currentDate, categories), [events, currentDate, categories]);
+  const upcoming = useMemo(() => {
+    const now = new Date();
+    return getUpcomingOccurrences(events, now, calendarToday(now));
+  }, [events]);
   const periodTitle = useMemo(() => getPeriodTitle(view, currentDate), [currentDate, view]);
   const periodRange = useMemo(
     () => getCalendarPeriodRange(view, currentDate),
@@ -492,6 +497,7 @@ export function useCalendarPage(initial?: InitialCalendarPage) {
     feedback,
     dismissFeedback,
     stats,
+    upcoming,
     view,
   };
 }

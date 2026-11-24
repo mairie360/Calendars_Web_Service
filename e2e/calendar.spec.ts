@@ -29,7 +29,7 @@ test('an administrator creates an event and invites an agent', async ({ page, co
   const dialog = page.getByRole('dialog', { name: 'Nouvel événement' });
   await dialog.getByRole('textbox', { name: 'Titre' }).fill(title);
   await dialog.getByRole('textbox', { name: 'Description' }).fill('Réunion créée par le parcours de bout en bout.');
-  // Today by default: the event is listed in the current month and in « Événements à venir ».
+  // Today by default: the event is listed in the current month and in « À venir » until 23:00.
   await dialog.getByRole('textbox', { name: 'Date de fin' }).fill(await dialog.getByRole('textbox', { name: 'Date de début' }).inputValue());
   await dialog.getByRole('combobox', { name: 'Heure de début' }).selectOption({ label: '09 h 00' });
   await dialog.getByRole('combobox', { name: 'Heure de fin' }).selectOption({ label: '23 h 00' });
