@@ -25,7 +25,7 @@
     "e2e": "npm --prefix e2e test"
   },
   "dependencies": {
-    "@mairie360/bff-calendar-openapi": "0.0.0-dev.7fe62a6cd59da36d3a473a6c72c46dab8f9d0e8b",
+    "@mairie360/bff-calendar-openapi": "0.0.0-dev.2a245551b0874288589283eca688852da905a47c",
     "@mairie360/lib-components": "2.4.0",
     "axios": "1.20.0",
     "daisyui": "^5.0.0",

@@ -6,7 +6,7 @@ import { CreateEventModal } from '../CreateEventModal';
 import { defaultEventCategories } from '@/components/CalendarPage/calendar-constants';
 import { normalizeDateForServer } from '@/components/CalendarPage/calendar-date';
 import { EventApprovalActions, EventDetailsActions } from './components/EventDetailsActions';
-import { EventFacts, approvalStatusLabels } from './components/EventFacts';
+import { EventFacts, approvalStatusLabels, isPrivateEvent } from './components/EventFacts';
 import { EventParticipation } from './components/EventParticipation';
 import { defaultEventValues, eventValues, selectedAssignees } from '../CreateEventModal';
 import type { CreateCalendarEventValues, EventDetailsModalProps } from '@/components/CalendarPage/calendar-types';
@@ -69,6 +69,9 @@ export const EventDetailsModal = ({
       recurrence: submitted.recurrence.frequency === 'none'
         ? { frequency: 'none', interval: 1, daysOfWeek: [], endsOn: '' }
         : { ...submitted.recurrence, endsOn: normalizeDateForServer(submitted.recurrence.endsOn) },
+      // An event read without its visibility is shown as public: unless « Privé » is picked, send nothing so the
+      // BFF keeps the stored value instead of making a private event public.
+      visibility: event.visibility === undefined && submitted.visibility === 'public' ? undefined : submitted.visibility,
     });
     setEditing(false);
   };
@@ -91,6 +94,7 @@ export const EventDetailsModal = ({
         <div className="space-y-2">
           <div className="flex flex-wrap items-center gap-2">
             {categoryLabel && <StatusPill size="s" dot tone={getEventTone(values.category)} label={String(categoryLabel)} />}
+            {isPrivateEvent(event) && <StatusPill size="s" tone="neutral" label="Privé" />}
             {event.approvalStatus && event.approvalStatus !== 'approved' && (
               <StatusPill size="s" tone={approvalTones[event.approvalStatus]} label={approvalStatusLabels[event.approvalStatus]} />
             )}

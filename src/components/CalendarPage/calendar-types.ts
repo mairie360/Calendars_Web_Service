@@ -15,6 +15,8 @@ export type CalendarUserRole = 'user' | 'responsable' | 'mayor';
 
 export type CalendarEventApprovalStatus = 'pending' | 'approved' | 'rejected';
 export type CalendarParticipation = 'accepted' | 'pending' | 'declined';
+/** Who can read an event: everyone (`public`) or only its creator and its participants (`private`). */
+export type CalendarVisibility = 'public' | 'private';
 
 export interface CalendarRecurrence {
   frequency: CalendarRecurrenceFrequency;
@@ -54,6 +56,8 @@ export interface CalendarEvent {
   myParticipation?: CalendarParticipation;
   /** MAIR-1122: the current user may answer (an assigned member, BFF decision). */
   canRespond?: boolean;
+  /** Absent on an event read before the BFF relayed it: shown as public. */
+  visibility?: CalendarVisibility;
   createdById?: CalendarAssigneeId;
   visibleToRoles?: CalendarUserRole[];
   colorClassName?: string;
@@ -208,6 +212,7 @@ export interface CreateCalendarEventValues {
   location: string;
   assigneeIds: CalendarAssigneeId[];
   recurrence: CalendarRecurrence;
+  visibility: CalendarVisibility;
 }
 
 export interface EditCalendarEventValues extends CreateCalendarEventValues {

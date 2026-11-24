@@ -6,6 +6,7 @@ import { EventRecurrenceFields, RecurrenceFrequencyField } from './components/Ev
 import { EventLocationField } from './components/EventLocationField';
 import { EventTitleFields } from './components/EventTitleFields';
 import { EventTimeRange } from './components/EventTimeRange';
+import { EventVisibilityField } from './components/EventVisibilityField';
 
 type Recurrence = CreateCalendarEventValues['recurrence'];
 export interface EventFormFieldsProps {
@@ -19,7 +20,7 @@ export interface EventFormFieldsProps {
 
 /**
  * MAIR-926 C2: the fields in the mockup order — Titre, Description, dates, hours, Catégorie + Récurrence
- * (with the recurrence details under them), Lieu, Participants.
+ * (with the recurrence details under them), Lieu, Participants, then Visibilité (public by default).
  */
 export const EventFormFields = ({ values, people, categories, canRecur, update, updateRecurrence }: EventFormFieldsProps) => (
   <div className="space-y-3">
@@ -33,5 +34,6 @@ export const EventFormFields = ({ values, people, categories, canRecur, update, 
     {canRecur && <EventRecurrenceFields recurrence={values.recurrence} onChange={updateRecurrence} />}
     <EventLocationField value={values.location} onChange={(value) => update('location', value)} />
     <EventAssigneeSelect people={people} value={values.assigneeIds} onChange={(assigneeIds) => update('assigneeIds', assigneeIds)} />
+    <EventVisibilityField value={values.visibility} onChange={(visibility) => update('visibility', visibility)} />
   </div>
 );

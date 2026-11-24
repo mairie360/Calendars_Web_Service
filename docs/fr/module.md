@@ -189,8 +189,9 @@ Le calendrier suit la maquette V2 validée ([Figma, parcours F1–F9](https://ww
   affiché et une carte par catégorie de l'API (Réunions, Animations, Cérémonies, Autres), recalculées au
   changement de mois.
 - **Fiche de l'événement (MAIR-929).** La fenêtre a pour titre l'événement ; dessous, la pastille de
-  catégorie (et « En attente » / « Refusé » le cas échéant) et la description ; puis quatre lignes avec
-  icône : Date avec la récurrence (« Jeudi 12 novembre 2026 · chaque mois »), Horaire, Lieu, Participants.
+  catégorie (et « En attente » / « Refusé » le cas échéant, « Privé » pour un événement privé) et la
+  description ; puis cinq lignes avec icône : Date avec la récurrence (« Jeudi 12 novembre 2026 · chaque
+  mois »), Horaire, Lieu, Participants, Visibilité.
   Le lien vers la formation et les actions Valider / Refuser des événements en attente suivent. Pied :
   « Supprimer » à gauche, « Fermer » et « Modifier » à droite, chacun seulement si le droit est accordé.
   L'enregistrement et les refus ne s'affichent plus dans le titre : la fenêtre est occupée pendant
@@ -204,11 +205,20 @@ Le calendrier suit la maquette V2 validée ([Figma, parcours F1–F9](https://ww
   sous-titre et s'enregistrent avec « Enregistrer », en chargement pendant l'appel (pas de double envoi). Champs :
   Titre*, Description, Date de début* + Date de fin, Heure de début + Heure de fin, Catégorie + Récurrence
   (détails de récurrence en dessous), Lieu, Participants (« Les participants reçoivent l’événement dans leur
-  calendrier. »). Les erreurs s'affichent sous leur champ (« Donnez un titre à l’événement. », « La date de fin
+  calendrier. »), Visibilité. Les erreurs s'affichent sous leur champ (« Donnez un titre à l’événement. », « La date de fin
   doit suivre la date de début. », « L’heure de fin doit suivre l’heure de début. ») et la première prend le
   focus. Un refus affiche « Impossible d’enregistrer » en haut de la fenêtre, garde la saisie et l'erreur part en
   toast ; le succès ferme la fenêtre, amène le calendrier à la date de l'événement et affiche « Événement créé » /
   « Événement modifié ».
+- **Visibilité.** Le formulaire se termine par « Visibilité », deux cartes radio (`RadioGroup` de la lib, variante
+  `card`) : « Public » (« Visible par tous les agents », valeur par défaut d'un nouvel événement) et « Privé »
+  (« Visible seulement par vous et les invités »). La modification part de la valeur de l'événement et chaque
+  enregistrement envoie `visibility` ; un événement lu sans ce champ s'affiche public et sa mise à jour l'omet,
+  BFF_Calendar garde alors la valeur enregistrée. La fiche affiche « Public · visible par tous les agents » ou
+  « Privé · visible seulement par vous et les invités » (icône globe ou cadenas), et un événement privé porte un
+  petit cadenas devant son titre dans les vues Mois, Semaine et Jour et dans « À venir », lu « (privé) » par les
+  lecteurs d'écran. Qui peut lire un événement privé (son créateur et ses participants) est une décision du BFF :
+  les autres reçoivent un 403.
 - **Recherche (MAIR-935).** « Rechercher un événement » dans le bandeau haut filtre à chaque frappe, sans tenir
   compte de la casse ni des accents, sur le titre et le lieu : dans les vues Mois, Semaine et Jour, les
   événements qui ne correspondent pas passent à 30 % d'opacité et restent cliquables (aucun résultat : tout est

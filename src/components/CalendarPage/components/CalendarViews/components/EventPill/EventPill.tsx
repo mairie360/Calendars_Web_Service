@@ -1,4 +1,6 @@
 import React from 'react';
+import { Lock } from 'lucide-react';
+import { Icon } from '@mairie360/lib-components/primitives';
 
 import { getEventTone, getShownParticipation, participationLabels } from '@/app/calendar/constants';
 import { getEventTimeLabel } from '@/components/CalendarPage/calendar-date';
@@ -24,6 +26,8 @@ export const EventPill = ({ event, onClick, className, style, showTime = true, i
   const declined = participation === 'declined';
   // MAIR-1122: the state of a meeting is read after its title, it is otherwise only its look.
   const stateLabel = participation && <span className="sr-only"> ({participationLabels[participation]})</span>;
+  // A private event shows a lock before its title, read « (privé) » after it.
+  const privateEvent = event.visibility === 'private';
   const clickableProps = onClick
     ? {
         role: 'button',
@@ -55,6 +59,7 @@ export const EventPill = ({ event, onClick, className, style, showTime = true, i
       )}
       data-tone={getEventTone(event.category)}
       data-participation={participation}
+      data-visibility={privateEvent ? 'private' : undefined}
       data-dimmed={event.searchDimmed ? 'true' : undefined}
       title={typeof event.title === 'string' ? event.title : undefined}
       style={style}
@@ -62,9 +67,11 @@ export const EventPill = ({ event, onClick, className, style, showTime = true, i
     >
       <div className={joinClasses('min-w-0 text-left', compact ? 'calendar-event-title line-clamp-2 break-words' : 'truncate')}>
         {startLabel && <span className="calendar-event-time mr-1 font-semibold tabular-nums">{startLabel}</span>}
+        {privateEvent && <Icon icon={Lock} size="xs" className="calendar-event-private mr-1 inline-block align-[-1px]" />}
         {startLabel
           ? <span className={joinClasses('calendar-event-title', declined && 'line-through')}>{event.title}</span>
           : declined ? <span className="line-through">{event.title}</span> : event.title}
+        {privateEvent && <span className="sr-only"> (privé)</span>}
         {stateLabel}
       </div>
       {timeLabel && !inline && (
