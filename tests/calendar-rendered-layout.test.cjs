@@ -2,26 +2,6 @@ const assert = require('node:assert/strict');
 const { test } = require('node:test');
 const { calendarDom } = require('./support/calendar-dom.cjs');
 
-function shadow(window, value) {
-  return value.split(/,(?![^()]*\))/).map((part) => {
-    const tokens = part.trim().split(/\s+(?![^()]*\))/);
-    const lengths = tokens.filter((token) => Number.isFinite(Number.parseFloat(token)));
-    const colors = tokens.filter((token) => !Number.isFinite(Number.parseFloat(token)));
-    assert.ok([3, 4].includes(lengths.length));
-    assert.equal(colors.length, 1);
-    const pixels = lengths.map((token) => {
-      const number = Number.parseFloat(token);
-      assert.ok(number === 0 || token.endsWith('px'));
-      return number;
-    });
-    if (pixels.length === 3) pixels.push(0);
-    const color = window.document.createElement('span');
-    color.style.color = colors[0]; window.document.body.append(color);
-    try { return { lengths: pixels, color: window.getComputedStyle(color).color }; }
-    finally { color.remove(); }
-  });
-}
-
 test('MAIR-879: the shared lib-components 2 frame is not reshaped by calendar rules', async (t) => {
   const dom = await calendarDom(t);
   const navigation = dom.document.querySelector('aside.app-desktop-navigation[aria-label="Navigation principale"]');
@@ -82,20 +62,12 @@ test('MAIR-879: the lib main area keeps its own scroll, insets and typography', 
   assert.ok(skip);
 });
 
-test('real cards reference the consumer shadow token in the always-light theme', async (t) => {
+test('MAIR-1120: real cards take the lib shadow token, the calendar defines no colour of its own', async (t) => {
   const dom = await calendarDom(t);
   const cards = [...dom.document.querySelectorAll('.calendar-board > section, .calendar-sidebar > section')];
   assert.ok(cards.length >= 3);
-  for (const card of cards) assert.equal(dom.style(card).boxShadow, 'var(--calendar-card-shadow)');
-  const token = () => shadow(dom.window, dom.style(dom.document.documentElement).getPropertyValue('--calendar-card-shadow'));
-  const light = [
-    { lengths: [0, 5, 15, 0], color: 'rgba(23, 32, 51, 0.14)' },
-    { lengths: [0, 1, 3, 0], color: 'rgba(23, 32, 51, 0.12)' },
-  ];
-  assert.deepEqual(token(), light);
-  // MAIR-933 (lib 2): the fronts are always light, a dark attribute no longer swaps the calendar token.
-  dom.document.documentElement.setAttribute('data-theme', 'dark');
-  assert.deepEqual(token(), light);
+  for (const card of cards) assert.equal(dom.style(card).boxShadow, 'var(--mairie-shadow)');
+  assert.equal(dom.style(dom.document.documentElement).getPropertyValue('--calendar-card-shadow'), '');
 });
 
 test('real page marks today after bootstrap, keeps selection independent and reattaches in week view', async (t) => {

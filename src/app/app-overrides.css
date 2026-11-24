@@ -1,7 +1,3 @@
-html {
-  --calendar-card-shadow: 0 5px 15px rgb(23 32 51 / 14%), 0 1px 3px rgb(23 32 51 / 12%);
-}
-
 html,
 body {
   min-height: 100%;
@@ -50,7 +46,7 @@ button {
 /* MAIR-905: Today cell — the day number sits on an accent pill. */
 .calendar-grid-viewport button[aria-current="date"] .calendar-day-number {
   background-color: var(--mairie-accent);
-  color: #fff;
+  color: var(--mairie-on-module);
 }
 
 .calendar-grid-viewport button[aria-current="date"]:focus-visible {
@@ -85,7 +81,7 @@ button {
 
 .calendar-board > section,
 .calendar-sidebar > section {
-  box-shadow: var(--calendar-card-shadow);
+  box-shadow: var(--mairie-shadow);
 }
 
 .calendar-sidebar > .calendar-upcoming-panel {

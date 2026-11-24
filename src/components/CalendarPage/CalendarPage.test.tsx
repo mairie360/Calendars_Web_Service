@@ -60,12 +60,12 @@ describe('CalendarPage', () => {
     expect(region).toHaveTextContent('');
   });
 
-  it('MAIR-879: announces a confirmed action in a success toast and acknowledges it', () => {
+  it('MAIR-879 / MAIR-1120: announces a confirmed action in a success toast at the bottom right and acknowledges it', () => {
     const dismissFeedback = vi.fn();
     page.state = loaded({ feedback: 'Événement « Conseil » créé.', dismissFeedback });
     render(<CalendarPage />);
     const region = screen.getByRole('region', { name: 'Notifications du calendrier' });
-    expect(region).toHaveAttribute('data-placement', 'top-end');
+    expect(region).toHaveAttribute('data-placement', 'bottom-end');
     expect(within(region).getByText('Événement « Conseil » créé.')).toBeInTheDocument();
     expect(dismissFeedback).toHaveBeenCalledTimes(1);
   });

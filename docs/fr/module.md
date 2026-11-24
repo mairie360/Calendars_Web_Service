@@ -146,7 +146,7 @@ Le calendrier suit la maquette V2 validée ([Figma, parcours F1–F9](https://ww
 
 - **Socle (MAIR-879).** Lib 2.1.0 : bandeau de navigation vert d'eau repliable, barre du haut et pied de page
   teintés fournis par le cadre de la lib (le calendrier ne le redessine plus), thème toujours clair. Les
-  retours d'action s'affichent dans les toasts de la lib (`ToastProvider`, en haut à droite) : un succès
+  retours d'action s'affichent dans les toasts de la lib (`ToastProvider`, en bas à droite) : un succès
   disparaît après 5 s, une écriture refusée reste jusqu'à sa fermeture.
 - **États chargement et indisponible (MAIR-911).** Le premier chargement et « Réessayer »
   affichent des squelettes dans les trois panneaux (calendrier, À venir, statistiques) ; un changement de

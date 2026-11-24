@@ -86,12 +86,14 @@ and agree the mockup first, then code it: the sync direction is Figma → code.
 - **V2 screen (epic MAIR-820)** — lib pin `2.3.2` (recorded in `tests/fixtures/shared-ui-releases.json`; since lib 2.3 the page base has no footer and the proxy forwards only declared body media types): the
   `AccessibleShell` frame of lib 2 is collapsible and self-sufficient, so `app-overrides.css` holds no shell rule
   any more (only `.calendar-*` board/grid rules) and `layout.tsx` always renders `data-theme="light"` (MAIR-933).
-  `CalendarPage` wraps the screen in the lib `ToastProvider` (`placement="top-end"`, region « Notifications du
+  `CalendarPage` wraps the screen in the lib `ToastProvider` (`placement="bottom-end"` since MAIR-1120, region « Notifications du
   calendrier »); `use-calendar-toasts.ts` turns the hook's `feedback` into `toast.success` and each new
   `mutationError` into a persistent `toast.error`. The provider keeps two hidden live regions (`role="status"` /
   `role="alert"`) mounted: page tests strip them with `withoutToastRegions` / `pageStatusRegions`
   (`tests/support/calendar-fixtures.cjs`). `server-view.cjs` stubs `document.hasFocus`, `visibilityState` and
   `HTMLElement` for it (other fronts need the same lines when they adopt the provider).
+  **Colours (MAIR-1120):** no hard-coded colour in `src/`: cards take `--mairie-shadow`, the today pill
+  `--mairie-on-module`, the training link `--mairie-border` / `--mairie-surface-raised`.
   **States (MAIR-911):** no status bar nor loading card any more. `CalendarPage` derives one panel state —
   `loading` before the browser initialisation and while `panelsLoading` (first read, or an explicit
   `refreshData()` from « Actualiser » / « Réessayer »; a period change keeps the grid), `unavailable` after a
