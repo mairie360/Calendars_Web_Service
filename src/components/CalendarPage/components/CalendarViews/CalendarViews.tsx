@@ -1,22 +1,35 @@
 "use client";
 import type { Ref } from "react";
+import { DataState } from "@mairie360/lib-components/primitives";
 
 import { CalendarToolbar } from './components/CalendarToolbar';
 import { DaySchedule } from './components/DaySchedule';
 import { MonthGrid } from './components/MonthGrid';
 import { WeekGrid } from './components/WeekGrid';
 import type { useCalendarPage } from '@/app/calendar/use-calendar-page';
+import type { CalendarPanelState } from '../../calendar-types';
 
 type Calendar = ReturnType<typeof useCalendarPage>;
 
-/** Toolbar and the month, week or day grid of the current view. */
-export const CalendarViews = ({ calendar, gridRef }: { calendar: Calendar; gridRef: Ref<HTMLDivElement> }) => (
+type CalendarViewsProps = { calendar: Calendar; gridRef: Ref<HTMLDivElement>; state?: CalendarPanelState };
+
+/**
+ * Toolbar and the month, week or day grid of the current view. MAIR-911: the toolbar stays while the
+ * period loads (skeleton) or cannot be read (unavailable state with « Réessayer »).
+ */
+export const CalendarViews = ({ calendar, gridRef, state = "default" }: CalendarViewsProps) => (
   <>
-    <CalendarToolbar title={calendar.periodTitle} view={calendar.view} onPrevious={calendar.handlePrevious} onNext={calendar.handleNext} onViewChange={calendar.setView} />
-    <div className="calendar-grid-viewport mt-9" ref={gridRef}>
+    {/* Before the browser initialisation the period would be the server's date: no toolbar yet. */}
+    {calendar.ready && <CalendarToolbar title={calendar.periodTitle} view={calendar.view} onPrevious={calendar.handlePrevious} onNext={calendar.handleNext} onViewChange={calendar.setView} />}
+    {state === "loading" && <DataState className="mt-9" state="loading" title="Chargement des données du calendrier…" />}
+    {state === "unavailable" && (
+      <DataState className="mt-9" state="unavailable" title="Calendrier indisponible."
+        description={<span role="alert">Calendrier : {calendar.readError}</span>} onRetry={() => void calendar.refreshData()} />
+    )}
+    {state === "default" && <div className="calendar-grid-viewport mt-9" ref={gridRef}>
       {calendar.view === "month" && <MonthGrid className="calendar-month-grid" currentDate={calendar.currentDate} selectedDate={calendar.selectedDate} events={calendar.events} onSelectDate={calendar.handleSelectDate} onEventClick={calendar.handleEventClick} />}
       {calendar.view === "week" && <WeekGrid className="calendar-week-grid" currentDate={calendar.currentDate} selectedDate={calendar.selectedDate} events={calendar.events} onSelectDate={calendar.handleSelectDate} onSelectSlot={calendar.handleSelectSlot} onEventClick={calendar.handleEventClick} />}
       {calendar.view === "day" && <DaySchedule currentDate={calendar.selectedDate} events={calendar.events} onSelectSlot={calendar.handleSelectSlot} onEventClick={calendar.handleEventClick} />}
-    </div>
+    </div>}
   </>
 );

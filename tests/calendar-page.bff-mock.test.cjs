@@ -116,6 +116,34 @@ test('period navigation uses the period contract and a cached return avoids anot
   assert.ok(front.calendarBff.sequence().slice(1).every(call => call.startsWith('GET /calendar/period?')));
 });
 
+test('MAIR-911: skeletons cover the first read and an explicit refresh, never a period change', async () => {
+  front.calendarRead({ body: bootstrap() });
+  page = renderHook(useCalendarPage);
+  await page.waitFor(state => state.loading);
+  assert.equal(page.result.current.panelsLoading, true, 'the first read shows the panel skeletons');
+  await page.waitFor(state => !state.loading);
+  assert.equal(page.result.current.panelsLoading, false);
+
+  let reply;
+  front.calendarBff.on('get', '/calendar/period', () => new Promise(resolve => { reply = resolve; }));
+  page.result.current.handleNext();
+  await page.waitFor(state => state.loading && Boolean(reply));
+  assert.equal(page.result.current.panelsLoading, false, 'navigating keeps the grid in place');
+  reply({ body: bootstrap() });
+  await page.waitFor(state => !state.loading);
+
+  front.calendarBff.on('get', '/calendar/bootstrap', () => new Promise(resolve => { reply = resolve; }));
+  reply = undefined;
+  const refreshed = page.result.current.refreshData();
+  await page.waitFor(state => state.loading && Boolean(reply));
+  assert.equal(page.result.current.panelsLoading, true, '« Actualiser » shows the skeletons');
+  reply({ body: bootstrap() });
+  await refreshed;
+  const state = await page.waitFor(current => !current.loading);
+  assert.equal(state.panelsLoading, false);
+  assert.equal(state.readError, null);
+});
+
 test('refreshData and date selection do not call anything outside the contract', async () => {
   await renderLoadedPage();
 
@@ -418,6 +446,24 @@ test('a bootstrap response started before a confirmed edit cannot restore the ea
   await read;
   const after = await page.waitFor(current => !current.loading && !current.saving);
   assert.equal(after.events[0].title, 'Confirmed after read started');
+});
+
+test('MAIR-911: an earlier refresh that ends first keeps the skeletons of the newer refresh', async () => {
+  const state = await renderLoadedPage();
+  const replies = [];
+  front.calendarRead(() => new Promise(resolve => { replies.push(resolve); }));
+  const first = state.refreshData();
+  await page.waitFor(() => replies.length === 1);
+  const latest = page.result.current.refreshData();
+  await page.waitFor(() => replies.length === 2);
+  replies[0]({ body: bootstrap() });
+  await first;
+  const waiting = await page.waitFor(current => current.loading);
+  assert.equal(waiting.panelsLoading, true, 'the newer refresh still shows the skeletons');
+  replies[1]({ body: bootstrap() });
+  await latest;
+  const after = await page.waitFor(current => !current.loading);
+  assert.equal(after.panelsLoading, false);
 });
 
 test('only the latest retry may update events, errors or the loading state', async () => {

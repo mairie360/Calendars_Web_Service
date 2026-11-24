@@ -61,7 +61,7 @@ test('server renders on either side of a month boundary expose no server-local c
       };
       // Real SSR has no effects: this is not the effect-running mount harness.
       const html = renderToStaticMarkup(React.createElement(Page));
-      assert.match(html, /<span role="status">Chargement des données du calendrier…<\/span>/);
+      assert.match(html, /role="status"[^>]*>(?:<[^>]*>)*Chargement des données du calendrier…/);
       assert.doesNotMatch(html, /calendar-month-grid|calendar-week-grid|Sélectionner le|>Nouvel événement<\/button>/);
       assert.deepEqual(front.calendarBff.sequence(), []);
     }
@@ -75,7 +75,10 @@ test('the first pass renders the loading state, the second the events answered b
   view = mount(React.createElement(Page));
 
   assert.equal(view.passes, 1);
-  assert.match(view.html, /<span role="status">Chargement des données du calendrier…<\/span>/);
+  // MAIR-911: the three panels start as skeletons (DataState loading, announced as a status).
+  assert.match(view.html, /role="status"[^>]*>(?:<[^>]*>)*Chargement des données du calendrier…/);
+  assert.match(view.html, /role="status"[^>]*>(?:<[^>]*>)*Chargement des statistiques…/);
+  assert.match(view.html, /role="status"[^>]*>(?:<[^>]*>)*Chargement des événements à venir…/);
   assert.doesNotMatch(view.text(), /Événement 5/);
   assert.doesNotMatch(view.html, new RegExp(`<h2[^>]*>${getPeriodTitle('month', initialDate)}</h2>`), 'do not expose server-local date markup before client initialization');
   assert.equal(view.find('MonthGrid').length, 0);
@@ -170,6 +173,12 @@ test('a BFF error is rendered as an alert with a retry button that reloads the c
   assert.match(failed, /<span role="alert">Calendrier : Calendar API unavailable<\/span>/);
   assert.match(failed, /<button type="button"[^>]*>[\s\S]*?Réessayer<\/button>/);
   assert.doesNotMatch(view.text(), /Événement 5/);
+  // MAIR-911 « API Calendar en panne »: the toolbar stays, the three panels show their unavailable states.
+  assert.equal(view.find('CalendarToolbar').length, 1);
+  assert.match(view.text(), /Calendrier indisponible\./);
+  assert.match(view.text(), /Statistiques indisponibles\./);
+  assert.equal(view.find('UnavailableAlert').length, 1, 'À venir offers its own retry');
+  assert.equal(view.find('MonthGrid').length, 0);
 
   front.calendarRead({ body: bootstrap() });
   await view.click('Réessayer');

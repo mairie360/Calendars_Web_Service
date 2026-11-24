@@ -74,6 +74,10 @@ export function useCalendarPage(initial?: InitialCalendarPage) {
     setSelectedEventState(event);
   }, []);
   const [loading, setLoading] = useState(!initialReceipt);
+  // MAIR-911: the panels show skeletons until a first read is confirmed and while an explicit
+  // refresh (« Actualiser », « Réessayer ») runs; a period change keeps the grid in place.
+  const [confirmedOnce, setConfirmedOnce] = useState(Boolean(initialReceipt));
+  const [refreshing, setRefreshing] = useState(false);
   const calendarReadRevision = useRef(0);
   const preserveConfirmedMutation = () => {
     // A read started before this confirmation can only describe older data.
@@ -177,6 +181,7 @@ export function useCalendarPage(initial?: InitialCalendarPage) {
         setCategories(calendarData.categories);
         setServices(calendarData.services);
         setReadError(null);
+        setConfirmedOnce(true);
         cancelPrefetch();
         if (dataCache.canPrefetch() && !mutationInFlight.current && typeof window !== 'undefined' && typeof window.requestIdleCallback === 'function') {
           const browser = window;
@@ -243,6 +248,17 @@ export function useCalendarPage(initial?: InitialCalendarPage) {
     if (linkedEvent) openEvent(linkedEvent);
     setLink({ ready: true, eventId: null });
   }, [readError, events, link.eventId, loading, openEvent]);
+
+  // Each refresh takes a token: only the latest one clears `refreshing`, so an earlier refresh that ends while a
+  // newer one still loads cannot hide its skeletons.
+  const refreshRevision = useRef(0);
+  const refreshData = useCallback(async () => {
+    const token = ++refreshRevision.current;
+    setRefreshing(true);
+    try { await loadData(undefined, true); } finally {
+      if (refreshRevision.current === token) setRefreshing(false);
+    }
+  }, [loadData]);
 
   const handlePrevious = () => {
     selectionFollowsToday.current = false;
@@ -452,7 +468,8 @@ export function useCalendarPage(initial?: InitialCalendarPage) {
     openCreateModal,
     people,
     periodTitle,
-    refreshData: () => loadData(undefined, true),
+    refreshData,
+    panelsLoading: loading && (refreshing || !confirmedOnce),
     ready: link.ready,
     readError,
     selectedDate,
