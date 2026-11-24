@@ -1,3 +1,4 @@
+import type React from 'react';
 import { Check, X } from 'lucide-react';
 import { Button, CancelButton, DeleteButton, EditButton } from '@mairie360/lib-components/primitives';
 
@@ -14,6 +15,8 @@ export interface EventDetailsActionsProps {
   onDelete?: (event: CalendarEvent) => void;
   onApprove?: (event: CalendarEvent) => void;
   onReject?: (event: CalendarEvent) => void;
+  /** Focus target when the delete confirmation is cancelled (MAIR-931). */
+  deleteRef?: React.Ref<HTMLButtonElement>;
 }
 
 /**
@@ -21,10 +24,10 @@ export interface EventDetailsActionsProps {
  * action only when allowed. Approve / reject are not in the mockup: they stay in the body
  * (`EventApprovalActions`), between the facts and this footer.
  */
-export const EventDetailsActions = ({ event, labels, canDelete, canEdit, onClose, onEdit, onDelete }: EventDetailsActionsProps) => (
+export const EventDetailsActions = ({ event, labels, canDelete, canEdit, onClose, onEdit, onDelete, deleteRef }: EventDetailsActionsProps) => (
   <div className="flex w-full flex-wrap items-center justify-between gap-2">
     <div className="flex gap-2">
-      {canDelete && onDelete && <DeleteButton label={labels.delete} variant="outline" onClick={() => onDelete(event)} />}
+      {canDelete && onDelete && <DeleteButton ref={deleteRef} label={labels.delete} variant="outline" onClick={() => onDelete(event)} />}
     </div>
     <div className="flex flex-wrap justify-end gap-2">
       <CancelButton label={labels.close} onClick={onClose} />
