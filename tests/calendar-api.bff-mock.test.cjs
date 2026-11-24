@@ -62,7 +62,7 @@ test('loadCalendarData reads GET /calendar/bootstrap once with the declared from
   assert.deepEqual(data.events[0], { ...calendarEvent(5), colorClassName: 'bg-[var(--mairie-secondary)] text-[var(--mairie-on-secondary)]' /* MAIR-1121: meetings navy */ });
   // Sans objets `assignees`, le front les reconstruit depuis l'annuaire du bootstrap.
   assert.deepEqual(data.events[1].assignees, [marie]);
-  assert.equal(data.events[1].colorClassName, 'bg-[var(--mairie-surface-raised)] text-[var(--mairie-text)]');
+  assert.equal(data.events[1].colorClassName, 'bg-[var(--mairie-purple-surface)] text-[var(--mairie-purple-text)]' /* MAIR-1121: « Autre » purple, no grey */);
 });
 
 test('loadCalendarData keeps optional bootstrap data as the BFF returns it', async () => {
