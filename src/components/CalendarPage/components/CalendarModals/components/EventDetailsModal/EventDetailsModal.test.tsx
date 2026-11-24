@@ -172,4 +172,17 @@ describe('EventDetailsModal component', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
     expect(handleSave).toHaveBeenLastCalledWith(expect.objectContaining({ visibility: 'public' }));
   });
+  it('MAIR-1179: editing an event read without its visibility sends none unless « Privé » is picked', () => {
+    const handleSave = vi.fn();
+    render(<EventDetailsModal isOpen event={event} people={people} onClose={vi.fn()} onSave={handleSave} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Modifier' }));
+    fireEvent.change(screen.getByLabelText('Titre'), { target: { value: 'Conseil municipal modifié' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+    expect(handleSave).toHaveBeenLastCalledWith(expect.objectContaining({ title: 'Conseil municipal modifié', visibility: undefined }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Modifier' }));
+    fireEvent.click(screen.getByRole('radio', { name: /Privé/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+    expect(handleSave).toHaveBeenLastCalledWith(expect.objectContaining({ visibility: 'private' }));
+  });
 });

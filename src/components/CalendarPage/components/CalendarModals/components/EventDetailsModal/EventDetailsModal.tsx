@@ -69,7 +69,9 @@ export const EventDetailsModal = ({
       recurrence: submitted.recurrence.frequency === 'none'
         ? { frequency: 'none', interval: 1, daysOfWeek: [], endsOn: '' }
         : { ...submitted.recurrence, endsOn: normalizeDateForServer(submitted.recurrence.endsOn) },
-      visibility: submitted.visibility,
+      // An event read without its visibility is shown as public: unless « Privé » is picked, send nothing so the
+      // BFF keeps the stored value instead of making a private event public.
+      visibility: event.visibility === undefined && submitted.visibility === 'public' ? undefined : submitted.visibility,
     });
     setEditing(false);
   };
