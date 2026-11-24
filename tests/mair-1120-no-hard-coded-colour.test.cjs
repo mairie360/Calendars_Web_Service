@@ -15,10 +15,21 @@ function files(dir) {
   });
 }
 
+function strip(line) {
+  return line.replace(/\/\*.*?\*\/|(^|[^:])\/\/.*$/g, '$1');
+}
+
+test('MAIR-1120: a URL is not taken for a comment, a colour after it is still found', () => {
+  assert.ok(COLOUR.test(strip('<a href="https://example.invalid/" className="bg-[#fff]">')));
+  assert.ok(!COLOUR.test(strip('const a = 1; // was #fff')));
+  assert.ok(!COLOUR.test(strip('/* #fff */ const a = 1;')));
+});
+
 test('MAIR-1120: the calendar sources hold no hard-coded colour, only mairie-* tokens', () => {
   const offenders = files(SRC).flatMap((path) => readFileSync(path, 'utf8').split('\n')
     .map((line, index) => ({ line, index }))
-    .filter(({ line }) => COLOUR.test(line.replace(/\/\/.*$|\/\*.*?\*\//g, '')))
+    // A comment may quote a colour; `//` after a `:` is a URL scheme, not a comment, so the rest of the line stays checked.
+    .filter(({ line }) => COLOUR.test(strip(line)))
     .map(({ index }) => `${relative(SRC, path)}:${index + 1}`));
   assert.deepEqual(offenders, []);
 });
