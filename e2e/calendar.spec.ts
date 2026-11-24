@@ -52,6 +52,21 @@ test('an administrator creates an event and invites an agent', async ({ page, co
   await expect(page.getByText(title, { exact: true }).first()).toBeVisible();
 });
 
+test('MAIR-935: the top-bar search dims the events that do not match and Escape restores them', async ({ page, context, baseURL }) => {
+  await signInAs(context, baseURL!, users.manager);
+  await page.goto('/');
+  const search = page.getByRole('searchbox', { name: 'Rechercher un événement' });
+  const pill = page.locator('[data-tone]', { hasText: title }).first();
+  await expect(pill).toBeVisible();
+  await search.fill(title.toUpperCase());
+  await expect(pill).not.toHaveAttribute('data-dimmed', 'true');
+  await search.fill('aucun-evenement-ne-correspond');
+  await expect(pill).toHaveAttribute('data-dimmed', 'true');
+  await search.press('Escape');
+  await expect(search).toHaveValue('');
+  await expect(pill).not.toHaveAttribute('data-dimmed', 'true');
+});
+
 test('the invited agent sees the event, without the actions to change it', async ({ page, context, baseURL }) => {
   await signInAs(context, baseURL!, users.member);
   const details = await openEvent(page);

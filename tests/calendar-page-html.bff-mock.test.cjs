@@ -232,7 +232,7 @@ test('a successful independent read cannot hide a refused edit or reset its draf
   await view.fire(props => props.id === 'event-title', 'onChange', { target: { value: 'Draft retained' } });
   front.calendarBff.on('patch', '/calendar/events/{id}', { status: 403, body: apiError('FORBIDDEN', 'Edit refused') });
   // Submit the actual shared form so the wrapper owns the refused draft too.
-  const form = view.hostElements((props, _text, tag) => tag === 'form' && props.onSubmit)[0];
+  const form = view.hostElements((props, _text, tag) => tag === 'form' && props.onSubmit && props.role !== 'search')[0];
   await view.act(() => form.props.onSubmit({ preventDefault() {} }));
   await view.waitFor(html => html.includes('Edit refused'));
   front.calendarRead({ status: 502, body: apiError('UNAVAILABLE', 'Read unavailable') });
@@ -260,7 +260,7 @@ test('pending and refused edit keeps its draft through reordered category reads,
   await view.fire(props => props.id === 'event-category', 'onChange', { target: { value: 'other' } });
   let reply;
   front.calendarBff.on('patch', '/calendar/events/{id}', () => new Promise(resolve => { reply = resolve; }));
-  const submitEdit = () => view.hostElements((props, _text, tag) => tag === 'form' && props.onSubmit)[0]
+  const submitEdit = () => view.hostElements((props, _text, tag) => tag === 'form' && props.onSubmit && props.role !== 'search')[0]
     .props.onSubmit({ preventDefault() {} });
   await view.act(submitEdit);
   await view.waitFor(() => Boolean(reply));
@@ -294,6 +294,30 @@ test('pending and refused edit keeps its draft through reordered category reads,
   // MAIR-879: the refused write stays in an error toast until dismissed; the confirmed one is a success toast.
   assert.match(toastTexts(), /Combined edit refused/);
   assert.match(toastTexts(), /Événement modifié/);
+});
+
+test('MAIR-935 F8: typing in « Rechercher un événement » dims the other events in every view, clearing restores them', async () => {
+  await renderLoadedPage();
+  const search = () => view.hostElements((props, _text, tag) => tag === 'input' && props.type === 'search' && props['aria-label'] === 'Rechercher un événement')[0];
+  const dimmed = () => view.hostElements((props) => props['data-dimmed'] === 'true').map(({ text }) => text);
+  assert.ok(search(), 'the top bar offers the calendar search');
+  assert.deepEqual(dimmed(), []);
+
+  await view.fire((props, _text, tag) => tag === 'input' && props.type === 'search', 'onChange', { target: { value: 'perma' } });
+  assert.deepEqual(dimmed().map((text) => /Événement 5/.test(text)), [true], 'C1: only the non-matching event fades');
+  assert.match(view.html, /data-dimmed="true"[^>]*class|class="[^"]*opacity-30/);
+
+  await view.act(() => view.props('CalendarToolbar').onViewChange('day'));
+  await view.waitFor(() => view.find('DaySchedule').length === 1 && !isCalendarPending());
+  assert.equal(view.props('DaySchedule').events.find((event) => event.id === 5).searchDimmed, true, 'still filtered after a view change');
+  assert.equal(view.props('DaySchedule').events.find((event) => event.id === 6).searchDimmed, undefined);
+
+  await view.fire((props, _text, tag) => tag === 'input' && props.type === 'search', 'onChange', { target: { value: 'introuvable' } });
+  assert.equal(view.props('DaySchedule').events.every((event) => event.searchDimmed), true, 'C2: no match dims everything');
+
+  await view.fire((props, _text, tag) => tag === 'input' && props.type === 'search', 'onKeyDown', { key: 'Escape', preventDefault() {} });
+  assert.deepEqual(dimmed(), [], 'C3: Escape clears the search and restores every event');
+  assert.equal(search().props.value, '');
 });
 
 test('changing the view re-renders the week grid with the reloaded events', async () => {

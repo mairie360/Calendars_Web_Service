@@ -192,3 +192,7 @@ The calendar follows the agreed V2 mockup ([Figma, journeys F1–F9](https://www
   suivre l’heure de début. ») and the first one takes the focus. A refusal shows « Impossible d’enregistrer » at
   the top of the dialog, keeps the entries and toasts the error; success closes the dialog, moves the calendar to
   the event date and toasts « Événement créé » / « Événement modifié ».
+- **Search (MAIR-935).** The top-bar « Rechercher un événement » filters on every keystroke, ignoring case and
+  accents, on the title and the location: in the month, week and day views the events that do not match fade to
+  30 % and stay clickable (no match fades everything, no dedicated message); clearing it (✕ or Escape) shows
+  every event again. The query survives period and view changes.

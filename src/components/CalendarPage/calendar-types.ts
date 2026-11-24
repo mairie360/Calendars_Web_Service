@@ -31,6 +31,8 @@ export interface CalendarAssignee {
 
 export interface CalendarEvent {
   id: string | number;
+  /** MAIR-935: does not match the top-bar search (shown at 30 % opacity, still clickable). */
+  searchDimmed?: boolean;
   title: React.ReactNode;
   date: CalendarDateInput;
   endDate?: CalendarDateInput;

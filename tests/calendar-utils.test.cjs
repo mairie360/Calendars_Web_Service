@@ -7,6 +7,7 @@ const { loadTs } = require('./support/load-ts.cjs');
 const dates = loadTs('app/calendar/date-utils');
 const { buildStats, eventOccursOnDate, getUpcomingOccurrences } = loadTs('app/calendar/stats');
 const { getEventColor, getEventTone, resolveAssignees } = loadTs('app/calendar/constants');
+const { applyEventSearch, matchesEventSearch } = loadTs('app/calendar/search');
 
 const ymd = (date) => dates.formatDateForQuery(date);
 
@@ -142,4 +143,18 @@ test('addMonths anchors navigation on the first day across year and short-month 
   assert.equal(source.getDate(), 31);
   const previous = dates.addMonths('2026-01-31', -13);
   assert.deepEqual([previous.getFullYear(), previous.getMonth(), previous.getDate()], [2024, 11, 1]);
+});
+
+test('MAIR-935: the search matches title and location, ignoring case and accents, and dims the others', () => {
+  const council = { id: 1, title: 'Réunion du Conseil', date: '2026-09-16', location: 'Mairie' };
+  const market = { id: 2, title: 'Marché', date: '2026-09-16', location: 'Place de l’Église' };
+  assert.equal(matchesEventSearch(council, 'REUNION'), true);
+  assert.equal(matchesEventSearch(market, 'eglise'), true);
+  assert.equal(matchesEventSearch(market, 'conseil'), false);
+  assert.equal(matchesEventSearch({ id: 3, title: 'Sans lieu', date: '2026-09-16' }, 'mairie'), false);
+  const events = [council, market];
+  assert.equal(applyEventSearch(events, '  '), events, 'C3: an empty query keeps every event');
+  assert.deepEqual(applyEventSearch(events, 'conseil').map((event) => Boolean(event.searchDimmed)), [false, true]);
+  assert.deepEqual(applyEventSearch(events, 'introuvable').map((event) => event.searchDimmed), [true, true], 'C2: no match dims everything');
+  assert.equal(council.searchDimmed, undefined, 'the source events are not mutated');
 });
