@@ -155,3 +155,6 @@ The calendar follows the agreed V2 mockup ([Figma, journeys F1–F9](https://www
   When the calendar cannot be read, the toolbar stays and the panels show « Calendrier indisponible. »
   (with the error and « Réessayer »), an unavailable alert with « Réessayer » and « Statistiques
   indisponibles. ». The former status bar is gone: write errors stay in the dialogs and the toasts.
+- **Page header (MAIR-884).** Subtitle « Planifiez et organisez les activités de la mairie »; actions
+  « Actualiser » (rereads the displayed period, disabled while a read runs) then « Créer » (opens « Nouvel
+  événement », shown once the data is ready).

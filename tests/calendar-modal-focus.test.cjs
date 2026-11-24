@@ -50,7 +50,7 @@ test('replacing event details with the actual editor re-evaluates the focus scop
 });
 
 test('opening and cancelling creation preserves its real command as the keyboard return target', async t => {
-  const dom = await calendarDom(t), opener = dom.button('Nouvel événement');
+  const dom = await calendarDom(t), opener = dom.button('Créer');
   opener.focus(); await dom.click(opener);
   const modal = dialog(dom); assert.ok(modal.contains(dom.document.activeElement));
   const cancel = [...modal.querySelectorAll('button')].find(node => node.textContent.trim() === 'Annuler');
@@ -80,7 +80,7 @@ for (const status of [200, 503]) test(`a pending edit preserves busy dismissal r
   assert.equal(dom.document.activeElement, dom.document.body);
   assert.equal(press(dom, dom.document.body, 'Tab').defaultPrevented, true);
   assert.ok(pending.contains(dom.document.activeElement));
-  const elsewhere = dom.button('Nouvel événement'); elsewhere.focus();
+  const elsewhere = dom.button('Créer'); elsewhere.focus();
   await React.act(async () => finish());
   await dom.waitFor(() => status === 200 ? dialog(dom) === null : dialog(dom)?.textContent.includes('Save refused'));
   assert.equal(dom.document.activeElement, elsewhere, 'A settled asynchronous response must preserve the user’s newer focus');
@@ -104,7 +104,7 @@ test('a nested dialog uses its own Tab scope and restores the control inside its
 });
 
 test('a dialog with its own focus and Tab handler remains authoritative and can restore a newer target', async t => {
-  const dom = await calendarDom(t), opener = dom.button('Nouvel événement'); opener.focus();
+  const dom = await calendarDom(t), opener = dom.button('Créer'); opener.focus();
   const modern = dom.document.createElement('div');
   modern.setAttribute('role', 'dialog'); modern.setAttribute('aria-modal', 'true');
   const first = dom.document.createElement('button'), preferred = dom.document.createElement('button');
@@ -141,14 +141,14 @@ function appendDialog(dom, content) {
 }
 
 test('focus stops skip controls inside a CSS-hidden ancestor', async t => {
-  const dom = await calendarDom(t), opener = dom.button('Nouvel événement'); opener.focus();
+  const dom = await calendarDom(t), opener = dom.button('Créer'); opener.focus();
   const scope = appendDialog(dom, '<div style="display:none"><button>Hidden</button></div><button id="visible-focus-stop">Visible</button>');
   await settleMutation(() => dom.document.querySelector('.app-shell-frame').append(scope));
   assert.equal(dom.document.activeElement, scope.querySelector('#visible-focus-stop'));
 });
 
 test('a CSS-hidden dialog ancestor leaves navigation and background focus available', async t => {
-  const dom = await calendarDom(t), opener = dom.button('Nouvel événement'); opener.focus();
+  const dom = await calendarDom(t), opener = dom.button('Créer'); opener.focus();
   const hidden = dom.document.createElement('div'); hidden.style.display = 'none';
   hidden.append(appendDialog(dom, '<button>Hidden dialog action</button>'));
   await settleMutation(() => dom.document.querySelector('.app-shell-frame').append(hidden));
@@ -157,7 +157,7 @@ test('a CSS-hidden dialog ancestor leaves navigation and background focus availa
 });
 
 test('frame-local eligibility attributes are observed without requiring a child-list mutation', async t => {
-  const dom = await calendarDom(t), opener = dom.button('Nouvel événement'); opener.focus();
+  const dom = await calendarDom(t), opener = dom.button('Créer'); opener.focus();
   const ancestor = dom.document.createElement('div'), scope = appendDialog(dom, '<button>Action</button>'); ancestor.append(scope);
   const style = dom.document.createElement('style'); style.textContent = '.focus-scope-hidden { display:none; }'; dom.document.head.append(style);
   await settleMutation(() => dom.document.querySelector('.app-shell-frame').append(ancestor));
