@@ -176,6 +176,12 @@ Le calendrier suit la maquette V2 validée ([Figma, parcours F1–F9](https://ww
   `on-secondary`), animation succès, cérémonie avertissement, autre violet (`purple-surface` / `purple-text`),
   dans les trois vues et sur les `StatusPill` (tons `secondary-strong` et `purple` de la lib 2.3). Une légende
   « Légende du calendrier » sous la grille reprend exactement ces couleurs.
+- **Ma participation (MAIR-1122).** Une réunion suit ma réponse à l'invitation, dans les trois vues : je participe
+  = marine plein ; en attente = fond surface et bordure marine en pointillés ; déclinée = fond surface, bordure
+  marine fine et titre barré (l'état est aussi lu par les lecteurs d'écran). La fiche d'une réunion où je suis
+  invité affiche le bloc « Ma participation » (état, « Je décline » / « Je participe ») ; la réponse donne le
+  toast « Réponse envoyée » et la pastille change aussitôt, un refus donne un toast d'erreur et garde l'état
+  précédent. La légende montre les trois aspects.
 - **Colonne de droite (MAIR-918).** « À venir » d'abord : les trois prochaines occurrences à partir de
   maintenant (récurrences comprises, un événement du jour reste jusqu'à son heure de fin), chaque ligne avec
   titre, pastille de catégorie, jour (« Aujourd’hui », « Demain », « ven. 20 nov. ») et horaires, et

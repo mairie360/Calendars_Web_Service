@@ -125,6 +125,12 @@ test('event colours and assignee resolution', () => {
   assert.equal(getEventColor('meeting'), 'bg-[var(--mairie-secondary)] text-[var(--mairie-on-secondary)]');
   assert.equal(getEventColor('other'), 'bg-[var(--mairie-purple-surface)] text-[var(--mairie-purple-text)]');
   for (const category of ['meeting', 'activity', 'ceremony', 'other']) assert.doesNotMatch(getEventColor(category), /neutral|surface-raised|muted/);
+  // MAIR-1122: a meeting follows the current user's answer; other categories never do.
+  assert.equal(getEventColor('meeting', 'accepted'), getEventColor('meeting'));
+  assert.match(getEventColor('meeting', 'pending'), /border-dashed border-\[var\(--mairie-secondary\)\] bg-\[var\(--mairie-surface\)\]/);
+  assert.match(getEventColor('meeting', 'declined'), /^border border-\[var\(--mairie-secondary\)\] bg-\[var\(--mairie-surface\)\]/);
+  assert.doesNotMatch(getEventColor('meeting', 'declined'), /dashed/);
+  for (const state of ['pending', 'declined']) assert.equal(getEventColor('ceremony', state), getEventColor('ceremony'));
   assert.equal(getEventColor('ceremony'), 'bg-[var(--mairie-warning-surface)] text-[var(--mairie-warning-text)]');
   assert.equal(getEventColor('unknown'), getEventColor('other'));
   assert.equal(getEventColor(), getEventColor('other'));

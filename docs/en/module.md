@@ -175,6 +175,12 @@ The calendar follows the agreed V2 mockup ([Figma, journeys F1–F9](https://www
   activity success, ceremony warning, other purple (`purple-surface` / `purple-text`), in the three views and
   on the `StatusPill`s (lib 2.3 tones `secondary-strong` and `purple`). A « Légende du calendrier » under the
   grid shows exactly these colours.
+- **My participation (MAIR-1122).** A meeting follows my answer to its invitation, in the three views: accepted =
+  solid navy; pending = surface with a dashed navy border; declined = surface, thin navy border and struck-through
+  title (the state is also read by screen readers). The details of a meeting I am invited to show the « Ma
+  participation » block (state, « Je décline » / « Je participe »); an answer gives the « Réponse envoyée » toast
+  and the pill changes at once, a refusal gives an error toast and keeps the previous state. The legend shows the
+  three looks.
 - **Right column (MAIR-918).** « À venir » comes first: the next three occurrences from now (recurrences
   included, an event of today stays until its end time), each row with its title, category pill, day
   (« Aujourd’hui », « Demain », « ven. 20 nov. ») and hours, and participants; a row opens the event details.

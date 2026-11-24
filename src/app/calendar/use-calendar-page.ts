@@ -13,6 +13,7 @@ import {
   loadCalendarEvent,
   updateCalendarEvent,
   updateCalendarEventApproval,
+  updateCalendarEventParticipation,
 } from "./api";
 import {
   buildCreateInitialValues,
@@ -481,6 +482,38 @@ export function useCalendarPage(initial?: InitialCalendarPage) {
     }
   };
 
+  // MAIR-1122: the current user's answer to a meeting. The saved event replaces the shown one at once; a refused
+  // answer is an error toast and leaves the previous state.
+  const handleRespond = async (eventToAnswer: CalendarEventItem, status: "accepted" | "declined") => {
+    // Display guard only: the BFF decides who may answer (403 otherwise).
+    if (mutationInFlight.current || !eventToAnswer.canRespond) return;
+    mutationInFlight.current = true;
+    const selection = eventSelectionRevision.current;
+
+    setSaving(true);
+    setMutationError(null);
+    setFeedback(null);
+
+    try {
+      const savedEvent = await updateCalendarEventParticipation(eventToAnswer.id, status, people);
+      preserveConfirmedMutation();
+      setEvents((currentEvents) =>
+        currentEvents.map((event) => (String(event.id) === String(savedEvent.id) ? savedEvent : event)),
+      );
+      setFeedback("Réponse envoyée");
+      if (eventSelectionRevision.current === selection) {
+        setSelectedEventState((current) =>
+          String(current?.id) === String(eventToAnswer.id) ? savedEvent : current,
+        );
+      }
+    } catch (answerError) {
+      setMutationError(formatCalendarApiError(answerError));
+    } finally {
+      mutationInFlight.current = false;
+      setSaving(false);
+    }
+  };
+
   return {
     categories,
     createInitialValues,
@@ -497,6 +530,7 @@ export function useCalendarPage(initial?: InitialCalendarPage) {
     handleSaveEvent,
     handleSelectDate,
     handleShowDay,
+    handleRespond,
     handleSelectSlot,
     handleToday,
     handleValidateEvent,

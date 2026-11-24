@@ -27,14 +27,19 @@ const contrast = (a, b) => {
   return (hi + 0.05) / (lo + 0.05);
 };
 
-test('MAIR-1121: every event colour is a lib token pair with an AA contrast, light and dark', () => {
+test('MAIR-1121 / MAIR-1122: every event colour is a lib token pair with an AA contrast, light and dark', () => {
   for (const [theme, selector] of [['light', ':root'], ['dark', 'html[data-theme="dark"]']]) {
     const values = tokens(selector);
-    for (const category of ['meeting', 'activity', 'ceremony', 'other']) {
-      const [background, text] = [...getEventColor(category).matchAll(/var\((--mairie-[\w-]+)\)/g)].map(([, name]) => name);
-      assert.ok(values[background] && values[text], `${category}: ${background} / ${text} are lib tokens (${theme})`);
+    // MAIR-1122: the meeting looks by participation count as well.
+    const looks = [['meeting'], ['activity'], ['ceremony'], ['other'], ['meeting', 'pending'], ['meeting', 'declined']];
+    for (const [category, participation] of looks) {
+      const classes = getEventColor(category, participation);
+      const background = classes.match(/bg-\[var\((--mairie-[\w-]+)\)\]/)[1];
+      const text = classes.match(/text-\[var\((--mairie-[\w-]+)\)\]/)[1];
+      const name = participation ? `${category} ${participation}` : category;
+      assert.ok(values[background] && values[text], `${name}: ${background} / ${text} are lib tokens (${theme})`);
       const ratio = contrast(values[background], values[text]);
-      assert.ok(ratio >= 4.5, `${category} in ${theme}: ${values[text]} on ${values[background]} is ${ratio.toFixed(2)}:1`);
+      assert.ok(ratio >= 4.5, `${name} in ${theme}: ${values[text]} on ${values[background]} is ${ratio.toFixed(2)}:1`);
     }
   }
 });

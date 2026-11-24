@@ -1,4 +1,4 @@
-import type { CalendarAssignee, CalendarAssigneeId } from "./types";
+import type { CalendarAssignee, CalendarAssigneeId, CalendarParticipation } from "./types";
 
 /**
  * Tone of an event per category, as the Figma `Calendrier/EventPill` variants (MAIR-905). MAIR-1121: no grey nor
@@ -24,9 +24,32 @@ export function getEventTone(category = "other"): CalendarEventTone {
   return eventTones[category] || "purple";
 }
 
-export function getEventColor(category = "other") {
-  return toneClasses[getEventTone(category)];
+/**
+ * MAIR-1122: a meeting shows the current user's answer. Accepted (or no answer to give) keeps the solid navy;
+ * pending is the surface with a dashed navy border; declined the surface with a thin navy border (the pill also
+ * strikes its title). Other categories do not change.
+ */
+const meetingParticipationClasses: Record<Exclude<CalendarParticipation, "accepted">, string> = {
+  pending: "border border-dashed border-[var(--mairie-secondary)] bg-[var(--mairie-surface)] text-[var(--mairie-secondary)]",
+  declined: "border border-[var(--mairie-secondary)] bg-[var(--mairie-surface)] text-[var(--mairie-secondary)]",
+};
+
+/** The participation a pill shows: only meetings the current user answers to. */
+export function getShownParticipation(category?: string, participation?: CalendarParticipation) {
+  return category === "meeting" && participation ? participation : undefined;
 }
+
+export function getEventColor(category = "other", participation?: CalendarParticipation) {
+  const shown = getShownParticipation(category, participation);
+  return shown && shown !== "accepted" ? meetingParticipationClasses[shown] : toneClasses[getEventTone(category)];
+}
+
+/** Words read by assistive technologies after a meeting's title (the state is otherwise only visual). */
+export const participationLabels: Record<CalendarParticipation, string> = {
+  accepted: "je participe",
+  pending: "en attente de ma réponse",
+  declined: "déclinée",
+};
 
 export function resolveAssignees(
   assigneeIds: CalendarAssigneeId[],

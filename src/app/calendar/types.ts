@@ -6,6 +6,8 @@ export type CalendarAssigneeId = string | number;
 export type CalendarDateInput = Date | string;
 export type CalendarUserRole = "user" | "responsable" | "mayor";
 export type CalendarEventApprovalStatus = "pending" | "approved" | "rejected";
+/** The current user's answer to the invitation to an event (absent when they are not assigned). */
+export type CalendarParticipation = "accepted" | "pending" | "declined";
 
 export type CalendarRecurrence = {
   frequency: "none" | "daily" | "weekly" | "monthly";
@@ -31,6 +33,8 @@ export type CalendarEventItem = {
   assignees?: CalendarAssignee[];
   recurrence?: CalendarRecurrence;
   approvalStatus?: CalendarEventApprovalStatus;
+  myParticipation?: CalendarParticipation;
+  canRespond?: boolean;
   createdById?: CalendarAssigneeId;
   canValidate?: boolean;
   canEdit?: boolean;

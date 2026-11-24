@@ -16,6 +16,7 @@ export const CalendarModals = ({ calendar }: { calendar: Calendar }) => (
       canValidate={Boolean(calendar.selectedEvent?.canValidate) && !calendar.saving}
       closeLabel="Fermer" editLabel="Modifier" deleteLabel="Supprimer" cancelLabel="Annuler" saveLabel="Enregistrer"
       onClose={() => calendar.setSelectedEvent(null)} onSave={calendar.handleSaveEvent} saving={calendar.saving} error={calendar.mutationError}
-      onDelete={calendar.handleDeleteEvent} onApprove={(event) => void calendar.handleValidateEvent(event, "approved")} onReject={(event) => void calendar.handleValidateEvent(event, "rejected")} />
+      onDelete={calendar.handleDeleteEvent} onApprove={(event) => void calendar.handleValidateEvent(event, "approved")} onReject={(event) => void calendar.handleValidateEvent(event, "rejected")}
+      onRespond={(event, status) => void calendar.handleRespond(event, status)} />
   </>
 );
