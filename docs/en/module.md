@@ -169,9 +169,12 @@ The calendar follows the agreed V2 mockup ([Figma, journeys F1–F9](https://www
 - **Month grid (MAIR-905).** Clicking a day (or Enter / Space on it) keeps it selected and opens « Nouvel
   événement » on that day, 09:00 – 10:00; clicking a pill still opens its details. Cells follow the mockup:
   Default, Selected, Today (accent border, number on an accent pill) and Outside (days of the adjacent
-  months on `surface-raised`, not interactive). Pills take the tone of their category (meeting info,
-  activity success, ceremony warning, other neutral, on the `mairie-*` tokens) and show their start time
-  only while their day holds a single event.
+  months on `surface-raised`, not interactive). Pills take the tone of their category and show their start
+  time only while their day holds a single event.
+- **Colours and legend (MAIR-1121).** No grey nor neutral event: meeting navy (`secondary` / `on-secondary`),
+  activity success, ceremony warning, other purple (`purple-surface` / `purple-text`), in the three views and
+  on the `StatusPill`s (lib 2.3 tones `secondary-strong` and `purple`). A « Légende du calendrier » under the
+  grid shows exactly these colours.
 - **Right column (MAIR-918).** « À venir » comes first: the next three occurrences from now (recurrences
   included, an event of today stays until its end time), each row with its title, category pill, day
   (« Aujourd’hui », « Demain », « ven. 20 nov. ») and hours, and participants; a row opens the event details.

@@ -120,7 +120,11 @@ test('MAIR-918: getUpcomingOccurrences lists the next three occurrences from now
 
 test('event colours and assignee resolution', () => {
   // MAIR-905: one tone per category (Figma Calendrier/EventPill), on the mairie-* tokens.
-  assert.deepEqual(['meeting', 'activity', 'ceremony', 'other', 'unknown', undefined].map(getEventTone), ['info', 'success', 'warning', 'neutral', 'neutral', 'neutral']);
+  // MAIR-1121: no grey nor neutral event: meetings navy, « Autre » (and any unknown category) purple.
+  assert.deepEqual(['meeting', 'activity', 'ceremony', 'other', 'unknown', undefined].map(getEventTone), ['secondary-strong', 'success', 'warning', 'purple', 'purple', 'purple']);
+  assert.equal(getEventColor('meeting'), 'bg-[var(--mairie-secondary)] text-[var(--mairie-on-secondary)]');
+  assert.equal(getEventColor('other'), 'bg-[var(--mairie-purple-surface)] text-[var(--mairie-purple-text)]');
+  for (const category of ['meeting', 'activity', 'ceremony', 'other']) assert.doesNotMatch(getEventColor(category), /neutral|surface-raised|muted/);
   assert.equal(getEventColor('ceremony'), 'bg-[var(--mairie-warning-surface)] text-[var(--mairie-warning-text)]');
   assert.equal(getEventColor('unknown'), getEventColor('other'));
   assert.equal(getEventColor(), getEventColor('other'));

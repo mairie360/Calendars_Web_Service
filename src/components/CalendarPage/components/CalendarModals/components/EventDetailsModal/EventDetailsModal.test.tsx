@@ -28,7 +28,7 @@ describe('EventDetailsModal component', () => {
 
     expect(screen.getByRole('dialog', { name: 'Conseil municipal' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Conseil municipal' })).toBeInTheDocument();
-    expect(screen.getByText('Réunion').closest('[data-tone]')).toHaveAttribute('data-tone', 'info');
+    expect(screen.getByText('Réunion').closest('[data-tone]')).toHaveAttribute('data-tone', 'secondary-strong');
     expect(screen.getByText('Préparer la séance')).toBeInTheDocument();
     expect(screen.getByText('Salle du conseil')).toBeInTheDocument();
     expect(screen.getByText('09:00 – 10:30')).toBeInTheDocument();
