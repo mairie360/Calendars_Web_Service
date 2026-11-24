@@ -174,3 +174,10 @@ Le calendrier suit la maquette V2 validée ([Figma, parcours F1–F9](https://ww
   participants ; une ligne ouvre la fiche. Puis « Statistiques » : « N événements en <mois> » pour le mois
   affiché et une carte par catégorie de l'API (Réunions, Animations, Cérémonies, Autres), recalculées au
   changement de mois.
+- **Fiche de l'événement (MAIR-929).** La fenêtre a pour titre l'événement ; dessous, la pastille de
+  catégorie (et « En attente » / « Refusé » le cas échéant) et la description ; puis quatre lignes avec
+  icône : Date avec la récurrence (« Jeudi 12 novembre 2026 · chaque mois »), Horaire, Lieu, Participants.
+  Le lien vers la formation et les actions Valider / Refuser des événements en attente suivent. Pied :
+  « Supprimer » à gauche, « Fermer » et « Modifier » à droite, chacun seulement si le droit est accordé.
+  L'enregistrement et les refus ne s'affichent plus dans le titre : la fenêtre est occupée pendant
+  l'enregistrement et le résultat part dans les toasts.
