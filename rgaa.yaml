@@ -108,7 +108,7 @@ states:
     route: /
     steps:
       - wait_for: { role: button, name: Réunion de quartier }
-      - click: { role: tab, name: Semaine }
+      - click: { role: radio, name: Semaine }
       - wait_for: { selector: .calendar-week-grid }
       - wait_for: { role: button, name: Réunion de quartier }
   - id: day
@@ -116,7 +116,7 @@ states:
     route: /
     steps:
       - wait_for: { role: button, name: Réunion de quartier }
-      - click: { role: tab, name: Jour }
+      - click: { role: radio, name: Jour }
       - wait_for_hidden: { selector: .calendar-month-grid }
       # Only the 15th is shown: the event of the 13th leaves the grid.
       - wait_for_hidden: { role: button, name: Réunion de quartier }
@@ -133,7 +133,7 @@ states:
     route: /
     steps:
       - wait_for: { role: button, name: Réunion de quartier }
-      - click: { role: button, name: Nouvel événement }
+      - click: { role: button, name: Créer, exact: true }
       - wait_for: { role: dialog, name: Nouvel événement }
   - id: create-date-picker
     description: Date picker of the start date opened in the create dialog
@@ -141,7 +141,7 @@ states:
     route: /
     steps:
       - wait_for: { role: button, name: Réunion de quartier }
-      - click: { role: button, name: Nouvel événement }
+      - click: { role: button, name: Créer, exact: true }
       - click: { role: button, name: Ouvrir le calendrier pour Date de début }
       - wait_for: { role: button, name: Mois précédent }
   - id: create-recurrence
@@ -150,7 +150,7 @@ states:
     route: /
     steps:
       - wait_for: { role: button, name: Réunion de quartier }
-      - click: { role: button, name: Nouvel événement }
+      - click: { role: button, name: Créer, exact: true }
       - select: { label: Récurrence, value: Chaque semaine }
       - wait_for: { label: Intervalle }
   - id: create-assignees
@@ -159,7 +159,7 @@ states:
     route: /
     steps:
       - wait_for: { role: button, name: Réunion de quartier }
-      - click: { role: button, name: Nouvel événement }
+      - click: { role: button, name: Créer, exact: true }
       - click: { role: button, name: Sélectionner des personnes }
       - wait_for: { role: listbox }
   - id: create-time-error
@@ -168,26 +168,26 @@ states:
     route: /
     steps:
       - wait_for: { role: button, name: Réunion de quartier }
-      - click: { role: button, name: Nouvel événement }
+      - click: { role: button, name: Créer, exact: true }
       - fill: { label: Titre, value: Visite du chantier }
       - select: { label: Heure de début, value: 10 h 00 }
       - select: { label: Heure de fin, value: 09 h 00 }
-      - click: { role: button, name: Créer, exact: true }
-      - wait_for: { text: L’heure de fin doit être après l’heure de début }
+      - click: { role: button, name: Enregistrer, exact: true }
+      - wait_for: { text: L’heure de fin doit suivre l’heure de début. }
   - id: event-details
     description: Details of an event opened from its link (?date=&event=)
     as: agent
     route: /?date=2026-01-15&event=900
     steps:
       # The sidebar repeats the description: look for it in the dialog.
-      - wait_for: { role: dialog, name: Détail de l’événement }
+      - wait_for: { role: dialog }
       - wait_for: { selector: '[role="dialog"] p:has-text("Séance publique du conseil municipal.")' }
   - id: event-recurring
     description: Details of a weekly event
     as: agent
     route: /?date=2026-01-13&event=904
     steps:
-      - wait_for: { role: dialog, name: Détail de l’événement }
+      - wait_for: { role: dialog }
       - wait_for: { selector: '[role="dialog"] p:has-text("Accueil des habitants sans rendez-vous.")' }
   - id: event-edit
     description: Edit form of an event (nothing saved)
@@ -201,15 +201,15 @@ states:
     as: agent
     route: /?date=2026-01-16&event=901
     steps:
-      - wait_for: { role: dialog, name: Détail de l’événement }
+      - wait_for: { role: dialog }
       - wait_for: { selector: '[role="dialog"] p:has-text("Initiation aux démarches en ligne.")' }
-      - wait_for: { text: En attente }
+      - wait_for: { selector: '[role="dialog"] >> text=En attente' }
   - id: event-to-validate
     description: The same event seen by the Responsable (Valider / Refuser, not clicked)
     as: responsable
     route: /?date=2026-01-16&event=901
     steps:
-      - wait_for: { role: dialog, name: Détail de l’événement }
+      - wait_for: { role: dialog }
       - wait_for: { selector: '[role="dialog"] p:has-text("Initiation aux démarches en ligne.")' }
       - wait_for: { role: button, name: Valider, exact: true }
   - id: event-created
@@ -217,10 +217,10 @@ states:
     as: writer
     route: /
     steps:
-      - wait_for: { role: tab, name: Mois }
-      - click: { role: button, name: Nouvel événement }
-      - fill: { label: Titre, value: Visite du chantier }
+      - wait_for: { role: radio, name: Mois }
       - click: { role: button, name: Créer, exact: true }
+      - fill: { label: Titre, value: Visite du chantier }
+      - click: { role: button, name: Enregistrer, exact: true }
       - wait_for_hidden: { role: dialog }
       # The pill of the month grid (the sidebar lists the event too).
       - wait_for: { selector: '.calendar-month-grid [role="button"][title="Visite du chantier"]' }
