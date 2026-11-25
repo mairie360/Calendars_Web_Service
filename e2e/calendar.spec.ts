@@ -48,7 +48,7 @@ test('an administrator creates an event and invites an agent', async ({ page, co
 
   // MAIR-926 C6: the dialog closes on the event's date with the « Événement créé » toast.
   await expect(dialog).toBeHidden();
-  await expect(page.getByText('Événement créé', { exact: true })).toBeVisible();
+  await expect(page.getByText('Événement créé', { exact: true }).first()).toBeVisible();
   await expect(page.getByText(title, { exact: true }).first()).toBeVisible();
 });
 
