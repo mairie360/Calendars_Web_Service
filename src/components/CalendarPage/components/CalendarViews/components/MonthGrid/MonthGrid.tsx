@@ -127,7 +127,7 @@ export const MonthGrid = ({
                       className="calendar-more-events pointer-events-auto mx-2 justify-self-start rounded-full px-1.5 text-xs font-semibold leading-[18px] text-[var(--mairie-accent)] hover:bg-[var(--mairie-surface-raised)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mairie-accent)]"
                       style={{ gridColumn: column + 1, gridRow: maxRows }}
                       aria-label={`Plus d’événements le ${formatFullDate(date)} : ${hidden} autre${hidden > 1 ? 's' : ''}, ouvrir la vue Jour`}
-                      onClick={() => onShowDay?.(date)}
+                      onClick={() => onShowDay(date)}
                     >
                       + {hidden}
                     </button>

@@ -10,7 +10,10 @@ it('delegates a real selected assignee while preserving the existing selection',
 it('MAIR-1222 the people popup is a named dialog whose search field and list have a name (RGAA 11.1, 12.6)', async () => {
   // The field sits in the page's main landmark; its popup is rendered at the end of the body.
   render(<main><EventAssigneeSelect people={[{ id: 1, name: 'Anne Marie' }]} value={[]} onChange={vi.fn()} /></main>);
-  await userEvent.click(screen.getByRole('button', { name: /Aucune personne|sélectionn|Choisir/i }));
+  const trigger = screen.getByRole('button', { name: /Aucune personne|sélectionn|Choisir/i });
+  // The trigger announces the kind of popup it opens.
+  expect(trigger).toHaveAttribute('aria-haspopup', 'dialog');
+  await userEvent.click(trigger);
   const popup = screen.getByRole('dialog', { name: 'Choisir des participants' });
   expect(popup).toContainElement(screen.getByRole('listbox', { name: 'Personnes' }));
   expect(popup).toContainElement(screen.getByRole('searchbox', { name: /Rechercher/ }));

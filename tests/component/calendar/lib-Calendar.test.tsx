@@ -45,7 +45,7 @@ describe('Calendar components', () => {
     const handleSelectDate = vi.fn();
 
     render(
-      <MonthGrid
+      <MonthGrid onShowDay={vi.fn()}
         currentDate="2026-06-15"
         selectedDate="2026-06-15"
         onSelectDate={handleSelectDate}
@@ -63,7 +63,7 @@ describe('Calendar components', () => {
     const handleEventClick = vi.fn();
 
     render(
-      <MonthGrid
+      <MonthGrid onShowDay={vi.fn()}
         currentDate="2026-06-15"
         selectedDate="2026-06-15"
         events={[
@@ -122,7 +122,7 @@ describe('Calendar components', () => {
 
   it('renders multi-day and recurring events on matching days', () => {
     render(
-      <MonthGrid
+      <MonthGrid onShowDay={vi.fn()}
         currentDate="2026-06-15"
         selectedDate="2026-06-15"
         events={[
@@ -264,7 +264,7 @@ describe('Calendar components', () => {
 
   it('renders all events in a month cell', () => {
     render(
-      <MonthGrid
+      <MonthGrid onShowDay={vi.fn()}
         currentDate="2026-06-15"
         selectedDate="2026-06-15"
         events={[
