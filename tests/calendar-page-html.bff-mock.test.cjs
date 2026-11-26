@@ -478,7 +478,8 @@ test('MAIR-918 F5: « À venir » lists the next occurrences first and a row ope
 test('calendar layout uses responsive grids and a bounded sidebar with BFF-backed events', async () => {
   const monthHtml = await renderLoadedPage();
 
-  assert.match(monthHtml, /class="calendar-board mt-7 grid items-start gap-6"/);
+  assert.match(monthHtml, /class="calendar-page p-4 sm:p-8"/);
+  assert.match(monthHtml, /class="calendar-board mt-6 grid items-start gap-6"/);
   assert.match(monthHtml, /class="calendar-grid-viewport mt-9"/);
   assert.equal(view.props('MonthGrid').className, 'calendar-month-grid');
   assert.equal(view.props('CalendarSidebar').className, 'calendar-sidebar');

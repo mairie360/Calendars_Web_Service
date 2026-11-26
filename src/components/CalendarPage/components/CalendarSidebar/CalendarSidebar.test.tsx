@@ -9,5 +9,5 @@ it('MAIR-918: shows the supplied occurrences and month statistics, « À venir �
   const headings = screen.getAllByRole('heading').map(heading => heading.textContent);
   expect(headings).toEqual(['À venir', 'Statistiques']);
   expect(screen.getByRole('button', { name: /Conseil/ })).toHaveTextContent('Demain');
-  expect(screen.getByRole('region', { name: 'Réunions' })).toHaveTextContent('4');
+  expect(screen.getByRole('group', { name: 'Réunions' })).toHaveTextContent('4');
 });

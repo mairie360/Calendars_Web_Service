@@ -1,3 +1,4 @@
+import { UsersRound } from 'lucide-react';
 import React from 'react';
 
 import { MetricCard, Panel } from '@mairie360/lib-components/primitives';
@@ -18,9 +19,10 @@ export const StatsPanel = ({ stats, state = 'default', className = '', ...props 
     stateProps={{ title: 'Statistiques indisponibles.', description: null }} {...props}>
     {/* The Panel loading state would insert its own status, the page announces the load once. */}
     {state === 'loading' ? <CalendarLoadingSkeleton padding="0" /> : (
-      <div className="grid grid-cols-2 gap-3">
+      // Mockup `Écran/Mois`: each card has its icon and its label in sentence case (see .calendar-stats in app-overrides.css).
+      <div className="calendar-stats grid grid-cols-2 gap-3">
         {stats.items.map((item) => (
-          <MetricCard key={item.category} size="s" label={item.label} value={item.value} trendLabel={`En ${stats.month}`} />
+          <MetricCard key={item.category} size="s" icon={UsersRound} label={item.label} value={item.value} trendLabel={`En ${stats.month}`} />
         ))}
       </div>
     )}

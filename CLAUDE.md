@@ -83,7 +83,8 @@ and agree the mockup first, then code it: the sync direction is Figma → code.
 
 ## Architecture
 
-- **V2 screen (epic MAIR-820)** — lib pin `2.3.2` (recorded in `tests/fixtures/shared-ui-releases.json`; since lib 2.3 the page base has no footer and the proxy forwards only declared body media types): the
+- **Shared header and mockup alignment (MAIR-1222)** — lib pin `2.5.1` (recorded in `tests/fixtures/shared-ui-releases.json`): `src/app/page.tsx` reads `COMMUNE_NAME` through `src/lib/commune.ts` (same helper as Administration) and the shell gets the single `commune` prop (no own logo any more); `CalendarPage` wraps the screen in `.calendar-page p-4 sm:p-8` (the collapsible shell has no padding). Month cells have a fixed 104 px height (`MonthGrid`: number on top, a lone event on two rows with its start time, up to three rows, else two events and « + N » → `onShowDay`); the week view has continuous hour lines, today's column (`data-today`) and the current-time line (`useCurrentTime`, browser only), and pills show the time range; the right column starts at 1280 px (380 px); the legend only shows the meeting looks; stats cards carry an icon and a sentence-case label (`.calendar-stats`). RGAA: no faded pill time, the « À venir » scroll region is « Liste des événements à venir », event facts are `dl > div > dt + dd`, the date and people popups are named dialogs, the participation status mounts empty.
+- **V2 screen (epic MAIR-820)** — earlier lib pin `2.3.2` (since lib 2.3 the page base has no footer and the proxy forwards only declared body media types): the
   `AccessibleShell` frame of lib 2 is collapsible and self-sufficient, so `app-overrides.css` holds no shell rule
   any more (only `.calendar-*` board/grid rules) and `layout.tsx` always renders `data-theme="light"` (MAIR-933).
   `CalendarPage` wraps the screen in the lib `ToastProvider` (`placement="bottom-end"` since MAIR-1120, region « Notifications du

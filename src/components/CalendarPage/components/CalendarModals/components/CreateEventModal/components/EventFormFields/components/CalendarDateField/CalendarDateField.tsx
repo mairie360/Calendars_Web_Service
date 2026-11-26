@@ -149,8 +149,11 @@ export const CalendarDateField = ({
   const popover =
     open && typeof document !== 'undefined'
       ? createPortal(
+          // Rendered outside the form dialog, so it is a dialog of its own (RGAA 12.6: no content outside a landmark).
           <div
             ref={popoverRef}
+            role="dialog"
+            aria-label={`Choisir ${labelText}`}
             className="fixed z-[80] rounded-md border border-[var(--mairie-border)] bg-[var(--mairie-surface)] p-3 text-[var(--mairie-text)] shadow-xl"
             style={popoverStyle}
           >

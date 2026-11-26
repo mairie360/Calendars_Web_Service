@@ -15,12 +15,14 @@ interface EventPillProps {
   showTime?: boolean;
   /** MAIR-905: one line « 09:00 Titre » (month cells) instead of the title above the time range. */
   inline?: boolean;
-  /** MAIR-1123 (week view): the title on two lines at most, then the start time only. */
+  /** MAIR-1123 (week view): the title on two lines at most, then the time range. */
   compact?: boolean;
+  /** Month cells: the start time under the title instead of the time range. */
+  startOnly?: boolean;
 }
 
-export const EventPill = ({ event, onClick, className, style, showTime = true, inline = false, compact = false }: EventPillProps) => {
-  const timeLabel = showTime ? (compact ? event.startTime || null : getEventTimeLabel(event)) : null;
+export const EventPill = ({ event, onClick, className, style, showTime = true, inline = false, compact = false, startOnly = false }: EventPillProps) => {
+  const timeLabel = showTime ? (startOnly ? event.startTime || null : getEventTimeLabel(event)) : null;
   const startLabel = showTime && inline ? event.startTime || null : null;
   const participation = getShownParticipation(event.category, event.myParticipation);
   const declined = participation === 'declined';
@@ -75,7 +77,8 @@ export const EventPill = ({ event, onClick, className, style, showTime = true, i
         {stateLabel}
       </div>
       {timeLabel && !inline && (
-        <div className="break-words text-[11px] font-normal opacity-75">{timeLabel}</div>
+        // Full colour of the pill: a faded time fails the contrast ratio (RGAA 3.2).
+        <div className="calendar-event-time break-words text-[11px] font-normal">{timeLabel}</div>
       )}
     </div>
   );

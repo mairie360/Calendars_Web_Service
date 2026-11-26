@@ -35,7 +35,8 @@ it('MAIR-1123: overlapping meetings show one readable event at full width and a 
   expect(shown).toHaveClass('calendar-event-title', 'line-clamp-2');
   expect(shown.parentElement).toHaveStyle({ left: '2px', right: '2px' });
   expect(shown.parentElement?.style.width).toBe('');
-  expect(screen.getByText('09:00', { selector: '[role="button"] div' })).toBeInTheDocument();
+  // MAIR-1222 (B5): the time range, not only the start.
+  expect(screen.getByText('09:00 – 10:00', { selector: '[role="button"] div' })).toBeInTheDocument();
   expect(screen.queryByText('Commission')).not.toBeInTheDocument();
   expect(screen.queryByText('Point presse')).not.toBeInTheDocument();
   const more = screen.getByRole('button', { name: '2 autres rendez-vous le 15 Octobre 2026, ouvrir la vue Jour' });
@@ -59,4 +60,39 @@ it('MAIR-1123: two overlapping meetings give « +1 » with a singular label, no 
   expect(screen.getByRole('button', { name: '1 autre rendez-vous le 15 Octobre 2026, ouvrir la vue Jour' })).toHaveTextContent('+1');
   rerender(<WeekGrid currentDate="2026-10-15" hours={['09:00', '10:00']} events={overlapping.slice(3)} />);
   expect(screen.queryByRole('button', { name: /rendez-vous le/ })).not.toBeInTheDocument();
+});
+
+it('MAIR-1222 continuous hour lines, today’s column tinted and a red line at the current time', () => {
+  vi.useFakeTimers({ toFake: ['Date', 'setInterval', 'clearInterval'] });
+  vi.setSystemTime(new Date(2026, 10, 12, 14, 30));
+  try {
+    const { container } = render(<WeekGrid currentDate="2026-11-12" hours={['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00']} events={[]} />);
+    const slots = Array.from(container.querySelectorAll('.calendar-hour-slot'));
+    expect(slots.length).toBeGreaterThan(0);
+    // Lines, not rounded boxes.
+    for (const slot of slots) { expect(slot).toHaveClass('border-t'); expect(slot).not.toHaveClass('rounded-md'); }
+    const columns = Array.from(container.querySelectorAll('.calendar-week-column'));
+    expect(columns.filter((column) => column.getAttribute('data-today') === 'true')).toHaveLength(1);
+    expect(columns[3]).toHaveAttribute('data-today', 'true');
+    const line = screen.getByTestId('calendar-current-time');
+    expect(columns[3]).toContainElement(line);
+    // 14:30 is 6.5 hours after 08:00, 64 px per hour.
+    expect(line).toHaveStyle({ top: `${6.5 * 64}px` });
+    // The header shows the day name over its number, without a box.
+    expect(screen.getByRole('button', { name: /^Sélectionner le 12 novembre 2026$/i })).toHaveClass('calendar-week-day', 'border-transparent');
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+it('MAIR-1222 no current-time line outside the displayed week', () => {
+  vi.useFakeTimers({ toFake: ['Date', 'setInterval', 'clearInterval'] });
+  vi.setSystemTime(new Date(2026, 10, 20, 10, 0));
+  try {
+    const { container } = render(<WeekGrid currentDate="2026-11-12" events={[]} />);
+    expect(screen.queryByTestId('calendar-current-time')).not.toBeInTheDocument();
+    expect(container.querySelector('[data-today]')).toBeNull();
+  } finally {
+    vi.useRealTimers();
+  }
 });

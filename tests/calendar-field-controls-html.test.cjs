@@ -47,7 +47,7 @@ test('MAIR-607 the assignee select lists, filters, toggles and removes people', 
   view = mount(React.createElement(EventAssigneeSelect, { label: 'Participants', people, value: [], onChange: (value) => changes.push(value) }));
   assert.match(view.text(), /Sélectionner des personnes/);
   assert.doesNotMatch(view.html, /role="option"/);
-  await view.click((props) => props['aria-haspopup'] === 'listbox');
+  await view.click((props) => props['aria-haspopup'] === 'dialog');
   assert.equal((view.html.match(/role="option"/g) || []).length, 3);
   await view.fire((props, _text, tag) => tag === 'input' && typeof props.onChange === 'function', 'onChange', { target: { value: 'mar' } });
   assert.equal((view.html.match(/role="option"/g) || []).length, 1);

@@ -62,3 +62,10 @@ it('MAIR-1179: a private event shows a lock before its title and reads « (priv�
   expect(container.querySelector('svg.lucide-lock')).toBeNull();
   expect(screen.queryByText(/privé/)).not.toBeInTheDocument();
 });
+
+it('MAIR-1222 the time of a pill keeps the full colour of the pill (RGAA 3.2)', () => {
+  render(<EventPill event={{ id: 1, title: 'Permanence du maire', date: '2026-11-12', startTime: '14:00', endTime: '15:00', category: 'other' }} />);
+  const time = screen.getByText('14:00 – 15:00');
+  expect(time).toHaveClass('calendar-event-time');
+  expect(time.className).not.toMatch(/opacity/);
+});

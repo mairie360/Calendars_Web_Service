@@ -171,11 +171,18 @@ Le calendrier suit la maquette V2 validée ([Figma, parcours F1–F9](https://ww
   « Nouvel événement » à cette date, 09:00 – 10:00 ; un clic sur une pastille ouvre toujours la fiche. Les
   cellules suivent la maquette : Normal, Sélectionné, Aujourd'hui (bordure accent, numéro sur pastille
   accent) et Hors mois (jours des mois voisins sur `surface-raised`, non interactifs). Les pastilles prennent
-  le ton de leur catégorie et n'affichent l'heure de début que si le jour n'a qu'un événement.
+  le ton de leur catégorie. Un jour garde une hauteur fixe avec son numéro en haut : un seul événement
+  affiche son titre puis son heure de début, deux ou trois événements une ligne chacun, et au-delà de trois
+  les deux premiers et « + N » (« Plus d’événements »), qui ouvre la vue Jour.
+- **Vue Semaine.** Lignes horaires continues, colonne du jour en évidence, trait rouge à l'heure actuelle
+  (mis à jour chaque minute), et chaque événement affiche sa plage horaire (« 14:00 – 15:30 »). Les
+  événements qui se chevauchent gardent un seul événement lisible et « +N » vers la vue Jour, où ils sont
+  côte à côte.
 - **Couleurs et légende (MAIR-1121).** Aucun événement gris ou neutre : réunion marine (`secondary` /
   `on-secondary`), animation succès, cérémonie avertissement, autre violet (`purple-surface` / `purple-text`),
-  dans les trois vues et sur les `StatusPill` (tons `secondary-strong` et `purple` de la lib 2.3). Une légende
-  « Légende du calendrier » sous la grille reprend exactement ces couleurs.
+  dans les trois vues et sur les `StatusPill` (tons `secondary-strong` et `purple` de la lib 2.3). La légende
+  sous la grille suit la maquette : « Réunions : » et les trois aspects d'une réunion (ci-dessous) ; les
+  catégories sont nommées par les statistiques et les badges de « À venir ».
 - **Ma participation (MAIR-1122).** Une réunion suit ma réponse à l'invitation, dans les trois vues : je participe
   = marine plein ; en attente = fond surface et bordure marine en pointillés ; déclinée = fond surface, bordure
   marine fine et titre barré (l'état est aussi lu par les lecteurs d'écran). La fiche d'une réunion où je suis

@@ -119,16 +119,17 @@ button {
   outline-offset: -2px;
 }
 
-@media (min-width: 768px) and (max-width: 1699px) {
+@media (min-width: 768px) and (max-width: 1279px) {
   .calendar-sidebar {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     align-items: start;
   }
 }
 
-@media (min-width: 1700px) {
+/* Mockup `Écran/Mois`: from a laptop width, « À venir » and « Statistiques » form a 380 px column on the right. */
+@media (min-width: 1280px) {
   .calendar-board {
-    grid-template-columns: minmax(0, 1fr) 310px;
+    grid-template-columns: minmax(0, 1fr) 380px;
     align-items: stretch;
   }
 
@@ -179,4 +180,15 @@ button {
   .calendar-month-grid [role="button"] > div + div {
     display: none;
   }
+}
+
+/* Week view header: no box around a day, even today's (its number carries the accent pill). */
+.calendar-grid-viewport .calendar-week-day[aria-current="date"] {
+  border-color: transparent;
+}
+
+/* Mockup `Écran/Mois`: the statistics cards read « Réunions », not the upper-case overline of the shared card. */
+.calendar-stats [data-m360-component="MetricCard"] > span:first-child > * {
+  text-transform: none;
+  letter-spacing: normal;
 }

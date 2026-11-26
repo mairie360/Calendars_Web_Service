@@ -3,6 +3,7 @@ import { Check, X } from 'lucide-react';
 import { Button } from '@mairie360/lib-components/primitives';
 
 import type { CalendarEvent, CalendarParticipation } from '@/components/CalendarPage/calendar-types';
+import { useMountedAnnouncement } from './use-mounted-announcement';
 
 const stateLabels: Record<CalendarParticipation, string> = {
   accepted: 'Vous participez à cette réunion.',
@@ -23,15 +24,17 @@ interface EventParticipationProps {
  */
 export const EventParticipation = ({ event, busy = false, onRespond }: EventParticipationProps) => {
   const headingId = React.useId();
-  if (event.category !== 'meeting' || !event.canRespond) return null;
   const state = event.myParticipation ?? 'pending';
+  // The answer is a status: its region exists before its text (RGAA 7.5), so a new answer is announced.
+  const announced = useMountedAnnouncement(stateLabels[state]);
+  if (event.category !== 'meeting' || !event.canRespond) return null;
 
   return (
     <section aria-labelledby={headingId} data-participation={state}
       className="calendar-participation flex flex-wrap items-center gap-3 rounded-lg border border-[var(--mairie-border)] p-3">
       <div className="mr-auto min-w-0">
         <h3 id={headingId} className="text-sm font-semibold text-[var(--mairie-text)]">Ma participation</h3>
-        <p className="text-sm text-[var(--mairie-muted)]" aria-live="polite">{stateLabels[state]}</p>
+        <p className="text-sm text-[var(--mairie-muted)]" role="status">{announced}</p>
       </div>
       <Button variant="outline" icon={X} label="Je décline" aria-pressed={state === 'declined'} disabled={busy}
         onClick={() => onRespond(event, 'declined')} />

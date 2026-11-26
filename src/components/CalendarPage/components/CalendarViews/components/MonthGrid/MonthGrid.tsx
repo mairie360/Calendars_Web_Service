@@ -16,72 +16,33 @@ import type { CalendarEvent, MonthGridProps } from '@/components/CalendarPage/ca
 
 export type { CalendarDateInput, CalendarEvent, MonthGridProps } from '@/components/CalendarPage/calendar-types';
 
-const dayCellMinHeight = 144;
-const dayHeaderHeight = 44;
-const eventRowHeight = 34;
+/** Mockup `Calendrier/MonthCell`: a fixed height, the day number on top, then at most three rows of events. */
+const weekHeight = 104;
+const dayHeaderHeight = 34;
+const eventRowHeight = 18;
+const eventRowGap = 2;
+const maxRows = 3;
 
-interface MonthEventSegment {
-  event: CalendarEvent;
-  startColumn: number;
-  endColumn: number;
-}
+/** One week's days and the events of each, in start-time order. */
+const getDayEvents = (events: CalendarEvent[], weekCells: Array<Date | null>) =>
+  weekCells.map((date) => (date
+    ? events.filter((event) => eventOccursOnDate(event, date))
+      .sort((first, second) => (first.startTime || '00:00').localeCompare(second.startTime || '00:00') || String(first.id).localeCompare(String(second.id)))
+    : []));
 
-interface PositionedMonthEventSegment extends MonthEventSegment {
-  lane: number;
-}
+/**
+ * What a day shows within its rows: a lone event takes two rows (title, then start time); up to three events one row
+ * each; past three, the first two and « + N » for the others.
+ */
+export const getMonthDayLayout = (count: number) => {
+  if (count <= maxRows) return { shown: count, hidden: 0, twoLines: count === 1 };
+  return { shown: maxRows - 1, hidden: count - (maxRows - 1), twoLines: false };
+};
 
 const getWeeks = (cells: Array<Date | null>) =>
   Array.from({ length: Math.ceil(cells.length / 7) }, (_, index) => cells.slice(index * 7, index * 7 + 7));
 
-const sortMonthSegments = (segments: MonthEventSegment[]) =>
-  [...segments].sort((firstSegment, secondSegment) => {
-    const firstTime = firstSegment.event.startTime || '00:00';
-    const secondTime = secondSegment.event.startTime || '00:00';
-    const timeDiff = firstTime.localeCompare(secondTime);
-
-    if (timeDiff !== 0) return timeDiff;
-
-    const startDiff = firstSegment.startColumn - secondSegment.startColumn;
-    if (startDiff !== 0) return startDiff;
-
-    return String(firstSegment.event.id).localeCompare(String(secondSegment.event.id));
-  });
-
-const positionMonthSegments = (segments: MonthEventSegment[]): PositionedMonthEventSegment[] => {
-  const laneEndColumns: number[] = [];
-
-  return sortMonthSegments(segments).map((segment) => {
-    const lane = laneEndColumns.findIndex((endColumn) => endColumn <= segment.startColumn);
-    const resolvedLane = lane === -1 ? laneEndColumns.length : lane;
-    laneEndColumns[resolvedLane] = segment.endColumn;
-
-    return {
-      ...segment,
-      lane: resolvedLane,
-    };
-  });
-};
-
-const getWeekEventSegments = (events: CalendarEvent[], weekCells: Array<Date | null>) => {
-  const segments: MonthEventSegment[] = [];
-
-  events.forEach((event) => {
-    for (let column = 0; column < weekCells.length; column += 1) {
-      const date = weekCells[column];
-      if (date && eventOccursOnDate(event, date)) {
-        segments.push({
-          event,
-          startColumn: column,
-          endColumn: column + 1,
-        });
-      }
-    }
-  });
-
-  return positionMonthSegments(segments);
-};
-
-const monthEventClassName = joinClasses('pointer-events-auto mx-1 flex h-8 items-center py-0 shadow-sm');
+const monthEventClassName = 'pointer-events-auto mx-2 py-px shadow-sm';
 
 export const MonthGrid = ({
   currentDate,
@@ -91,6 +52,7 @@ export const MonthGrid = ({
   dayLabels = defaultDayLabels,
   onSelectDate,
   onEventClick,
+  onShowDay,
   className = '',
   ...props
 }: MonthGridProps) => {
@@ -98,7 +60,7 @@ export const MonthGrid = ({
   const selected = selectedDate ? parseDateInput(selectedDate) : parsedDate;
   const cells = useMemo(() => getMonthCells(parsedDate, weekStartsOn), [parsedDate, weekStartsOn]);
   const weeks = useMemo(() => getWeeks(cells), [cells]);
-  const weekSegments = useMemo(() => weeks.map((week) => getWeekEventSegments(events, week)), [events, weeks]);
+  const weekDays = useMemo(() => weeks.map((week) => getDayEvents(events, week)), [events, weeks]);
   // MAIR-905: days of the adjacent months fill the first and last weeks (Outside cells).
   const leadingDays = cells.findIndex(Boolean);
   const outsideDate = (weekIndex: number, index: number) =>
@@ -116,9 +78,7 @@ export const MonthGrid = ({
 
       <div className="space-y-1.5">
         {weeks.map((week, weekIndex) => {
-          const segments = weekSegments[weekIndex] || [];
-          const laneCount = Math.max(0, ...segments.map((segment) => segment.lane + 1));
-          const weekHeight = Math.max(dayCellMinHeight, dayHeaderHeight + laneCount * eventRowHeight + 8);
+          const days = weekDays[weekIndex] || [];
 
           return (
             <div key={`week-${weekIndex}`} className="relative" style={{ height: weekHeight }}>
@@ -141,24 +101,38 @@ export const MonthGrid = ({
               </div>
 
               <div
-                className="pointer-events-none absolute inset-x-0 z-20 grid grid-cols-7 gap-x-1.5 gap-y-1"
-                style={{ top: dayHeaderHeight, gridAutoRows: `${eventRowHeight - 4}px` }}
+                className="pointer-events-none absolute inset-x-0 z-20 grid grid-cols-7 gap-x-1.5"
+                style={{ top: dayHeaderHeight, rowGap: eventRowGap, gridTemplateRows: `repeat(${maxRows}, ${eventRowHeight}px)` }}
               >
-                {segments.map((segment) => (
-                  <EventPill
-                    key={`${segment.event.id}-${weekIndex}-${segment.startColumn}-${segment.endColumn}-${segment.lane}`}
-                    event={segment.event}
-                    onClick={onEventClick}
-                    inline
-                    // MAIR-905: the start time only while the day holds a single event.
-                    showTime={segments.filter((other) => other.startColumn === segment.startColumn).length < 2}
-                    className={monthEventClassName}
-                    style={{
-                      gridColumn: `${segment.startColumn + 1} / span ${segment.endColumn - segment.startColumn}`,
-                      gridRow: segment.lane + 1,
-                    }}
-                  />
-                ))}
+                {days.flatMap((dayEvents, column) => {
+                  const date = week[column];
+                  if (!date || dayEvents.length === 0) return [];
+                  const { shown, hidden, twoLines } = getMonthDayLayout(dayEvents.length);
+                  const pills = dayEvents.slice(0, shown).map((event, row) => (
+                    <EventPill
+                      key={`${event.id}-${dateKey(date)}`}
+                      event={event}
+                      onClick={onEventClick}
+                      showTime={twoLines}
+                      startOnly
+                      className={monthEventClassName}
+                      style={{ gridColumn: column + 1, gridRow: twoLines ? '1 / span 2' : row + 1 }}
+                    />
+                  ));
+                  if (!hidden) return pills;
+                  return [...pills, (
+                    <button
+                      key={`more-${dateKey(date)}`}
+                      type="button"
+                      className="calendar-more-events pointer-events-auto mx-2 justify-self-start rounded-full px-1.5 text-xs font-semibold leading-[18px] text-[var(--mairie-accent)] hover:bg-[var(--mairie-surface-raised)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mairie-accent)]"
+                      style={{ gridColumn: column + 1, gridRow: maxRows }}
+                      aria-label={`Plus d’événements le ${formatFullDate(date)} : ${hidden} autre${hidden > 1 ? 's' : ''}, ouvrir la vue Jour`}
+                      onClick={() => onShowDay(date)}
+                    >
+                      + {hidden}
+                    </button>
+                  )];
+                })}
               </div>
             </div>
           );
