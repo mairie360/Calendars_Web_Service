@@ -16,15 +16,15 @@ import { useCalendarPage } from '../../app/calendar/use-calendar-page';
 import type { InitialCalendarPage } from '../../lib/calendar-bootstrap-receipt';
 
 /** The calendar page: header, status bar, the grid of the current view, the side panels and the dialogs. */
-export default function CalendarClient({ initial }: { initial?: InitialCalendarPage }) {
+export default function CalendarClient({ initial, commune }: { initial?: InitialCalendarPage; commune?: string }) {
   return (
     <ToastProvider regionLabel="Notifications du calendrier" placement="bottom-end">
-      <CalendarScreen initial={initial} />
+      <CalendarScreen initial={initial} commune={commune} />
     </ToastProvider>
   );
 }
 
-function CalendarScreen({ initial }: { initial?: InitialCalendarPage }) {
+function CalendarScreen({ initial, commune }: { initial?: InitialCalendarPage; commune?: string }) {
   const calendar = useCalendarPage(initial);
   useCalendarToasts(calendar);
   // MAIR-911: one state for the three panels — skeletons during the first read and an explicit refresh,
@@ -37,17 +37,20 @@ function CalendarScreen({ initial }: { initial?: InitialCalendarPage }) {
   const gridRef = useCalendarTodayMarker(calendar.view, state === 'default' && !calendar.noMatchingEvents ? calendar.currentDate.getTime() : -1);
 
   return (
-    <AppShell activeItem="calendar" search={{ value: calendar.searchQuery, onChange: calendar.setSearchQuery }}>
+    <AppShell activeItem="calendar" commune={commune} search={{ value: calendar.searchQuery, onChange: calendar.setSearchQuery }}>
+      {/* The module area of the shared shell has no padding: the page gives the mockup's 32 px (16 px on a phone). */}
+      <div className="calendar-page p-4 sm:p-8">
       <CalendarHeader onCreate={calendar.ready ? () => calendar.openCreateModal() : undefined}
         onRefresh={calendar.ready ? () => void calendar.refreshData() : undefined} loading={calendar.loading} />
       {/* RGAA 7.5: mounted with the page, only its text follows the panels' loading state. */}
       <CalendarLoadingStatus state={state} />
-      <div className="calendar-board mt-7 grid items-start gap-6" ref={prepareUpcomingScrollRegion}>
+      <div className="calendar-board mt-6 grid items-start gap-6" ref={prepareUpcomingScrollRegion}>
         {/* MAIR-893: the panel title is the displayed period (not before the browser initialisation). */}
         <Panel title={calendar.ready ? calendar.periodTitle : 'Calendrier'} className="calendar-panel min-h-[620px] overflow-hidden" aria-busy={state === 'loading' || undefined}>
           <CalendarViews calendar={calendar} gridRef={gridRef} state={state} />
         </Panel>
         <CalendarSidebar className="calendar-sidebar" state={state} onRetry={() => void calendar.refreshData()} upcoming={calendar.upcoming} upcomingFiltered={calendar.activeFilterCount > 0} categories={calendar.categories} today={calendarToday()} stats={calendar.stats} onEventClick={calendar.handleEventClick} />
+      </div>
       </div>
       <CalendarModals calendar={calendar} />
     </AppShell>

@@ -27,7 +27,7 @@ export const CalendarCell = ({
   if (outside) {
     return (
       <div aria-hidden="true" data-state="outside"
-        className={joinClasses('calendar-cell-outside rounded-md border border-[var(--mairie-border)] bg-[var(--mairie-surface-raised)] p-2 text-[var(--mairie-muted)]', className)}>
+        className={joinClasses('calendar-cell-outside rounded-md border px-2 pb-2 pt-1.5 border-[var(--mairie-border)] bg-[var(--mairie-surface-raised)] text-[var(--mairie-muted)]', className)}>
         {number}
       </div>
     );
@@ -38,6 +38,8 @@ export const CalendarCell = ({
       data-state={selected ? 'selected' : 'default'}
       className={joinClasses(
         'min-h-16 w-full rounded-md border bg-[var(--mairie-surface)] p-2 text-left align-top text-sm leading-5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mairie-accent)]/30',
+        // A month day keeps its number at the top, above the events (a button centres its content otherwise).
+        day !== undefined && 'flex flex-col items-start justify-start pt-1.5',
         selected
           ? 'border-[var(--mairie-accent)] bg-[var(--mairie-accent-surface)] text-[var(--mairie-accent)]'
           : 'border-[var(--mairie-border)] text-[var(--mairie-text)] hover:bg-[var(--mairie-surface-raised)]',

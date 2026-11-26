@@ -169,12 +169,17 @@ The calendar follows the agreed V2 mockup ([Figma, journeys F1–F9](https://www
 - **Month grid (MAIR-905).** Clicking a day (or Enter / Space on it) keeps it selected and opens « Nouvel
   événement » on that day, 09:00 – 10:00; clicking a pill still opens its details. Cells follow the mockup:
   Default, Selected, Today (accent border, number on an accent pill) and Outside (days of the adjacent
-  months on `surface-raised`, not interactive). Pills take the tone of their category and show their start
-  time only while their day holds a single event.
+  months on `surface-raised`, not interactive). Pills take the tone of their category. A day keeps a fixed
+  height with its number at the top: a lone event shows its title then its start time, two or three events one
+  line each, and past three the first two and « + N » (« Plus d’événements »), which opens the day view.
+- **Week view.** Continuous hour lines, today's column tinted, a red line at the current time (refreshed every
+  minute), and each event shows its time range (« 14:00 – 15:30 »). Overlapping events keep one readable event
+  and « +N » towards the day view, where they sit side by side.
 - **Colours and legend (MAIR-1121).** No grey nor neutral event: meeting navy (`secondary` / `on-secondary`),
   activity success, ceremony warning, other purple (`purple-surface` / `purple-text`), in the three views and
-  on the `StatusPill`s (lib 2.3 tones `secondary-strong` and `purple`). A « Légende du calendrier » under the
-  grid shows exactly these colours.
+  on the `StatusPill`s (lib 2.3 tones `secondary-strong` and `purple`). The legend under the grid follows the
+  mockup: « Réunions : » and the three looks of a meeting (below); the categories are named by the statistics
+  and the badges of « À venir ».
 - **My participation (MAIR-1122).** A meeting follows my answer to its invitation, in the three views: accepted =
   solid navy; pending = surface with a dashed navy border; declined = surface, thin navy border and struck-through
   title (the state is also read by screen readers). The details of a meeting I am invited to show the « Ma

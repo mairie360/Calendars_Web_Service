@@ -149,8 +149,8 @@ describe('Calendar components', () => {
 
     const festivalEvents = screen.getAllByText('Festival');
     expect(festivalEvents).toHaveLength(2);
-    expect(festivalEvents[0].parentElement).toHaveStyle({ gridColumn: '1 / span 1' });
-    expect(festivalEvents[1].parentElement).toHaveStyle({ gridColumn: '2 / span 1' });
+    expect(festivalEvents[0].parentElement).toHaveStyle({ gridColumn: '1' });
+    expect(festivalEvents[1].parentElement).toHaveStyle({ gridColumn: '2' });
     expect(screen.getAllByText('Permanence')).toHaveLength(5);
   });
 
@@ -295,8 +295,9 @@ describe('Calendar components', () => {
     expect(screen.getByText('Soir')).toBeInTheDocument();
   });
 
-  it('reserves readable month rows for several events on the same day', () => {
+  it('MAIR-1222 month cells keep a fixed height and show « + N » past three events', () => {
     const onEventClick = vi.fn();
+    const onShowDay = vi.fn();
     const events = ['Matin', 'Midi', 'Après-midi', 'Soir'].map((title, index) => ({
       id: `event-${index}`,
       title,
@@ -310,19 +311,26 @@ describe('Calendar components', () => {
         currentDate="2026-06-15"
         events={events}
         onEventClick={onEventClick}
+        onShowDay={onShowDay}
       />
     );
 
     const weeks = Array.from(container.querySelectorAll<HTMLElement>('.month-spacing-test > div:nth-child(2) > div'));
     expect(weeks).toHaveLength(5);
-    expect(weeks.every((week) => Number.parseInt(week.style.height, 10) >= 144)).toBe(true);
-    expect(weeks[2]).toHaveStyle({ height: '188px' });
-    const eventPill = screen.getByText('Après-midi').parentElement;
-    expect(eventPill).toHaveClass('h-8');
-    expect(eventPill).toHaveStyle({ gridRow: '3' });
+    // The mockup's cell height, whatever the number of events.
+    expect(weeks.every((week) => week.style.height === '104px')).toBe(true);
+    expect(screen.getByText('Matin').parentElement).toHaveStyle({ gridRow: '1' });
+    expect(screen.getByText('Midi').parentElement).toHaveStyle({ gridRow: '2' });
+    expect(screen.queryByText('Après-midi')).not.toBeInTheDocument();
+    expect(screen.queryByText('Soir')).not.toBeInTheDocument();
+    const more = screen.getByRole('button', { name: /^Plus d’événements le .* : 2 autres, ouvrir la vue Jour$/ });
+    expect(more).toHaveTextContent('+ 2');
+    expect(more).toHaveStyle({ gridRow: '3' });
 
-    fireEvent.click(eventPill!);
-    expect(onEventClick).toHaveBeenCalledWith(events[2]);
+    fireEvent.click(more);
+    expect(onShowDay).toHaveBeenCalledWith(new Date(2026, 5, 15));
+    fireEvent.click(screen.getByText('Midi').parentElement!);
+    expect(onEventClick).toHaveBeenCalledWith(events[1]);
   });
 
   it('MAIR-918: renders « À venir » first, then the statistics of the displayed month', () => {

@@ -133,8 +133,11 @@ export const EventAssigneeSelect = ({
   };
 
   const dropdown = open ? (
+    // Rendered outside the form dialog, so it is a dialog of its own (RGAA 12.6: no content outside a landmark).
     <div
       ref={dropdownRef}
+      role="dialog"
+      aria-label="Choisir des participants"
       className="fixed z-[70] flex flex-col overflow-hidden rounded-md border border-[var(--mairie-border)] bg-[var(--mairie-surface)] shadow-lg"
       style={dropdownStyle}
     >
@@ -143,13 +146,14 @@ export const EventAssigneeSelect = ({
         <input
           type="search"
           value={search}
+          aria-label={searchPlaceholder}
           placeholder={searchPlaceholder}
           className="h-9 w-full rounded-md border border-[var(--mairie-border)] bg-[var(--mairie-surface-raised)] pl-9 pr-3 text-sm text-[var(--mairie-text)] shadow-sm outline-none placeholder:text-[var(--mairie-muted)] focus:border-[var(--mairie-border)] focus:ring-2 focus:ring-[var(--mairie-accent)]/20"
           onChange={(event) => setSearch(event.target.value)}
         />
       </div>
 
-      <div role="listbox" aria-multiselectable="true" className="min-h-0 flex-1 overflow-y-auto p-1">
+      <div role="listbox" aria-multiselectable="true" aria-label="Personnes" className="min-h-0 flex-1 overflow-y-auto p-1">
         {filteredPeople.length > 0 ? (
           filteredPeople.map((person) => {
             const selected = value.some((id) => idsMatch(id, person.id));

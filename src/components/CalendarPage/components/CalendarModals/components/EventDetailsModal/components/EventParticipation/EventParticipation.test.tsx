@@ -37,3 +37,11 @@ it('MAIR-1122: no block for another category nor for a user who cannot answer', 
   rerender(<EventParticipation event={{ ...meeting, canRespond: false }} onRespond={vi.fn()} />);
   expect(container).toBeEmptyDOMElement();
 });
+
+it('MAIR-1222 the answer status exists before its text, so the text is announced (RGAA 7.5)', async () => {
+  const { renderToStaticMarkup } = await import('react-dom/server');
+  // First render (server or first client pass): the status is there, still empty.
+  expect(renderToStaticMarkup(<EventParticipation event={meeting} onRespond={vi.fn()} />)).toMatch(/<p[^>]*role="status"[^>]*><\/p>/);
+  render(<EventParticipation event={meeting} onRespond={vi.fn()} />);
+  expect(screen.getByRole('status')).toHaveTextContent('Vous n’avez pas encore répondu.');
+});

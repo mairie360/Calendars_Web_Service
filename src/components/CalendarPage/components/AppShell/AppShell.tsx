@@ -14,13 +14,15 @@ import { getActiveFrontHrefs } from '@/app/navigation';
 
 type AppShellProps = {
   activeItem: string;
+  /** The commune of the deployment (`COMMUNE_NAME`), shown by the shared header and navigation; none when unknown. */
+  commune?: string;
   /** MAIR-935: the top-bar « Rechercher un événement », filtered on every keystroke ('' once cleared). */
   search?: { value: string; onChange: (query: string) => void };
   children: ReactNode | ((session: AuthSession) => ReactNode);
 };
 
 /** Bind the existing BFF session and calendar viewport to the shared frontend shell. */
-export function AppShell({ activeItem, search, children }: AppShellProps) {
+export function AppShell({ activeItem, commune, search, children }: AppShellProps) {
   const session = useAuthSession();
   const [logoutError, setLogoutError] = useState<string | null>(null);
   async function logout() {
@@ -37,7 +39,7 @@ export function AppShell({ activeItem, search, children }: AppShellProps) {
       user={session.user}
       onLogout={() => void logout()}
       hrefs={{ ...frontHrefs, calendar: frontHrefs.calendar ?? "/" }}
-      sidebarProps={{ brandLogoSrc: "/mairie360-logo.png" }}
+      commune={commune}
       headerProps={search ? { searchLabel: "Rechercher un événement", searchValue: search.value, onSearchChange: search.onChange } : undefined}
     >
       {logoutError && <div className="mb-4">

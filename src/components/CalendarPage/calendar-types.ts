@@ -115,6 +115,8 @@ export interface MonthGridProps extends React.HTMLAttributes<HTMLDivElement> {
   dayLabels?: string[];
   onSelectDate?: (date: Date) => void;
   onEventClick?: (event: CalendarEvent) => void;
+  /** « + N » of a full day: opens that day (day view). */
+  onShowDay?: (date: Date) => void;
 }
 
 export interface WeekGridProps extends React.HTMLAttributes<HTMLDivElement> {

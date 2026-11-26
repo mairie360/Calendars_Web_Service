@@ -13,6 +13,7 @@ import {
 import { EventPill } from '../EventPill';
 import { calendarHourHeight, getEventGroupsForDate } from '../../layout';
 import { joinClasses } from '@/components/CalendarPage/calendar-style';
+import { useCurrentTime } from './use-current-time';
 import type { WeekGridProps } from '@/components/CalendarPage/calendar-types';
 
 export type { CalendarDateInput, CalendarEvent, WeekGridProps } from '@/components/CalendarPage/calendar-types';
@@ -37,21 +38,25 @@ export const WeekGrid = ({
   const visibleStartMinutes = timeToMinutes(hours[0] || '00:00');
   const visibleEndMinutes = timeToMinutes(hours[hours.length - 1] || '23:00') + 60;
   const timelineHeight = hours.length * calendarHourHeight;
+  const now = useCurrentTime();
+  const nowMinutes = now ? now.getHours() * 60 + now.getMinutes() : -1;
+  const nowTop = ((nowMinutes - visibleStartMinutes) / 60) * calendarHourHeight;
 
   return (
     <div className={joinClasses('min-w-[780px] space-y-2', className)} {...props}>
       <div className="grid grid-cols-[3.5rem_repeat(7,minmax(0,1fr))] gap-1">
         <div aria-hidden="true" />
         {weekDates.map((date, index) => (
+          // Mockup `Écran/Semaine`: the day name over its number, no box; today's number on the accent pill.
           <CalendarCell
             key={dateKey(date)}
             aria-label={`Sélectionner le ${formatFullDate(date)}`}
             selected={isSameDay(date, selected)}
-            className="flex h-14 min-h-0 flex-col items-center justify-center text-center"
+            className="calendar-week-day flex h-14 min-h-0 flex-col items-center justify-center gap-1 border-transparent bg-transparent text-center"
             onClick={() => onSelectDate?.(date)}
           >
             <span className="text-xs font-medium text-[var(--mairie-muted)]">{dayLabels[index]}</span>
-            <span className="text-sm font-bold">{date.getDate()}</span>
+            <span className="calendar-day-number inline-flex h-7 min-w-7 items-center justify-center rounded-full px-1 text-sm font-bold">{date.getDate()}</span>
           </CalendarCell>
         ))}
       </div>
@@ -62,7 +67,7 @@ export const WeekGrid = ({
             <div
               key={hour}
               className="absolute right-1 text-right text-xs leading-5 text-[var(--mairie-muted)]"
-              style={{ top: index * calendarHourHeight + 6 }}
+              style={{ top: index * calendarHourHeight - 10 }}
             >
               {hour}
             </div>
@@ -72,18 +77,26 @@ export const WeekGrid = ({
         {weekDates.map((date) => {
           const groups = getEventGroupsForDate(events, date, visibleStartMinutes, visibleEndMinutes);
 
+          // Mockup `Écran/Semaine`: continuous hour lines, today's column tinted and a red line at the current time.
+          const today = now !== null && isSameDay(date, now);
+
           return (
-            <div key={dateKey(date)} className="relative" style={{ height: timelineHeight }}>
+            <div key={dateKey(date)} data-today={today || undefined}
+              className={joinClasses('calendar-week-column relative', today && 'bg-[var(--mairie-accent-surface)]')} style={{ height: timelineHeight }}>
               {hours.map((hour, index) => (
                 <button
                   key={`${dateKey(date)}-${hour}`}
                   type="button"
                   aria-label={`${formatFullDate(date)} à ${hour}`}
-                  className="absolute left-0 right-0 rounded-md border border-[var(--mairie-border)] bg-[var(--mairie-surface)] transition-colors hover:border-[var(--mairie-border)] hover:bg-[var(--mairie-surface-raised)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mairie-accent)]/30"
-                  style={{ top: index * calendarHourHeight, height: calendarHourHeight - 4 }}
+                  className="calendar-hour-slot absolute left-0 right-0 border-t border-[var(--mairie-border)] bg-transparent transition-colors hover:bg-[var(--mairie-surface-raised)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--mairie-accent)]/30"
+                  style={{ top: index * calendarHourHeight, height: calendarHourHeight }}
                   onClick={() => onSelectSlot?.(date, hour)}
                 />
               ))}
+              {today && nowTop >= 0 && nowTop <= timelineHeight && (
+                <div aria-hidden="true" data-testid="calendar-current-time"
+                  className="calendar-current-time pointer-events-none absolute inset-x-0 z-30 h-0.5 bg-[var(--mairie-danger)]" style={{ top: nowTop }} />
+              )}
 
               {/* MAIR-1123: one readable event per overlapping group, at full width; « +N » opens the day. */}
               {groups.map(({ event, range, hiddenCount, endOffsetMinutes }) => {

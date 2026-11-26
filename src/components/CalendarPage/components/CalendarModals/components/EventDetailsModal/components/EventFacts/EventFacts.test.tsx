@@ -29,3 +29,15 @@ describe('EventFacts', () => {
     expect(screen.getByText('Aucun participant')).toBeVisible();
   });
 });
+
+it('MAIR-1222 each fact is a dl group holding only its term and its description (RGAA 9.3)', async () => {
+  const { axe } = await import('jest-axe');
+  const { container } = render(<EventFacts event={event} />);
+  const groups = Array.from(container.querySelectorAll('dl > div'));
+  expect(groups).toHaveLength(5);
+  for (const group of groups) expect(Array.from(group.children).map((child) => child.tagName)).toEqual(['DT', 'DD']);
+  expect(screen.getByText('Horaire')).toHaveClass('sr-only');
+  const ids = (await axe(container)).violations.map((violation) => violation.id);
+  expect(ids).not.toContain('definition-list');
+  expect(ids).not.toContain('dlitem');
+});

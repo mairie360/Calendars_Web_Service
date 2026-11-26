@@ -45,11 +45,11 @@ function policyDocument(t) {
 
 test('parsed calendar media policies retain reference tracks, insets and bounded upcoming lists', (t) => {
   const { declarations } = policyDocument(t);
-  const mobile = '(max-width: 767px)', tablet = '(min-width: 768px) and (max-width: 1699px)', desktop = '(min-width: 1700px)';
+  const mobile = '(max-width: 767px)', tablet = '(min-width: 768px) and (max-width: 1279px)', desktop = '(min-width: 1280px)';
   assert.equal(value(declarations('.calendar-week-grid > .grid', mobile)('grid-template-columns')), '2.4remrepeat(7,minmax(0,1fr))');
   assert.equal(value(declarations('.calendar-board > section > div', mobile)('padding')), '16px10px');
   assert.equal(value(declarations('.calendar-sidebar', tablet)('grid-template-columns')), 'repeat(2,minmax(0,1fr))');
-  assert.equal(value(declarations('.calendar-board', desktop)('grid-template-columns')), 'minmax(0,1fr)310px');
+  assert.equal(value(declarations('.calendar-board', desktop)('grid-template-columns')), 'minmax(0,1fr)380px');
   const panel = '.calendar-sidebar > .calendar-upcoming-panel';
   assert.equal(value(declarations(panel)('max-height')), 'clamp(320px,100dvh-440px,560px)');
   assert.equal(value(declarations(panel, desktop)('max-height')), 'min(100%,clamp(320px,100dvh-440px,560px))');

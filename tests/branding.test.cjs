@@ -43,14 +43,19 @@ test('manifest and page metadata expose the branded assets', async () => {
   assert.match(html, /<span id="branding-child">Preserved child<\/span>/);
 });
 
-test('shared navigation renders the public Mairie360 logo', async () => {
+test('MAIR-1222 the shared header and navigation show the library brand and the commune of the deployment', async () => {
   const { layout, AppShell } = loadRootLayout(() => ({
     layout: require('./support/load-ts.cjs').loadTs('app/layout.tsx'),
     AppShell: require('./support/load-ts.cjs').loadTs('components/CalendarPage/components/AppShell/AppShell.tsx').AppShell,
   }));
   const React = require('react');
   const { renderToStaticMarkup } = require('react-dom/server');
-  const shell = React.createElement(AppShell, { activeItem: 'calendar' }, 'Page content');
+  const shell = React.createElement(AppShell, { activeItem: 'calendar', commune: 'Saint-Pierre' }, 'Page content');
   const html = renderToStaticMarkup(await layout.default({children:shell}));
-  assert.ok((html.match(/<img\b[^>]*>/g) ?? []).some(tag => /\bsrc="\/mairie360-logo\.png"/.test(tag)), 'the rendered navigation contains the public brand image');
+  // The shared shell draws the Mairie360 brand itself (the front no longer passes its own logo).
+  assert.ok((html.match(/<img\b[^>]*>/g) ?? []).some(tag => /class="app-navigation-logo"/.test(tag)), 'the rendered navigation contains the brand image');
+  assert.match(html, /<header[\s\S]*Saint-Pierre[\s\S]*<\/header>/, 'the header names the commune');
+  assert.doesNotMatch(html, /Saint-André/, 'never the sample name of the library');
+  const anonymous = renderToStaticMarkup(await layout.default({ children: React.createElement(AppShell, { activeItem: 'calendar' }, 'Page content') }));
+  assert.doesNotMatch(anonymous, /Saint-André|Mairie de/, 'no commune block when none is configured');
 });

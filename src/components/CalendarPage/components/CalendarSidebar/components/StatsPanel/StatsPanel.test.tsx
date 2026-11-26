@@ -11,7 +11,7 @@ it('MAIR-918: one MetricCard per category with « N événements en <mois> » an
   render(<StatsPanel stats={stats} />);
   expect(screen.getByText('5 événements en novembre')).toBeVisible();
   for (const item of stats.items) {
-    const card = screen.getByRole('region', { name: item.label });
+    const card = screen.getByRole('group', { name: item.label });
     expect(card).toHaveTextContent(String(item.value));
     expect(card).toHaveTextContent('En novembre');
   }
@@ -27,4 +27,13 @@ it('MAIR-911: is a busy skeleton while loading and « Statistiques indisponibles
   rerender(<StatsPanel stats={stats} state="unavailable" />);
   expect(screen.getByText('Statistiques indisponibles.')).toBeVisible();
   expect(screen.queryByText('Réunions')).toBeNull();
+});
+
+it('MAIR-1222 each statistics card shows its icon and its label in sentence case', () => {
+  const { container } = render(<StatsPanel stats={stats} />);
+  expect(container.querySelector('.calendar-stats')).not.toBeNull();
+  for (const item of stats.items) {
+    const card = screen.getByRole('group', { name: item.label });
+    expect(card.querySelector('svg')).not.toBeNull();
+  }
 });
