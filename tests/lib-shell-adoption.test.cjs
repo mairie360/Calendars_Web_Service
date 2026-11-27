@@ -13,9 +13,9 @@ test('MAIR-578 the calendar shell renders the library shell, not a local copy', 
     assert.equal(fs.existsSync(path.join(root, copy)), false, `${copy} must not exist`);
   }
   const page = read('src/components/CalendarPage/components/AppShell/AppShell.tsx');
-  assert.match(page, /import \{ AccessibleShell as SharedAppShell \} from "@mairie360\/lib-components\/shell"/);
+  assert.match(page, /import \{ AccessibleShell as SharedAppShell, createBffSearchSource \} from "@mairie360\/lib-components\/shell"/);
   assert.doesNotMatch(page, /@\/components\/(accessible-shell|desktop-navigation)/);
   assert.match(read('src/lib/front-urls-provider.tsx'), /configureSidebarCookieDomain \} from "@mairie360\/lib-components\/shell"/);
   const shell = require('@mairie360/lib-components/shell');
-  for (const name of ['AccessibleShell', 'CurrentDate', 'DesktopNavigation', 'SIDEBAR_COOKIE', 'configureSidebarCookieDomain']) assert.ok(name in shell, `shell entry exports ${name}`);
+  for (const name of ['AccessibleShell', 'createBffSearchSource', 'CurrentDate', 'DesktopNavigation', 'SIDEBAR_COOKIE', 'configureSidebarCookieDomain']) assert.ok(name in shell, `shell entry exports ${name}`);
 });

@@ -87,13 +87,17 @@ test('MAIR-484: one main landmark and one status region, mounted before the load
 test('MAIR-935: the top-bar search dims the events that do not match and Escape restores them', async ({ page, context, baseURL }) => {
   await signInAs(context, baseURL!, users.manager);
   await page.goto('/');
-  const search = page.getByRole('searchbox', { name: 'Rechercher un événement' });
+  // MAIR-1230: the field also runs the global search, so it is a combobox named « Rechercher ».
+  const search = page.getByRole('combobox', { name: 'Rechercher' });
   const pill = page.locator('[data-tone]', { hasText: title }).first();
   await expect(pill).toBeVisible();
   await search.fill(title.toUpperCase());
   await expect(pill).not.toHaveAttribute('data-dimmed', 'true');
   await search.fill('aucun-evenement-ne-correspond');
   await expect(pill).toHaveAttribute('data-dimmed', 'true');
+  // The first Escape closes the global results, the second one clears the field.
+  await search.press('Escape');
+  await expect(search).toHaveAttribute('aria-expanded', 'false');
   await search.press('Escape');
   await expect(search).toHaveValue('');
   await expect(pill).not.toHaveAttribute('data-dimmed', 'true');

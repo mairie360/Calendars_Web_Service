@@ -48,7 +48,8 @@ describe('CalendarPage', () => {
   it('MAIR-484: one status region, mounted with the page, whose text alone follows the loading state (RGAA 7.5)', () => {
     page.state = loaded();
     const { rerender } = render(<CalendarPage />);
-    const region = screen.getByText((_, element) => element?.tagName === 'P' && element.getAttribute('role') === 'status');
+    // The header search keeps its own result-count region in its search form (MAIR-1230): the page's is the other one.
+    const region = screen.getByText((_, element) => element?.tagName === 'P' && element.getAttribute('role') === 'status' && !element.closest('form[role="search"]'));
     expect(region).toHaveTextContent('');
     page.state = loaded({ panelsLoading: true, loading: true });
     rerender(<CalendarPage />);

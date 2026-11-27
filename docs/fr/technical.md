@@ -164,6 +164,7 @@ Ces chemins de données sont exposés à la même origine par le proxy; les page
 | GET | `/calendar/assignees` | query `from`, `to` (optionnels) | 200, 400, 401, 500, 502 |
 | GET | `/calendar/categories` | — | 200, 500 |
 | GET | `/calendar/services` | — | 200, 500 |
+| GET | `/search` | query `q` (2 à 100 caractères), `limit` (facultatif, 1 à 20) | 200, 400, 401, 500, 503 |
 
 ### Pages et adaptateurs locaux
 

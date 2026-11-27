@@ -3,7 +3,7 @@ const { test, before, after, beforeEach, afterEach } = require('node:test');
 const { FrontHarness, jwtFor } = require('./support/front-harness.cjs');
 const { loadTs } = require('./support/load-ts.cjs');
 const { installReactRuntime, mount } = require('./support/server-view.cjs');
-const { alice, apiError, bootstrap, calendarEvent, installWindow, sessionResponse, withoutToastRegions } = require('./support/calendar-fixtures.cjs');
+const { alice, apiError, bootstrap, calendarEvent, globalSearchResult, installWindow, sessionResponse, withoutToastRegions } = require('./support/calendar-fixtures.cjs');
 
 // HTML of the calendar page (src/app/page.tsx) rendered with react-dom/server against the mocked BFFs:
 // the real page, shell and @mairie360/lib-components are rendered, the hook state is kept between render
@@ -301,9 +301,11 @@ test('pending and refused edit keeps its draft through reordered category reads,
   assert.match(toastTexts(), /Événement modifié/);
 });
 
-test('MAIR-935 F8: typing in « Rechercher un événement » dims the other events in every view, clearing restores them', async () => {
+test('MAIR-935 F8: typing in the header search dims the other events in every view, clearing restores them', async () => {
+  // MAIR-1230: the same field also lists the global results, served here by the contract mock.
+  front.calendarBff.on('get', '/search', { body: globalSearchResult({ groups: [], unavailable: [] }) });
   await renderLoadedPage();
-  const search = () => view.hostElements((props, _text, tag) => tag === 'input' && props.type === 'search' && props['aria-label'] === 'Rechercher un événement')[0];
+  const search = () => view.hostElements((props, _text, tag) => tag === 'input' && props.type === 'search' && props['aria-label'] === 'Rechercher')[0];
   const dimmed = () => view.hostElements((props) => props['data-dimmed'] === 'true').map(({ text }) => text);
   assert.ok(search(), 'the top bar offers the calendar search');
   assert.deepEqual(dimmed(), []);
@@ -320,9 +322,69 @@ test('MAIR-935 F8: typing in « Rechercher un événement » dims the other even
   await view.fire((props, _text, tag) => tag === 'input' && props.type === 'search', 'onChange', { target: { value: 'introuvable' } });
   assert.equal(view.props('DaySchedule').events.every((event) => event.searchDimmed), true, 'C2: no match dims everything');
 
+  // MAIR-1230: the field is a combobox: a first Escape closes the result list and keeps the filter, the next one clears it.
+  await view.fire((props, _text, tag) => tag === 'input' && props.type === 'search', 'onKeyDown', { key: 'Escape', preventDefault() {} });
+  assert.equal(search().props.value, 'introuvable');
+  assert.equal(search().props['aria-expanded'], false);
   await view.fire((props, _text, tag) => tag === 'input' && props.type === 'search', 'onKeyDown', { key: 'Escape', preventDefault() {} });
   assert.deepEqual(dimmed(), [], 'C3: Escape clears the search and restores every event');
   assert.equal(search().props.value, '');
+});
+
+// MAIR-1230: the header search lists the results of every module and opens an event of this module on its day.
+test('MAIR-1230: typing in the header search lists the global results with their links and opens the chosen one', async () => {
+  const calendarUrl = new URL(process.env.CALENDAR_FRONT_URL ?? 'http://calendar.mairie.test/').href;
+  loadTs('lib/front-urls').setBrowserFrontUrls({ LOGIN_FRONT_URL: process.env.LOGIN_FRONT_URL ?? 'https://login.mairie.test', CALENDAR_FRONT_URL: calendarUrl, PROJECT_FRONT_URL: 'https://projects.mairie.test/' });
+  front.calendarBff.on('get', '/search', { body: globalSearchResult() });
+  await renderLoadedPage();
+  const field = (props, _text, tag) => tag === 'input' && props.type === 'search';
+  const options = () => view.hostElements((props) => props.role === 'option');
+  assert.equal(view.hostElements(field)[0].props.role, 'combobox');
+
+  await view.fire(field, 'onFocus', {});
+  await view.fire(field, 'onChange', { target: { value: 'perma' } });
+  await view.waitFor(() => options().length === 3);
+
+  assert.deepEqual(front.calendarBff.calls('/search', 'GET').map((call) => call.url.search), ['?q=perma']);
+  assert.deepEqual(options().map(({ props }) => props.id.replace(/^.*-(scope|calendar-0|projects-0)$/, '$1')), ['scope', 'calendar-0', 'projects-0'], 'the calendar search stays the first option');
+  assert.match(view.text(), /Rechercher « perma » dans Calendrier/);
+  assert.match(view.text(), /Conseil municipal Événement · 16 septembre · Salle du conseil/);
+  assert.match(view.text(), /Conseil des jeunes Projet/);
+  assert.match(view.text(), /Messagerie ne répond pas/);
+  const start = new Date('2026-09-16T18:00:00Z');
+  const day = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}-${String(start.getDate()).padStart(2, '0')}`;
+  const [, event, project] = options();
+  assert.equal(event.props['data-href'], `${calendarUrl}?date=${day}&event=5`, 'an event opens the calendar on its day');
+  assert.equal(project.props['data-href'], 'https://projects.mairie.test/?project=7', 'a project opens the Projects module');
+  // The calendar's own filter still applies to the typed term: only « Permanence » matches it.
+  assert.deepEqual(view.props('MonthGrid').events.map((item) => [item.id, Boolean(item.searchDimmed)]), [[5, true], [6, false]]);
+
+  await view.act(() => event.props.onClick());
+  assert.deepEqual(window.location.assigned, [event.props['data-href']]);
+});
+
+test('MAIR-1230: a search link « ?date=<day>&event=<id> » shows that day and opens the event details', async () => {
+  const date = '2026-12-03';
+  window.location.search = `?date=${date}&event=42`;
+  front.calendarBff.on('get', '/calendar/events/{id}', { body: calendarEvent(42, { date, title: 'Conseil municipal' }) });
+  await renderLoadedPage(bootstrap({ events: [calendarEvent(42, { date, title: 'Conseil municipal' })] }));
+  await view.waitFor(() => view.props('ValidatedEventDetailsModal')?.event?.id === 42);
+
+  assert.equal(view.props('CalendarToolbar').title, getPeriodTitle('month', new Date(2026, 11, 3)));
+  assert.match(dialogHtml(), /Conseil municipal/);
+  await view.waitFor(() => front.calendarBff.calls('/calendar/events/{id}', 'GET').length === 1);
+  assert.deepEqual(front.calendarBff.calls('/calendar/events/{id}', 'GET').map((call) => call.pathParams.id), ['42']);
+});
+
+test('MAIR-1230: a search link to an unknown event shows its day without a dialog nor a retry', async () => {
+  window.location.search = '?date=2026-12-03&event=999';
+  await renderLoadedPage(bootstrap({ events: [calendarEvent(42, { date: '2026-12-03' })] }));
+  await view.waitFor(() => !isCalendarPending());
+
+  assert.equal(view.props('CalendarToolbar').title, getPeriodTitle('month', new Date(2026, 11, 3)));
+  assert.doesNotMatch(withoutToastRegions(view.html), /role="dialog"/);
+  assert.equal(front.calendarBff.calls('/calendar/events/{id}', 'GET').length, 0);
+  assert.equal(front.calendarBff.calls('/calendar/bootstrap', 'GET').length, 1);
 });
 
 test('MAIR-1180: the type and service filters hide events, combine with the search, empty the grid and clear back', async () => {
@@ -704,7 +766,8 @@ test('MAIR-557: the details dialog offers the actions granted by the event detai
 });
 
 test('MAIR-484: one main landmark and one status region, mounted before its text, across load and refresh (RGAA 9.2, 12.6, 7.5)', async () => {
-  const statuses = (html) => withoutToastRegions(html).match(/<[a-z]+\b[^>]*role="status"[^>]*>[\s\S]*?<\/[a-z]+>/g) ?? [];
+  // The header search keeps its own (empty) result-count region in its search form (MAIR-1230): the page's is the other one.
+  const statuses = (html) => withoutToastRegions(html).replace(/<form role="search" aria-label="Rechercher"[\s\S]*?<\/form>/g, '').match(/<[a-z]+\b[^>]*role="status"[^>]*>[\s\S]*?<\/[a-z]+>/g) ?? [];
   const html = await renderLoadedPage();
   assert.equal((html.match(/<main\b/g) ?? []).length, 1, 'only the AppShell main landmark');
   // Loaded: the region is already there, empty, so the next load only changes its text.
