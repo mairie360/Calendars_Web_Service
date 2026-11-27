@@ -148,6 +148,7 @@ These data paths are exposed at the same origin through the proxy; Next.js pages
 | GET | `/calendar/assignees` | `from`, `to` query (optional) | 200, 400, 401, 500, 502 |
 | GET | `/calendar/categories` | — | 200, 500 |
 | GET | `/calendar/services` | — | 200, 500 |
+| GET | `/search` | `q` query (2 to 100 characters), `limit` query (optional, 1 to 20) | 200, 400, 401, 500, 503 |
 
 ### Pages and local adapters
 

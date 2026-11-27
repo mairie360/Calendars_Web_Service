@@ -219,10 +219,17 @@ The calendar follows the agreed V2 mockup ([Figma, journeys F1–F9](https://www
   icon), and a private event gets a small lock before its title in the month, week and day views and in « À venir »,
   read « (privé) » by screen readers. Who may read a private event (its creator and its participants) is the BFF's
   decision: anyone else gets a 403.
-- **Search (MAIR-935).** The top-bar « Rechercher un événement » filters on every keystroke, ignoring case and
+- **Search (MAIR-935).** The top-bar « Rechercher » filters on every keystroke, ignoring case and
   accents, on the title and the location: in the month, week and day views the events that do not match fade to
-  30 % and stay clickable (no match fades everything, no dedicated message); clearing it (✕ or Escape) shows
-  every event again. The query survives period and view changes.
+  30 % and stay clickable (no match fades everything, no dedicated message); clearing it (✕, or Escape once the
+  result list is closed) shows every event again. The query survives period and view changes.
+- **Global search (MAIR-1230).** The same field also searches every module (agents, projects and tasks, events,
+  conversations and messages, courses) through the same-origin `GET /search`, forwarded to BFF_Calendar: from
+  2 characters and after a 250 ms pause, a list under the field shows the results grouped by module, the modules
+  that did not answer, and first « Rechercher « … » dans Calendrier », which keeps the calendar filter above. A
+  result opens its module; an event opens this page on `?date=<YYYY-MM-DD>&event=<id>`, the period of that day
+  with the day selected and the event details open (the same link the dashboard uses). An unknown or invisible
+  event only shows the day, an invalid date the current month.
 - **Filters.** Under the toolbar, « Du » / « Au » (each optional), « Type » (several categories, with their
   colour dots) and « Service » (« Tous les services » first) hide the events that do not match, in every view;
   the search still dims inside what is left. An event without service only shows while no service is chosen. A

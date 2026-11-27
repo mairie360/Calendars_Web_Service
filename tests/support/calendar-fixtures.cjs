@@ -74,6 +74,9 @@ function installWindow() {
       removeItem: (key) => store.delete(key),
       clear: () => store.clear(),
     },
+    // The header search debounces its calls with the browser timers.
+    setTimeout: (...args) => setTimeout(...args),
+    clearTimeout: (id) => clearTimeout(id),
     location: { href: new URL(process.env.CALENDAR_FRONT_URL ?? 'http://calendar.mairie.test/').href, reloads: 0, assigned: [], reload() { this.reloads += 1; }, assign(href) { this.assigned.push(href); } },
   };
   global.window = window;
@@ -96,4 +99,17 @@ const pageStatusRegions = (document) => [...document.querySelectorAll('[role="st
 /** Same check on rendered HTML: a page status element whose first text is not empty. */
 const hasPageStatus = (html) => /role="status"[^>]*>(?:<(?!\/)[^>]*>)*[^<\s]/.test(withoutToastRegions(html));
 
-module.exports = { admin, alice, marie, apiError, bootstrap, calendarEvent, hasPageStatus, installWindow, pageStatusRegions, sessionResponse, withoutToastRegions };
+/**
+ * MAIR-1230: an answer of the global search (`GET /search`, `GlobalSearchResponse`): one event of this module,
+ * one project of another, and Messages unavailable. `updated_at` of an event is its start.
+ */
+const globalSearchResult = (overrides = {}) => ({
+  groups: [
+    { module: 'calendar', items: [{ kind: 'event', id: 5, title: 'Conseil municipal', excerpt: 'Salle du conseil', parent_id: null, updated_at: '2026-09-16T18:00:00Z' }] },
+    { module: 'projects', items: [{ kind: 'project', id: 7, title: 'Conseil des jeunes', excerpt: null, parent_id: null, updated_at: '2026-09-01T08:00:00Z' }] },
+  ],
+  unavailable: ['messages'],
+  ...overrides,
+});
+
+module.exports = { admin, alice, marie, apiError, bootstrap, calendarEvent, globalSearchResult, hasPageStatus, installWindow, pageStatusRegions, sessionResponse, withoutToastRegions };

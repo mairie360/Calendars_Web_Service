@@ -1,7 +1,7 @@
 {
   "package": "@mairie360/bff-calendar-openapi",
-  "version": "0.0.0-dev.2a245551b0874288589283eca688852da905a47c",
-  "commit": "2a245551b0874288589283eca688852da905a47c",
-  "source": "https://raw.githubusercontent.com/mairie360/BFF_Calendar/2a245551b0874288589283eca688852da905a47c/contracts/openapi.json",
-  "sha256": "73665d39501eba64ebdd5b7658e13464d00ed0b8d4c8441a0d557bc5a9090874"
+  "version": "0.0.0-dev.94085795bfb1ea4ea04fc514d306ff4ca09e47f2",
+  "commit": "94085795bfb1ea4ea04fc514d306ff4ca09e47f2",
+  "source": "https://raw.githubusercontent.com/mairie360/BFF_Calendar/94085795bfb1ea4ea04fc514d306ff4ca09e47f2/contracts/openapi.json",
+  "sha256": "a6d185f77027aa71d4d05836ca1a5726f83d1dfc286eaa00e3429bacb6701f1e"
 }

@@ -5,7 +5,7 @@ const { test, before, after, beforeEach, afterEach } = require('node:test');
 const { APP_ROUTES, FrontHarness, jwtFor } = require('./support/front-harness.cjs');
 const { SRC, loadTs } = require('./support/load-ts.cjs');
 const policy = require('./support/source-policy.cjs');
-const { admin, alice, apiError, bootstrap, calendarEvent } = require('./support/calendar-fixtures.cjs');
+const { admin, alice, apiError, bootstrap, calendarEvent, globalSearchResult } = require('./support/calendar-fixtures.cjs');
 
 // Périmètre réseau du front : le code n'émet des requêtes que depuis les fichiers prévus, uniquement vers
 // sa propre origine, et le proxy ne laisse passer vers BFF_Calendar que les opérations de contracts/openapi.json.
@@ -123,6 +123,7 @@ const OPERATION_FIXTURES = {
   'GET /calendar/assignees': { path: '/calendar/assignees', reply: { body: [admin, alice] } },
   'GET /calendar/categories': { path: '/calendar/categories', reply: { body: [{ label: 'Réunion', value: 'meeting' }] } },
   'GET /calendar/services': { path: '/calendar/services', reply: { body: [{ label: 'Direction générale', value: 'direction' }] } },
+  'GET /search': { path: '/search?q=conseil', reply: { body: globalSearchResult() } },
 };
 
 test('every contract operation has a conforming fixture', () => {
@@ -145,6 +146,30 @@ for (const [operation, fixture] of Object.entries(OPERATION_FIXTURES)) {
     if (fixture.reply.body) assert.deepEqual(await response.json(), fixture.reply.body);
   });
 }
+
+test('MAIR-1230: the header search source calls GET /search through the contract proxy with the session', async () => {
+  const { createBffSearchSource } = require('@mairie360/lib-components/shell');
+  front.calendarBff.on('get', '/search', { body: globalSearchResult() });
+
+  const result = await createBffSearchSource()('  conseil ', new AbortController().signal);
+
+  assert.deepEqual(front.calendarBff.sequence(), ['GET /search?q=conseil']);
+  assert.equal(front.calendarBff.requests[0].headers.authorization, `Bearer ${front.cookies.get('accessToken')}`);
+  assert.deepEqual(result.groups.map(({ module, items }) => [module, items.map(({ kind, id }) => `${kind}:${id}`)]), [['calendar', ['event:5']], ['projects', ['project:7']]]);
+  assert.deepEqual(result.unavailable, ['messages']);
+});
+
+test('MAIR-1230: a refused search keeps the BFF error envelope and the source reports the failure', async () => {
+  const { createBffSearchSource } = require('@mairie360/lib-components/shell');
+  const envelope = apiError('BAD_REQUEST', 'q must hold 2 to 100 characters');
+  front.calendarBff.on('get', '/search', { status: 400, body: envelope });
+
+  const response = await fetch('/search?q=ab');
+  assert.equal(response.status, 400);
+  assert.deepEqual(await response.json(), envelope);
+  await assert.rejects(createBffSearchSource()('ab', new AbortController().signal), /status 400/);
+  assert.deepEqual(front.calendarBff.sequence(), ['GET /search?q=ab', 'GET /search?q=ab']);
+});
 
 test('the proxy answers routes and methods outside the contract without contacting any BFF', async () => {
   for (const [method, url, status] of [

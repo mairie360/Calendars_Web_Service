@@ -226,11 +226,19 @@ Le calendrier suit la maquette V2 validée ([Figma, parcours F1–F9](https://ww
   petit cadenas devant son titre dans les vues Mois, Semaine et Jour et dans « À venir », lu « (privé) » par les
   lecteurs d'écran. Qui peut lire un événement privé (son créateur et ses participants) est une décision du BFF :
   les autres reçoivent un 403.
-- **Recherche (MAIR-935).** « Rechercher un événement » dans le bandeau haut filtre à chaque frappe, sans tenir
+- **Recherche (MAIR-935).** « Rechercher » dans le bandeau haut filtre à chaque frappe, sans tenir
   compte de la casse ni des accents, sur le titre et le lieu : dans les vues Mois, Semaine et Jour, les
   événements qui ne correspondent pas passent à 30 % d'opacité et restent cliquables (aucun résultat : tout est
-  estompé, sans message dédié) ; l'effacement (✕ ou Échap) réaffiche tout. La recherche est conservée au
-  changement de période et de vue.
+  estompé, sans message dédié) ; l'effacement (✕, ou Échap une fois la liste de résultats fermée) réaffiche
+  tout. La recherche est conservée au changement de période et de vue.
+- **Recherche globale (MAIR-1230).** Le même champ cherche aussi dans tous les modules (agents, projets et
+  tâches, événements, conversations et messages, formations) via `GET /search` sur la même origine, relayé à
+  BFF_Calendar : dès 2 caractères et après 250 ms de pause, une liste sous le champ affiche les résultats groupés
+  par module, les modules qui n'ont pas répondu, et en premier « Rechercher « … » dans Calendrier », qui garde le
+  filtre du calendrier ci-dessus. Un résultat ouvre son module ; un événement ouvre cette page sur
+  `?date=<YYYY-MM-DD>&event=<id>` : la période de ce jour, le jour sélectionné et la fiche de l'événement ouverte
+  (le même lien que celui du tableau de bord). Un événement inconnu ou non visible n'affiche que le jour, une date
+  invalide le mois courant.
 - **Filtres.** Sous la barre d'outils, « Du » / « Au » (chacun facultatif), « Type » (plusieurs catégories, avec
   leur pastille de couleur) et « Service » (« Tous les services » en tête) masquent les événements qui ne
   correspondent pas, dans toutes les vues ; la recherche continue d'estomper parmi ceux qui restent. Un événement
