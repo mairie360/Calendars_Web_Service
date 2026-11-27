@@ -192,3 +192,14 @@ button {
   text-transform: none;
   letter-spacing: normal;
 }
+
+/* Mockup `Écran/Mois`: the icon of each type sits on a 28 px chip in the calendar module colour. */
+.calendar-stats [data-m360-component="MetricCard"] > span:first-child > span:last-child {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--mairie-module-calendar);
+  color: var(--mairie-on-module);
+}

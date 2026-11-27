@@ -47,6 +47,9 @@ async function openEventDetails(event) {
   await view.waitFor(() => view.props('ValidatedEventDetailsModal')?.event?.canEdit !== undefined);
 }
 
+// The period heading of the calendar card's one-line toolbar (it names the card).
+const periodHeading = () => view.html.match(/<h2 [^>]*id="calendar-period-title"[^>]*>([^<]*)<\/h2>/)?.[1];
+
 async function renderLoadedPage(body = bootstrap()) {
   front.calendarRead({ body });
   view = mount(React.createElement(Page));
@@ -469,7 +472,7 @@ test('day arrows render the navigated date in the actual schedule, statistics an
   await view.waitFor(() => !isCalendarPending());
   await view.act(() => view.props('CalendarToolbar').onNext());
   const html = await view.waitFor(() => !isCalendarPending() && view.props('CalendarToolbar').title === 'Vendredi 1 janvier 2027');
-  assert.ok(view.find('Panel').some(({ props }) => props.title === 'Vendredi 1 janvier 2027'), 'MAIR-893: the period is the title of the calendar panel');
+  assert.equal(periodHeading(), 'Vendredi 1 janvier 2027', 'MAIR-1256: the period is the heading of the calendar card toolbar');
   assert.match(html, /aria-label="1 Janvier 2027 à 09:00"/);
   assert.doesNotMatch(html, /aria-label="31 Décembre 2026 à/);
   assert.equal(view.props('CalendarSidebar').stats.total, 1, 'MAIR-918: statistics of the displayed month (January)');
@@ -486,7 +489,7 @@ for (const mode of ['month', 'week', 'day']) {
       await view.waitFor(() => !isCalendarPending() && view.props('CalendarToolbar').view === mode);
     }
     const today = getPeriodTitle(mode, initialDate);
-    const panelTitles = () => view.find('Panel').map(({ props }) => props.title);
+    const panelTitles = () => [periodHeading()];
     assert.ok(panelTitles().includes(today));
     const iconButton = (name) => (props) => props['aria-label'] === name;
     await view.click(iconButton('Période suivante'));
@@ -521,6 +524,60 @@ test('MAIR-905 F4: a month day opens « Nouvel événement » on that day at 09:
   assert.equal(view.props('ValidatedEventDetailsModal').isOpen, true);
   assert.equal(view.props('ValidatedCreateEventModal').isOpen, false, 'a pill never starts a creation');
   assert.ok(front.calendarBff.sequence().every((call) => /^GET \/calendar\//.test(call)));
+});
+
+test('MAIR-1256: the header names the agent from the calendar answer while BFF User cannot be read', async () => {
+  front.userBff.on('get', '/me', { status: 502, body: { error: { code: 'BAD_GATEWAY', message: 'Core API indisponible', details: [] } } });
+  front.calendarRead({ body: bootstrap() });
+  view = mount(React.createElement(Page));
+  await view.waitFor(() => !isCalendarPending() && front.userBff.sequence().length === 1);
+  await front.settle();
+  const html = await view.waitFor(() => view.find('Header')[0]?.props.user.name === 'Admin Mairie');
+  assert.match(html, /<span[^>]*>Admin Mairie<\/span>/);
+  assert.doesNotMatch(html, /Chargement…/, 'never the session placeholder once the calendar named the agent');
+});
+
+test('MAIR-1256: the calendar card header is one line « ‹ › <period> [Aujourd’hui] » with the views on the right', async () => {
+  const html = withoutToastRegions(await renderLoadedPage());
+  const period = getPeriodTitle('month', initialDate);
+  const card = html.slice(html.indexOf('aria-labelledby="calendar-period-title"'));
+  const order = ['aria-label="Période précédente"', 'aria-label="Période suivante"', `>${period}</h2>`, '>Aujourd’hui<', 'aria-label="Changer de vue"']
+    .map((marker) => card.indexOf(marker));
+  assert.ok(order.every((index) => index >= 0), `every control is in the card: ${order}`);
+  assert.deepEqual([...order].sort((a, b) => a - b), order, 'previous, next, period, today, then the views');
+  assert.equal(periodHeading(), period);
+  assert.match(card, /<h2 [^>]*aria-live="polite"[^>]*>/, 'the period change is announced');
+  assert.equal(view.find('Panel').some(({ props }) => props.title === period), false, 'the period is no longer a separate panel title');
+  const today = card.match(/<button [^>]*>Aujourd’hui<\/button>/)?.[0] ?? '';
+  assert.match(today, /data-variant="outline"/, '« Aujourd’hui » is an outline button');
+  assert.match(today, /data-tone="neutral"/);
+});
+
+test('MAIR-1256: a created event with a participant appears in the month and in « À venir » with its avatar', async () => {
+  await renderLoadedPage(bootstrap({ events: [] }));
+  const tomorrow = new Date(initialDate.getFullYear(), initialDate.getMonth(), initialDate.getDate() + 1);
+  const ymd = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`;
+  // As BFF_Calendar answers since the `users` index: the participants as ids only.
+  const created = calendarEvent(11, { title: 'Commission travaux', date: ymd, startTime: '14:00', endTime: '15:00', assignees: undefined, assigneeIds: [alice.id] });
+  front.calendarRead({ body: bootstrap({ events: [created] }) });
+  front.calendarBff.on('post', '/calendar/events', { status: 201, body: { ...created, assignees: [] } });
+  await view.act(() => view.props('CalendarHeader').onCreate());
+  await view.act(() => view.props('ValidatedCreateEventModal').onCreate({
+    title: 'Commission travaux', date: tomorrow, startTime: '14:00', endTime: '15:00', category: 'meeting', service: 'direction',
+    location: 'Salle du conseil', description: '', assigneeIds: [alice.id],
+  }));
+  await view.waitFor(() => !isCalendarPending() && view.props('CalendarSidebar').upcoming.length === 1);
+  const posted = front.calendarBff.requests.find((request) => request.method === 'POST');
+  assert.deepEqual(posted.body.assigneeIds, [alice.id]);
+  assert.ok(view.props('MonthGrid').events.some((event) => event.id === 11), 'the event is in the month grid');
+  const [{ event }] = view.props('CalendarSidebar').upcoming;
+  assert.equal(event.title, 'Commission travaux');
+  assert.deepEqual(event.assignees.map((person) => person.name), ['Alice Martin'], 'participants resolved from the users index');
+  const stack = view.find('AvatarStack').find(({ props }) => props.label === 'Participants');
+  assert.ok(stack, '« À venir » shows the participants');
+  assert.deepEqual(stack.props.people.map((person) => person.name), ['Alice Martin']);
+  const upcomingHtml = view.html.slice(view.html.indexOf('Commission travaux'));
+  assert.match(upcomingHtml, /aria-label="Participants"[\s\S]*>AM</, 'the avatar initials are rendered');
 });
 
 test('MAIR-918 F5: « À venir » lists the next occurrences first and a row opens the event details', async () => {

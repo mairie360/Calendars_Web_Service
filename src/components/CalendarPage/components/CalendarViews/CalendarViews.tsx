@@ -15,19 +15,19 @@ import type { CalendarPanelState } from '../../calendar-types';
 
 type Calendar = ReturnType<typeof useCalendarPage>;
 
-type CalendarViewsProps = { calendar: Calendar; gridRef: Ref<HTMLDivElement>; state?: CalendarPanelState };
+type CalendarViewsProps = { calendar: Calendar; gridRef: Ref<HTMLDivElement>; state?: CalendarPanelState; titleId?: string };
 
 /**
  * Toolbar and the month, week or day grid of the current view. MAIR-911: the toolbar stays while the
  * period loads (skeleton) or cannot be read (unavailable state with « Réessayer »).
  */
-export const CalendarViews = ({ calendar, gridRef, state = "default" }: CalendarViewsProps) => {
+export const CalendarViews = ({ calendar, gridRef, state = "default", titleId }: CalendarViewsProps) => {
   // Filters hide the events that do not match; when none of the period is left, the empty state replaces the grid.
   const noMatch = state === "default" && Boolean(calendar.noMatchingEvents);
   return (
   <>
     {/* Before the browser initialisation the period would be the server's date: no toolbar yet. */}
-    {calendar.ready && <CalendarToolbar title={calendar.periodTitle} view={calendar.view} onPrevious={calendar.handlePrevious} onNext={calendar.handleNext} onToday={calendar.handleToday} onViewChange={calendar.setView} />}
+    {calendar.ready && <CalendarToolbar title={calendar.periodTitle} titleId={titleId} view={calendar.view} onPrevious={calendar.handlePrevious} onNext={calendar.handleNext} onToday={calendar.handleToday} onViewChange={calendar.setView} />}
     {calendar.ready && calendar.filters && (
       <CalendarFilters className="mt-4" filters={calendar.filters} categories={calendar.categories} services={calendar.services}
         activeCount={calendar.activeFilterCount} shownCount={calendar.filterCounts.shown} totalCount={calendar.filterCounts.total}

@@ -12,8 +12,11 @@ test('MAIR-578 the calendar shell renders the library shell, not a local copy', 
   for (const copy of ['src/components/accessible-shell.tsx', 'src/components/desktop-navigation.tsx', 'src/lib/sidebar-preference.ts']) {
     assert.equal(fs.existsSync(path.join(root, copy)), false, `${copy} must not exist`);
   }
-  const page = read('src/components/CalendarPage/components/AppShell/AppShell.tsx');
-  assert.match(page, /import \{ AccessibleShell as SharedAppShell, createBffSearchSource \} from "@mairie360\/lib-components\/shell"/);
+  // MAIR-1256: the page renders the library shell directly, without a local AppShell wrapper.
+  assert.equal(fs.existsSync(path.join(root, 'src/components/CalendarPage/components/AppShell')), false, 'no local AppShell wrapper');
+  const page = read('src/components/CalendarPage/CalendarPage.tsx');
+  assert.match(page, /import \{ AccessibleShell, createBffSearchSource \} from "@mairie360\/lib-components\/shell"/);
+  assert.match(page, /<AccessibleShell\b/);
   assert.doesNotMatch(page, /@\/components\/(accessible-shell|desktop-navigation)/);
   assert.match(read('src/lib/front-urls-provider.tsx'), /configureSidebarCookieDomain \} from "@mairie360\/lib-components\/shell"/);
   const shell = require('@mairie360/lib-components/shell');

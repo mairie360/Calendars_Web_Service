@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { Button, NextIconButton, PreviousIconButton, SegmentedControl } from '@mairie360/lib-components/primitives';
+import { Button, NextIconButton, PreviousIconButton, SectionTitle, SegmentedControl } from '@mairie360/lib-components/primitives';
 import { defaultViewOptions } from '@/components/CalendarPage/calendar-constants';
 import { joinClasses } from '@/components/CalendarPage/calendar-style';
 import type { CalendarToolbarProps } from '@/components/CalendarPage/calendar-types';
@@ -9,11 +9,13 @@ import type { CalendarViewMode } from '@/app/calendar/types';
 export type { CalendarToolbarProps } from '@/components/CalendarPage/calendar-types';
 
 /**
- * MAIR-893 (F2, F3): lib Précédent / Suivant (one month, week or day), « Aujourd'hui », and the view
- * choice as a lib SegmentedControl. The period itself is the title of the calendar panel.
+ * Header row of the calendar card, on one line like the mockup: « ‹ › <period> [Aujourd’hui] » on the left
+ * (lib Précédent / Suivant, the period as the card's h2, « Aujourd’hui » as an outline button), the view
+ * choice (lib SegmentedControl) on the right.
  */
 export const CalendarToolbar = ({
   title,
+  titleId,
   view,
   viewOptions = defaultViewOptions,
   onViewChange,
@@ -26,13 +28,16 @@ export const CalendarToolbar = ({
   ...props
 }: CalendarToolbarProps) => (
   <div
-    className={joinClasses('flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between', className)}
+    className={joinClasses('calendar-toolbar flex flex-wrap items-center justify-between gap-3', className)}
     {...props}
   >
-    <div className="flex min-w-0 items-center gap-2" role="group" aria-label={title ? `Navigation : ${title}` : 'Navigation dans le calendrier'}>
+    <div className="calendar-period-nav flex min-w-0 items-center gap-1">
       <PreviousIconButton size="s" label={previousLabel} onClick={onPrevious} />
       <NextIconButton size="s" label={nextLabel} onClick={onNext} />
-      <Button variant="ghost" tone="neutral" size="s" label="Aujourd’hui" onClick={onToday} />
+      {title && (
+        <SectionTitle id={titleId} className="calendar-period-title mx-2 whitespace-nowrap" aria-live="polite">{title}</SectionTitle>
+      )}
+      <Button variant="outline" tone="neutral" size="s" label="Aujourd’hui" onClick={onToday} />
     </div>
 
     <SegmentedControl<CalendarViewMode> label="Changer de vue" size="m"

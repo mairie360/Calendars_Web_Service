@@ -11,8 +11,8 @@ const make = (overrides: Record<string, unknown> = {}) => ({ ready: true, readEr
 describe('CalendarViews', () => {
   it('renders the toolbar and the month grid of the current view', () => {
     const { container } = render(<CalendarViews calendar={make()} gridRef={React.createRef()} />);
-    // MAIR-893: the period is the title of the surrounding panel, the toolbar group names it.
-    expect(screen.getByRole('group', { name: 'Navigation : Octobre 2026' })).toBeInTheDocument();
+    // MAIR-1256: the period is the heading of the toolbar row, between the arrows and « Aujourd’hui ».
+    expect(screen.getByRole('heading', { level: 2, name: 'Octobre 2026' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Aujourd’hui' })).toBeInTheDocument();
     expect(container.querySelector('.calendar-month-grid')).not.toBeNull();
     expect(screen.getByRole('button', { name: /précédent/i })).toBeInTheDocument();

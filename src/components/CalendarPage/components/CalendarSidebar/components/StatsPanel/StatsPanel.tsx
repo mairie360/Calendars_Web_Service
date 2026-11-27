@@ -1,4 +1,4 @@
-import { UsersRound } from 'lucide-react';
+import { Calendar, Landmark, PartyPopper, Users, type LucideIcon } from 'lucide-react';
 import React from 'react';
 
 import { MetricCard, Panel } from '@mairie360/lib-components/primitives';
@@ -6,6 +6,10 @@ import { CalendarLoadingSkeleton } from '@/components/CalendarPage/components/Ca
 import type { StatsPanelProps } from '@/components/CalendarPage/calendar-types';
 
 export type { CalendarMonthStats, StatsPanelProps } from '@/components/CalendarPage/calendar-types';
+
+/** Icon of each event type, as in the mockup; any other category takes the calendar icon. */
+const STAT_ICONS: Readonly<Record<string, LucideIcon>> = { meeting: Users, activity: PartyPopper, ceremony: Landmark, other: Calendar };
+export const statIconOf = (category: string): LucideIcon => STAT_ICONS[category] ?? Calendar;
 
 const plural = (count: number) => `${count} événement${count > 1 ? 's' : ''}`;
 
@@ -19,10 +23,11 @@ export const StatsPanel = ({ stats, state = 'default', className = '', ...props 
     stateProps={{ title: 'Statistiques indisponibles.', description: null }} {...props}>
     {/* The Panel loading state would insert its own status, the page announces the load once. */}
     {state === 'loading' ? <CalendarLoadingSkeleton padding="0" /> : (
-      // Mockup `Écran/Mois`: each card has its icon and its label in sentence case (see .calendar-stats in app-overrides.css).
+      // Mockup `Écran/Mois`: each card has the icon of its type on the calendar chip and its label in sentence case
+      // (see .calendar-stats in app-overrides.css).
       <div className="calendar-stats grid grid-cols-2 gap-3">
         {stats.items.map((item) => (
-          <MetricCard key={item.category} size="s" icon={UsersRound} label={item.label} value={item.value} trendLabel={`En ${stats.month}`} />
+          <MetricCard key={item.category} data-category={item.category} size="s" icon={statIconOf(item.category)} label={item.label} value={item.value} trendLabel={`En ${stats.month}`} />
         ))}
       </div>
     )}
