@@ -7,7 +7,7 @@ test('MAIR-879: the shared lib-components 2 frame is not reshaped by calendar ru
   const navigation = dom.document.querySelector('aside.app-desktop-navigation[aria-label="Navigation principale"]');
   assert.ok(navigation, 'the collapsible navigation band of the lib frame is rendered');
   const commands = [...navigation.querySelectorAll('nav button')];
-  assert.deepEqual(commands.map((button) => button.getAttribute('aria-label')), ['Tableau de bord', 'Projets', 'Messagerie', 'Formation', 'Calendrier', 'Administration', 'Paramètres']);
+  assert.deepEqual(commands.map((button) => button.getAttribute('aria-label')), ['Tableau de bord', 'Projets', 'Calendrier', 'Messagerie', 'E-learning', 'Administration', 'Paramètres']);
   assert.equal(dom.document.querySelector('.calendar-scroll-shell'), null);
   assert.ok(dom.document.querySelector('.app-shell-frame > .app-shell-body'));
   assert.equal(dom.document.querySelector('footer'), null, 'lib-components 2.3 renders no footer in the page base');
@@ -92,7 +92,7 @@ test('real page marks today after bootstrap, keeps selection independent and rea
   // MAIR-905 C1: a day click keeps the selection and opens « Nouvel événement » on that day, 09:00 – 10:00.
   const dialog = dom.document.querySelector('[role="dialog"]');
   assert.match(dialog?.textContent ?? '', /Nouvel événement/);
-  assert.equal(dom.document.getElementById('event-date')?.value ?? dialog.querySelector('input[value="08-10-2026"]')?.value, '08-10-2026');
+  assert.equal(dialog.querySelector('input[data-field="event-date"]')?.value, '08-10-2026');
   await dom.click(dom.button('Annuler'));
   assert.notEqual(other.className, beforeOther, 'The real selected-day presentation changes');
   assert.notEqual(today()[0].className, beforeToday, 'The previous selection presentation clears');

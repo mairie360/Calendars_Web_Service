@@ -157,11 +157,15 @@ Le calendrier suit la maquette V2 validée ([Figma, parcours F1–F9](https://ww
 - **En-tête de page (MAIR-884).** Sous-titre « Planifiez et organisez les activités de la mairie » ; actions
   « Actualiser » (relit la période affichée, désactivé tant qu'une lecture court) puis « Créer » (ouvre
   « Nouvel événement », visible dès que les données sont prêtes).
-- **Panneau calendrier (MAIR-893).** Le calendrier est dans un `Panel` de la lib dont le titre est la
-  période affichée (« Novembre 2026 », « 9 – 15 novembre 2026 », « Jeudi 12 novembre 2026 »). Barre
-  d'outils : Précédent / Suivant de la lib (un mois, une semaine ou un jour), « Aujourd’hui » (retour à la
-  période du jour) et le choix de vue en `SegmentedControl` de la lib (Mois / Semaine / Jour, flèches du
-  clavier). L'URL suit toujours `view` et `date`.
+- **Carte calendrier (MAIR-893).** Le calendrier est dans une carte dont l'en-tête tient sur une ligne,
+  comme la maquette : Précédent / Suivant de la lib (un mois, une semaine ou un jour), la période affichée
+  comme titre de la carte (« Novembre 2026 », « 9 – 15 novembre 2026 », « Jeudi 12 novembre 2026 »,
+  annoncée quand elle change), « Aujourd’hui » en bouton contour (retour à la période du jour), et à droite
+  le choix de vue en `SegmentedControl` de la lib (Mois / Semaine / Jour, flèches du clavier). L'URL suit
+  toujours `view` et `date`.
+- **En-tête partagé.** La page rend directement le cadre de la bibliothèque (`AccessibleShell`) : l'en-tête
+  nomme l'agent connecté et son rôle d'après la session BFF User, ou, pendant sa lecture ou si elle est
+  indisponible, d'après l'utilisateur courant renvoyé par BFF_Calendar avec le calendrier.
 - **Rendez-vous qui se chevauchent (MAIR-1123).** En vue Semaine, chaque groupe de rendez-vous qui se
   chevauchent n'en montre qu'un, lisible et sur toute la largeur du jour (titre sur deux lignes au plus, heure de
   début), avec un bouton « +N » (libellé « N autres rendez-vous le …, ouvrir la vue Jour ») qui ouvre la vue Jour
@@ -193,8 +197,9 @@ Le calendrier suit la maquette V2 validée ([Figma, parcours F1–F9](https://ww
   maintenant (récurrences comprises, un événement du jour reste jusqu'à son heure de fin), chaque ligne avec
   titre, pastille de catégorie, jour (« Aujourd’hui », « Demain », « ven. 20 nov. ») et horaires, et
   participants ; une ligne ouvre la fiche. Puis « Statistiques » : « N événements en <mois> » pour le mois
-  affiché et une carte par catégorie de l'API (Réunions, Animations, Cérémonies, Autres), recalculées au
-  changement de mois.
+  affiché et une carte par catégorie de l'API (Réunions, Animations, Cérémonies, Autres), chacune avec
+  l'icône de son type sur une pastille couleur du module Calendrier, recalculées au changement de mois. Les
+  participants de « À venir » sont des avatars (trois au plus, puis « +n »).
 - **Fiche de l'événement (MAIR-929).** La fenêtre a pour titre l'événement ; dessous, la pastille de
   catégorie (et « En attente » / « Refusé » le cas échéant, « Privé » pour un événement privé) et la
   description ; puis cinq lignes avec icône : Date avec la récurrence (« Jeudi 12 novembre 2026 · chaque
@@ -217,6 +222,12 @@ Le calendrier suit la maquette V2 validée ([Figma, parcours F1–F9](https://ww
   focus. Un refus affiche « Impossible d’enregistrer » en haut de la fenêtre, garde la saisie et l'erreur part en
   toast ; le succès ferme la fenêtre, amène le calendrier à la date de l'événement et affiche « Événement créé » /
   « Événement modifié ».
+- **Champs du formulaire (MAIR-1256, lib 2.9.0).** Les dates utilisent le `DatePicker` de la lib (« jeudi
+  12 novembre 2026 », calendrier avec raccourcis, bouton d'effacement ; « Date de début » marquée obligatoire) ;
+  choisir un début remplit une fin vide ou antérieure avec le même jour. Les heures utilisent le `TimeField` de la
+  lib (« 09:00 », icône d'horloge, pas de 15 minutes). Les textes d'aide suivent l'artefact : « Ordre du jour,
+  informations pratiques… », « Salle du conseil », « Ajouter un participant… ». Les deux cartes « Visibilité »
+  se partagent la ligne.
 - **Visibilité.** Le formulaire se termine par « Visibilité », deux cartes radio (`RadioGroup` de la lib, variante
   `card`) : « Public » (« Visible par tous les agents », valeur par défaut d'un nouvel événement) et « Privé »
   (« Visible seulement par vous et les invités »). La modification part de la valeur de l'événement et chaque

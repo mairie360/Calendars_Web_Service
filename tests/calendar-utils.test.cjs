@@ -94,7 +94,7 @@ test('MAIR-918: buildStats counts the occurrences of the displayed month per API
   const categories = [{ value: 'meeting', label: 'Réunion' }, { value: 'activity', label: 'Animation' }, { value: 'ceremony', label: 'Cérémonie' }, { value: 'other', label: 'Autre' }, { value: 'vote', label: 'Scrutin' }];
   // September: A, B once (an occurrence counts once, on its first day), C on Tuesday 1st (base date) and the 5 Wednesdays.
   assert.deepEqual(buildStats(events, new Date(2026, 8, 16), categories), {
-    month: 'septembre', total: 8,
+    month: 'septembre', year: 2026, total: 8,
     items: [
       { category: 'meeting', label: 'Réunions', value: 1 }, { category: 'activity', label: 'Animations', value: 1 },
       { category: 'ceremony', label: 'Cérémonies', value: 6 }, { category: 'other', label: 'Autres', value: 0 },

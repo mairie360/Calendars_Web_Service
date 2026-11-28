@@ -11,6 +11,6 @@ export const visibilityOptions = [
 
 /** Who can read the event: every agent, or only its creator and its participants. */
 export const EventVisibilityField = ({ value, onChange }: { value: CalendarVisibility; onChange: (value: CalendarVisibility) => void }) => (
-  <RadioGroup<CalendarVisibility> id="event-visibility" name="visibility" label="Visibilité" size="s" variant="card" inline
+  <RadioGroup<CalendarVisibility> id="event-visibility" name="visibility" label="Visibilité" size="s" variant="card" inline className="calendar-visibility"
     options={visibilityOptions} value={value} onChange={onChange} />
 );

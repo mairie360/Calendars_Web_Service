@@ -74,7 +74,8 @@ test('invalid create chronology stays in the modal with an accessible error', as
   assert.deepEqual(created, []);
   assert.match(view.html, /role="alert"/);
   // MAIR-926 C3: the error sits under « Date de fin », which takes the focus.
-  assert.match(view.html, /id="event-end-date-error" role="alert"[^>]*>La date de fin doit suivre la date de début\.</);
+  // MAIR-1256: the lib DatePicker writes its error after an icon.
+  assert.match(view.html, /id="event-end-date-error" role="alert"[^>]*>(?:<svg[\s\S]*?<\/svg>)?La date de fin doit suivre la date de début\.</);
   assert.match(view.html, /aria-describedby="event-end-date-error"/);
   assert.equal(focused.at(-1), 'event-end-date');
   assert.match(view.text(), /Enregistrer/);
@@ -183,7 +184,9 @@ test('pending and refused edits retain submitted values, expose in-dialog feedba
   assert.match(view.text(), /Modifier l’événement.*Impossible d’enregistrer.*Refus temporaire, réessayez\..*Titre/);
   for (const [id, expected] of [['event-title', 'Titre conservé'], ['event-location', 'Salle conservée'],
     ['event-date', '16-09-2026'], ['event-start-time', '09:00'], ['event-end-time', '10:00']]) {
-    assert.equal(view.hostElements(props => props.id === id)[0].props.value, expected);
+    // MAIR-1256: a date picker trigger has the id, its server value sits in the hidden `data-field` input.
+    const field = view.hostElements(props => props['data-field'] === id)[0] ?? view.hostElements(props => props.id === id)[0];
+    assert.equal(field.props.value, expected);
   }
   assert.match(view.html, /Description conservée/);
   await view.fire(props => props.id === 'event-title', 'onChange', { target: { value: 'Titre confirmé' } });
@@ -304,7 +307,7 @@ test('cancel and reopen initialize a fresh creation with the newly loaded defaul
   assert.doesNotMatch(view.html, /role="dialog"/);
   await view.act(reopen);
   assert.equal(view.hostElements(props => props.id === 'event-title')[0].props.value, '');
-  assert.equal(view.hostElements(props => props.id === 'event-date')[0].props.value, '19-09-2026');
+  assert.equal(view.hostElements(props => props['data-field'] === 'event-date')[0].props.value, '19-09-2026');
   assert.equal(view.hostElements(props => props.id === 'event-start-time')[0].props.value, '11:00');
   assert.equal(view.hostElements(props => props.id === 'event-category')[0].props.value, 'other');
   assert.deepEqual(created, []);
@@ -368,7 +371,9 @@ test('MAIR-926: an empty title is refused under the field, which takes the focus
 
 test('MAIR-926: the fields follow the mockup order and the participants explain where the event goes', async () => {
   view = mount(React.createElement(CreateEventModal, { isOpen: true, initialValues, onCancel() {}, onCreate() {} }));
-  const ids = view.hostElements((props, _text, tag) => ['input', 'select', 'textarea'].includes(tag) && typeof props.id === 'string' && props.id.startsWith('event-')).map(({ props }) => props.id).filter((id, index, all) => all.indexOf(id) === index);
+  // MAIR-1256: the dates are lib DatePicker triggers (buttons) carrying the historical ids.
+  const fieldIds = ['event-title', 'event-description', 'event-date', 'event-end-date', 'event-start-time', 'event-end-time', 'event-category', 'event-recurrence', 'event-location'];
+  const ids = view.hostElements((props, _text, tag) => ['input', 'select', 'textarea', 'button'].includes(tag) && fieldIds.includes(props.id)).map(({ props }) => props.id).filter((id, index, all) => all.indexOf(id) === index);
   assert.deepEqual(ids, ['event-title', 'event-description', 'event-date', 'event-end-date', 'event-start-time', 'event-end-time', 'event-category', 'event-recurrence', 'event-location']);
   assert.match(view.text(), /Lieu.*Participants.*Les participants reçoivent l’événement dans leur calendrier\./);
   assert.match(view.text(), /Annuler.*Enregistrer$/);

@@ -29,7 +29,7 @@ export const UpcomingEventsPanel = ({
   categories = [],
   today = new Date(),
   filtered = false,
-  emptyLabel = filtered ? 'Aucun événement à venir ne correspond aux filtres.' : 'Aucun événement à venir.',
+  emptyLabel = filtered ? 'Aucun événement à venir ne correspond aux filtres.' : 'Aucun événement prévu.',
   onEventClick,
   className = '',
   ...props
@@ -51,8 +51,8 @@ export const UpcomingEventsPanel = ({
             return (
               <li key={`${event.id}-${date.getTime()}`}>
                 <button type="button" onClick={() => onEventClick?.(event)} disabled={!onEventClick}
-                  className={joinClasses('calendar-upcoming-item flex w-full flex-col gap-1.5 rounded-md border border-[var(--mairie-border)] bg-[var(--mairie-surface)] p-3 text-left transition-colors',
-                    'hover:bg-[var(--mairie-surface-raised)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mairie-accent)]/30 disabled:cursor-default')}>
+                  className={joinClasses('calendar-upcoming-item flex w-full flex-col gap-1.5 rounded-md border border-transparent bg-[var(--mairie-surface-raised)] p-3 text-left transition-colors',
+                    'hover:border-[var(--mairie-control-border)] hover:bg-[var(--mairie-surface)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mairie-accent)]/30 disabled:cursor-default')}>
                   <span className="flex min-w-0 items-start justify-between gap-2">
                     <span className="min-w-0 truncate text-sm font-semibold leading-5 text-[var(--mairie-text)]">
                       {event.visibility === 'private' && <Icon icon={Lock} size="xs" className="calendar-upcoming-private mr-1 inline-block align-[-1px] text-[var(--mairie-muted)]" />}

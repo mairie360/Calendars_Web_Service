@@ -25,7 +25,8 @@ it('MAIR-918: names the day as Aujourd’hui, Demain or its short date, and show
   expect(upcomingDayLabel(new Date(2026, 10, 19), today)).toBe('Demain');
   expect(upcomingDayLabel(new Date(2026, 10, 20), today)).toBe('ven. 20 nov.');
   render(<UpcomingEventsPanel items={[]} />);
-  expect(screen.getByText('Aucun événement à venir.')).toBeVisible();
+  // MAIR-1256: the mockup's empty wording.
+  expect(screen.getByText('Aucun événement prévu.')).toBeVisible();
 });
 it('MAIR-911: shows a skeleton while loading and an unavailable alert whose retry reloads', async () => {
   const onRetry = vi.fn(); const items = [{ event, date: today }];
@@ -47,4 +48,18 @@ it('MAIR-1179: a private upcoming event shows a lock and reads « (privé) »', 
   expect(screen.getByRole('button', { name: /Conseil\s*\(privé\)/ })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: /Fête/ })).not.toHaveTextContent('privé');
   expect(container.querySelectorAll('svg.lucide-lock')).toHaveLength(1);
+});
+
+it('MAIR-1256: each upcoming event shows the avatars of its participants, three at most then « +n »', () => {
+  const people = ['Anne Martin', 'Paul Roux', 'Léa Petit', 'Marc Blanc'].map((name, id) => ({ id, name }));
+  render(<UpcomingEventsPanel today={today} categories={categories} items={[{ event: { ...event, assignees: people }, date: today }]} />);
+  const stack = within(screen.getByRole('button', { name: /Conseil/ })).getByRole('list', { name: 'Participants' });
+  for (const initials of ['AM', 'PR', 'LP']) expect(stack).toHaveTextContent(initials);
+  expect(stack).not.toHaveTextContent('MB');
+  expect(within(stack).getByLabelText('1 autre personne : Marc Blanc')).toHaveTextContent('+1');
+});
+
+it('MAIR-1256: an upcoming event without participants shows no avatar list', () => {
+  render(<UpcomingEventsPanel today={today} categories={categories} items={[{ event: { ...event, assignees: [] }, date: today }]} />);
+  expect(screen.queryByRole('list', { name: 'Participants' })).toBeNull();
 });

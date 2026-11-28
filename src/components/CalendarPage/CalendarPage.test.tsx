@@ -1,9 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import '@testing-library/jest-dom/vitest';
 import React from 'react';
-import { render, screen, within } from '@testing-library/react';
-vi.mock('@/lib/auth-session', () => ({ useAuthSession: () => ({ user: { name: 'Agent' }, isAdmin: false }), logoutAndReload: vi.fn() }));
-vi.mock('@/app/navigation', () => ({ getActiveFrontHrefs: () => ({ calendar: '/' }) }));
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
+const auth = vi.hoisted(() => ({ session: {} as Record<string, unknown> }));
+vi.mock('@/lib/auth-session', () => ({ useAuthSession: () => auth.session, logoutAndReload: vi.fn() }));
+vi.mock('@/app/navigation', () => ({ getActiveFrontHrefs: () => ({ calendar: '/', projects: 'https://projects.example/' }) }));
 const page = vi.hoisted(() => ({ state: {} as Record<string, unknown> }));
 vi.mock('@/app/calendar/use-calendar-page', () => ({ useCalendarPage: () => page.state }));
 vi.mock('./components/CalendarViews', () => ({ CalendarViews: ({ state }: { state: string }) => <div>grille {state}</div> }));
@@ -12,6 +13,17 @@ vi.mock('./components/CalendarModals', () => ({ CalendarModals: () => null }));
 
 import CalendarPage from './CalendarPage';
 
+/** The shared shell header (the page title bar is the other `header`). */
+const shellHeader = () => screen.getAllByRole('banner')[0];
+
+const searchAnswer = {
+  groups: [
+    { module: 'calendar', items: [{ kind: 'event', id: 4, title: 'Conseil municipal', excerpt: 'Salle du conseil', parent_id: null, updated_at: '2026-12-03T18:00:00' }] },
+    { module: 'projects', items: [{ kind: 'project', id: 7, title: 'Conseil des jeunes', excerpt: null, parent_id: null, updated_at: '2026-11-20T10:00:00Z' }] },
+  ],
+  unavailable: [],
+};
+
 const loaded = (overrides: Record<string, unknown> = {}) => ({
   ready: true, readError: null, mutationError: null, loading: false, saving: false, feedback: null,
   dismissFeedback: vi.fn(), refreshData: vi.fn(), openCreateModal: vi.fn(), view: 'month',
@@ -19,7 +31,14 @@ const loaded = (overrides: Record<string, unknown> = {}) => ({
 });
 
 describe('CalendarPage', () => {
-  beforeEach(() => { page.state = { ready: false, readError: null, view: 'month', currentDate: new Date(2026, 9, 21) }; });
+  beforeEach(() => {
+    page.state = { ready: false, readError: null, view: 'month', currentDate: new Date(2026, 9, 21) };
+    auth.session = { user: { name: 'Agent', role: 'User' }, isAdmin: false, loading: false, error: null };
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
 
   it('MAIR-911: renders the shell, the header and the three panel skeletons until the data is ready', () => {
     render(<CalendarPage />);
@@ -77,5 +96,45 @@ describe('CalendarPage', () => {
     rerender(<CalendarPage />);
     const region = screen.getByRole('region', { name: 'Notifications du calendrier' });
     expect(within(region).getAllByText('Calendrier : Modification refusée')).toHaveLength(1);
+  });
+
+  it('MAIR-1256: the library shell header names the signed-in agent from the session', () => {
+    page.state = loaded({ currentUser: { id: 'user-1', name: 'Admin Mairie', email: 'admin@mairie.test', role: 'Admin', groupIds: [] } });
+    render(<CalendarPage />);
+    const header = shellHeader();
+    expect(within(header).getByText('Agent')).toBeInTheDocument();
+    expect(within(header).queryByText('Admin Mairie')).toBeNull();
+  });
+
+  it('MAIR-1256: while or when the session cannot be read, the header names the agent BFF_Calendar returned', () => {
+    auth.session = { user: { name: 'Chargement…', role: 'Guest' }, isAdmin: false, loading: true, error: null };
+    page.state = loaded({ currentUser: { id: 'user-1', name: 'Admin Mairie', email: 'admin@mairie.test', role: 'Admin', groupIds: [] } });
+    const { rerender } = render(<CalendarPage />);
+    expect(within(shellHeader()).getByText('Admin Mairie')).toBeInTheDocument();
+    auth.session = { user: { name: 'Chargement…', role: 'Guest' }, isAdmin: false, loading: false, error: 'Les informations du profil sont indisponibles.' };
+    rerender(<CalendarPage />);
+    expect(within(shellHeader()).getByText('Admin Mairie')).toBeInTheDocument();
+    expect(screen.queryByText('Chargement…')).toBeNull();
+  });
+
+  it('MAIR-1230: the header searches every module through the same-origin /search and links the results', async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify(searchAnswer), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+    vi.stubGlobal('fetch', fetchMock);
+    const setSearchQuery = vi.fn();
+    page.state = loaded({ searchQuery: 'conseil', setSearchQuery });
+    render(<CalendarPage />);
+
+    const field = screen.getByRole('combobox', { name: 'Rechercher' });
+    fireEvent.focus(field);
+    await act(async () => { await vi.advanceTimersByTimeAsync(300); });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(String((fetchMock.mock.calls[0] as unknown[])[0])).toBe('/search?q=conseil');
+    expect(screen.getByRole('option', { name: /Conseil municipal/ })).toHaveAttribute('data-href', '/?date=2026-12-03&event=4');
+    expect(screen.getByRole('option', { name: /Conseil des jeunes/ })).toHaveAttribute('data-href', 'https://projects.example/?project=7');
+    // The calendar's own search stays the first option and keeps the typed filter.
+    fireEvent.click(screen.getByRole('option', { name: 'Rechercher « conseil » dans Calendrier' }));
+    expect(setSearchQuery).toHaveBeenCalledWith('conseil');
   });
 });

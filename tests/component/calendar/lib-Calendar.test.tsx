@@ -339,7 +339,7 @@ describe('Calendar components', () => {
     );
 
     expect(screen.getByRole('heading', { name: 'À venir' })).toBeInTheDocument();
-    expect(screen.getByText('Aucun événement à venir.')).toBeInTheDocument();
+    expect(screen.getByText('Aucun événement prévu.')).toBeInTheDocument();
     expect(screen.getByText('12 événements en juin')).toBeInTheDocument();
 
     const panels = container.querySelectorAll('aside > section');

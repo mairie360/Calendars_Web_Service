@@ -26,4 +26,12 @@ describe('EventVisibilityField', () => {
     render(<EventVisibilityField value="private" onChange={vi.fn()} />);
     expect(screen.getByRole('radio', { name: /Privé/ })).toBeChecked();
   });
+
+  it('MAIR-1256 the two cards share the row equally', async () => {
+    const { readFileSync } = await import('node:fs');
+    render(<EventVisibilityField value="public" onChange={vi.fn()} />);
+    expect(screen.getByRole('group', { name: 'Visibilité' })).toHaveClass('calendar-visibility');
+    expect(document.querySelectorAll('.calendar-visibility [data-card]')).toHaveLength(2);
+    expect(readFileSync('src/app/app-overrides.css', 'utf8')).toMatch(/\.calendar-visibility \[data-card\] \{ flex: 1 1 0; min-width: 12rem; \}/);
+  });
 });

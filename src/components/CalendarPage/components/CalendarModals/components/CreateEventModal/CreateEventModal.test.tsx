@@ -4,6 +4,7 @@ import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 
 import { CreateEventModal } from './CreateEventModal';
+import { pickDate } from '@tests/component/pick-date';
 
 const people = [
   { id: 'alice', name: 'Alice Dupont', role: 'Communication' },
@@ -25,15 +26,10 @@ describe('CreateEventModal component', () => {
     fireEvent.change(screen.getByLabelText('Titre'), {
       target: { value: 'Conseil municipal' },
     });
-    fireEvent.change(screen.getByLabelText('Date de début'), {
-      target: { value: '15-06-2026' },
-    });
-    expect(screen.getByLabelText('Date de début')).toHaveValue('15-06-2026');
-    fireEvent.click(screen.getByRole('button', { name: 'Ouvrir le calendrier pour Date de début' }));
-    expect(screen.getByText('Juin 2026')).toBeInTheDocument();
-    expect(screen.getByText('Lun')).toBeInTheDocument();
-    expect(screen.getByText('Dim')).toBeInTheDocument();
-    expect(screen.getAllByRole('option', { name: '09 h 00' })).toHaveLength(2);
+    // MAIR-1256: the lib DatePicker; picking the start fills the empty end with the same day.
+    pickDate('event-date', '2026-06-15');
+    expect(document.getElementById('event-date')).toHaveAccessibleName('Date de début (obligatoire), lundi 15 juin 2026');
+    expect(document.getElementById('event-end-date')).toHaveAccessibleName(/lundi 15 juin 2026/);
     fireEvent.change(screen.getByLabelText('Heure de début'), {
       target: { value: '09:00' },
     });
@@ -41,7 +37,7 @@ describe('CreateEventModal component', () => {
       target: { value: 'Salle du conseil' },
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /sélectionner des personnes/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Ajouter un participant/i }));
     fireEvent.click(screen.getByRole('option', { name: /Alice Dupont/ }));
 
     fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));

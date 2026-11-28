@@ -85,8 +85,10 @@ export interface PageTitleBarProps extends Omit<React.HTMLAttributes<HTMLDivElem
 }
 
 export interface CalendarToolbarProps extends React.HTMLAttributes<HTMLDivElement> {
-  /** MAIR-893: the period is the title of the calendar panel; the toolbar only names its controls. */
+  /** The displayed period, rendered as the h2 of the calendar card between the arrows and « Aujourd’hui ». */
   title?: string;
+  /** Id of that h2, which names the calendar card (`aria-labelledby`). */
+  titleId?: string;
   view: CalendarViewMode;
   onToday?: () => void;
   viewOptions?: ViewSwitcherOption<CalendarViewMode>[];
@@ -152,6 +154,8 @@ export interface CalendarUpcomingItem {
 
 export interface CalendarMonthStats {
   month: string;
+  /** MAIR-1256: 2026, for « N événements en novembre 2026 » (Figma « Mois en cours »). */
+  year?: number;
   total: number;
   items: Array<{ category: string; label: string; value: number }>;
 }

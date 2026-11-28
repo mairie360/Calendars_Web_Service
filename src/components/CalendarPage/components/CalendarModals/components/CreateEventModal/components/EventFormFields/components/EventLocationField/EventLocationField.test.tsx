@@ -12,4 +12,9 @@ describe('EventLocationField', () => {
     fireEvent.change(screen.getByLabelText('Lieu'), { target: { value: 'Salle' } });
     expect(onChange).toHaveBeenCalledWith('Salle'); expect(document.getElementById('event-location')).not.toBeNull();
   });
+
+  it('MAIR-1256 suggests « Salle du conseil » as the place, as the artifact', () => {
+    render(<EventLocationField value="" onChange={() => undefined} />);
+    expect(screen.getByLabelText('Lieu')).toHaveAttribute('placeholder', 'Salle du conseil');
+  });
 });

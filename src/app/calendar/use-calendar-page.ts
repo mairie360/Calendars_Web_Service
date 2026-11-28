@@ -73,6 +73,7 @@ export function useCalendarPage(initial?: InitialCalendarPage) {
   const [people, setPeople] = useState<CalendarAssignee[]>(initialReceipt?.data.people ?? []);
   const [categories, setCategories] = useState<CalendarReferenceOption[]>(initialReceipt?.data.categories ?? []);
   const [services, setServices] = useState<CalendarReferenceOption[]>(initialReceipt?.data.services ?? []);
+  const [currentUser, setCurrentUser] = useState(initialReceipt?.data.currentUser);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [createInitialValues, setCreateInitialValues] = useState(() =>
     buildCreateInitialValues(currentDate),
@@ -222,6 +223,7 @@ export function useCalendarPage(initial?: InitialCalendarPage) {
         setPeople(calendarData.people);
         setCategories(calendarData.categories);
         setServices(calendarData.services);
+        setCurrentUser(calendarData.currentUser);
         setReadError(null);
         setConfirmedOnce(true);
         cancelPrefetch();
@@ -574,6 +576,7 @@ export function useCalendarPage(initial?: InitialCalendarPage) {
     createInitialValues,
     createModalOpen,
     currentDate,
+    currentUser,
     displayedEvents,
     error,
     events,

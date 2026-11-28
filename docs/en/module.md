@@ -158,10 +158,14 @@ The calendar follows the agreed V2 mockup ([Figma, journeys F1–F9](https://www
 - **Page header (MAIR-884).** Subtitle « Planifiez et organisez les activités de la mairie »; actions
   « Actualiser » (rereads the displayed period, disabled while a read runs) then « Créer » (opens « Nouvel
   événement », shown once the data is ready).
-- **Calendar panel (MAIR-893).** The calendar sits in a lib `Panel` titled with the displayed period
-  (« Novembre 2026 », « 9 – 15 novembre 2026 », « Jeudi 12 novembre 2026 »). Toolbar: lib Précédent /
-  Suivant (one month, week or day), « Aujourd’hui » (back to the period holding today) and the view choice
-  as a lib `SegmentedControl` (Mois / Semaine / Jour, arrow keys). The URL keeps following `view` and `date`.
+- **Calendar card (MAIR-893).** The calendar sits in a card whose header is one line, like the mockup:
+  lib Précédent / Suivant (one month, week or day), the displayed period as the card's heading (« Novembre
+  2026 », « 9 – 15 novembre 2026 », « Jeudi 12 novembre 2026 », announced when it changes), « Aujourd’hui » as
+  an outline button (back to the period holding today), and on the right the view choice as a lib
+  `SegmentedControl` (Mois / Semaine / Jour, arrow keys). The URL keeps following `view` and `date`.
+- **Shared header.** The page renders the library shell (`AccessibleShell`) directly: the header names the
+  signed-in agent and their role from the BFF User session, or, while that session is read or when it cannot be,
+  from the current user BFF_Calendar returns with the calendar.
 - **Overlapping meetings (MAIR-1123).** In the week view, each group of overlapping meetings shows one of them,
   readable at the full width of the day (title on two lines at most, start time), with a « +N » button (label « N
   autres rendez-vous le …, ouvrir la vue Jour ») that opens the Day view on that date; a lone meeting keeps the
@@ -190,7 +194,9 @@ The calendar follows the agreed V2 mockup ([Figma, journeys F1–F9](https://www
   included, an event of today stays until its end time), each row with its title, category pill, day
   (« Aujourd’hui », « Demain », « ven. 20 nov. ») and hours, and participants; a row opens the event details.
   Then « Statistiques »: « N événements en <mois> » for the displayed month and one metric card per API
-  category (Réunions, Animations, Cérémonies, Autres), recomputed when the month changes.
+  category (Réunions, Animations, Cérémonies, Autres), each with the icon of its type on a chip in the
+  Calendar module colour, recomputed when the month changes. The participants of « À venir » are avatars
+  (three at most, then « +n »).
 - **Event details (MAIR-929).** The dialog is titled with the event; under the title the category pill
   (and « En attente » / « Refusé » when relevant, « Privé » for a private event) and the description; then five
   facts with icons: Date with the recurrence (« Jeudi 12 novembre 2026 · chaque mois »), Horaire, Lieu,
@@ -211,6 +217,11 @@ The calendar follows the agreed V2 mockup ([Figma, journeys F1–F9](https://www
   suivre l’heure de début. ») and the first one takes the focus. A refusal shows « Impossible d’enregistrer » at
   the top of the dialog, keeps the entries and toasts the error; success closes the dialog, moves the calendar to
   the event date and toasts « Événement créé » / « Événement modifié ».
+- **Form fields (MAIR-1256, lib 2.9.0).** The dates use the lib `DatePicker` (« jeudi 12 novembre 2026 », calendar
+  with shortcuts, clear button; « Date de début » marked required); picking a start fills an empty or earlier end
+  with the same day. The hours use the lib `TimeField` (« 09:00 », clock icon, 15-minute step). Placeholders
+  follow the artifact: « Ordre du jour, informations pratiques… », « Salle du conseil », « Ajouter un
+  participant… ». The two « Visibilité » cards share the row equally.
 - **Visibility.** The form ends with « Visibilité », two radio cards (lib `RadioGroup`, `card` variant): « Public »
   (« Visible par tous les agents », the default of a new event) and « Privé » (« Visible seulement par vous et les
   invités »). Editing starts from the event's value and every save sends `visibility`; an event read without it is
