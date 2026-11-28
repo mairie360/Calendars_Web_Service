@@ -203,3 +203,7 @@ button {
   background: var(--mairie-module-calendar);
   color: var(--mairie-on-module);
 }
+
+/* MAIR-1256: the two « Visibilité » cards share the row equally, as in the artifact (the lib inline card group
+   leaves them at their content width). They stack below 12rem each. */
+.calendar-visibility [data-card] { flex: 1 1 0; min-width: 12rem; }

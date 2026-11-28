@@ -222,6 +222,12 @@ Le calendrier suit la maquette V2 validée ([Figma, parcours F1–F9](https://ww
   focus. Un refus affiche « Impossible d’enregistrer » en haut de la fenêtre, garde la saisie et l'erreur part en
   toast ; le succès ferme la fenêtre, amène le calendrier à la date de l'événement et affiche « Événement créé » /
   « Événement modifié ».
+- **Champs du formulaire (MAIR-1256, lib 2.9.0).** Les dates utilisent le `DatePicker` de la lib (« jeudi
+  12 novembre 2026 », calendrier avec raccourcis, bouton d'effacement ; « Date de début » marquée obligatoire) ;
+  choisir un début remplit une fin vide ou antérieure avec le même jour. Les heures utilisent le `TimeField` de la
+  lib (« 09:00 », icône d'horloge, pas de 15 minutes). Les textes d'aide suivent l'artefact : « Ordre du jour,
+  informations pratiques… », « Salle du conseil », « Ajouter un participant… ». Les deux cartes « Visibilité »
+  se partagent la ligne.
 - **Visibilité.** Le formulaire se termine par « Visibilité », deux cartes radio (`RadioGroup` de la lib, variante
   `card`) : « Public » (« Visible par tous les agents », valeur par défaut d'un nouvel événement) et « Privé »
   (« Visible seulement par vous et les invités »). La modification part de la valeur de l'événement et chaque

@@ -32,7 +32,7 @@ export const EventAssigneeSelect = ({
   value = [],
   onChange,
   label = 'Participants',
-  placeholder = 'Sélectionner des personnes',
+  placeholder = 'Ajouter un participant…',
   searchPlaceholder = 'Rechercher une personne...',
   emptyLabel = 'Aucune personne disponible',
   disabled = false,

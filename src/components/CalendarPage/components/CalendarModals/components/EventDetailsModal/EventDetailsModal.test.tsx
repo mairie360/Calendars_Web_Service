@@ -65,7 +65,7 @@ describe('EventDetailsModal component', () => {
 
     expect(screen.getByRole('heading', { name: 'Modifier l’événement' })).toBeInTheDocument();
     expect(screen.getByLabelText('Titre')).toHaveValue('Conseil municipal');
-    expect(screen.getByLabelText('Date de début')).toHaveValue('15-06-2026');
+    expect(document.getElementById('event-date')).toHaveAccessibleName('Date de début (obligatoire), lundi 15 juin 2026');
 
     fireEvent.change(screen.getByLabelText('Titre'), {
       target: { value: 'Conseil municipal modifié' },

@@ -14,4 +14,9 @@ describe('EventTitleFields', () => {
     expect([onTitle.mock.calls[0][0], onDescription.mock.calls[0][0]]).toEqual(['Conseil', 'Ordre du jour']);
     expect(document.getElementById('event-title')).toBeRequired();
   });
+
+  it('MAIR-1256 suggests the agenda in the description, as the artifact', () => {
+    render(<EventTitleFields title="" description="" onTitle={() => undefined} onDescription={() => undefined} />);
+    expect(screen.getByLabelText('Description')).toHaveAttribute('placeholder', 'Ordre du jour, informations pratiques…');
+  });
 });

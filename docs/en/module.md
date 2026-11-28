@@ -217,6 +217,11 @@ The calendar follows the agreed V2 mockup ([Figma, journeys F1–F9](https://www
   suivre l’heure de début. ») and the first one takes the focus. A refusal shows « Impossible d’enregistrer » at
   the top of the dialog, keeps the entries and toasts the error; success closes the dialog, moves the calendar to
   the event date and toasts « Événement créé » / « Événement modifié ».
+- **Form fields (MAIR-1256, lib 2.9.0).** The dates use the lib `DatePicker` (« jeudi 12 novembre 2026 », calendar
+  with shortcuts, clear button; « Date de début » marked required); picking a start fills an empty or earlier end
+  with the same day. The hours use the lib `TimeField` (« 09:00 », clock icon, 15-minute step). Placeholders
+  follow the artifact: « Ordre du jour, informations pratiques… », « Salle du conseil », « Ajouter un
+  participant… ». The two « Visibilité » cards share the row equally.
 - **Visibility.** The form ends with « Visibilité », two radio cards (lib `RadioGroup`, `card` variant): « Public »
   (« Visible par tous les agents », the default of a new event) and « Privé » (« Visible seulement par vous et les
   invités »). Editing starts from the event's value and every save sends `visibility`; an event read without it is

@@ -4,7 +4,9 @@ import type { CalendarRecurrence } from '@/app/calendar/types';
 import { validateEventForm } from './validation';
 
 function readFormValue(form: HTMLFormElement, id: string) {
-  return form.querySelector<HTMLInputElement | HTMLSelectElement>(`#${id}`)?.value ?? '';
+  // MAIR-1256: a date picker trigger carries the id, its value sits in a hidden `data-field` input.
+  const field = form.querySelector<HTMLInputElement>(`input[data-field="${id}"]`) ?? form.querySelector<HTMLInputElement | HTMLSelectElement>(`#${id}`);
+  return field?.value ?? '';
 }
 
 function textsFromForm(form: HTMLFormElement) {

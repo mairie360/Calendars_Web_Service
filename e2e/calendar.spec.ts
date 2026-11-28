@@ -29,12 +29,13 @@ test('an administrator creates an event and invites an agent', async ({ page, co
   const dialog = page.getByRole('dialog', { name: 'Nouvel événement' });
   await dialog.getByRole('textbox', { name: 'Titre' }).fill(title);
   await dialog.getByRole('textbox', { name: 'Description' }).fill('Réunion créée par le parcours de bout en bout.');
-  // Today by default: the event is listed in the current month and in « À venir » until 23:00.
-  await dialog.getByRole('textbox', { name: 'Date de fin' }).fill(await dialog.getByRole('textbox', { name: 'Date de début' }).inputValue());
-  await dialog.getByRole('combobox', { name: 'Heure de début' }).selectOption({ label: '09 h 00' });
-  await dialog.getByRole('combobox', { name: 'Heure de fin' }).selectOption({ label: '23 h 00' });
+  // Today by default (MAIR-1256: lib DatePicker, the end follows the start): the event is listed in the current
+  // month and in « À venir » until 23:00.
+  await expect(dialog.getByRole('button', { name: /^Date de début \(obligatoire\), / })).toBeVisible();
+  await dialog.getByLabel('Heure de début', { exact: true }).fill('09:00');
+  await dialog.getByLabel('Heure de fin', { exact: true }).fill('23:00');
   await dialog.getByRole('textbox', { name: 'Lieu' }).fill('Salle du conseil');
-  await dialog.getByRole('button', { name: 'Sélectionner des personnes' }).click();
+  await dialog.getByRole('button', { name: /Ajouter un participant/ }).click();
   await page.getByRole('option', { name: /Membre Lecteur/ }).click();
   await page.keyboard.press('Escape');
 
@@ -191,9 +192,8 @@ test('MAIR-1179: an administrator creates a private event, it is still private a
   await page.getByRole('button', { name: 'Créer', exact: true }).first().click();
   const dialog = page.getByRole('dialog', { name: 'Nouvel événement' });
   await dialog.getByRole('textbox', { name: 'Titre' }).fill(privateTitle);
-  await dialog.getByRole('textbox', { name: 'Date de fin' }).fill(await dialog.getByRole('textbox', { name: 'Date de début' }).inputValue());
-  await dialog.getByRole('combobox', { name: 'Heure de début' }).selectOption({ label: '09 h 00' });
-  await dialog.getByRole('combobox', { name: 'Heure de fin' }).selectOption({ label: '23 h 00' });
+  await dialog.getByLabel('Heure de début', { exact: true }).fill('09:00');
+  await dialog.getByLabel('Heure de fin', { exact: true }).fill('23:00');
   // Public is the default choice.
   await expect(dialog.getByRole('radio', { name: /Public/ })).toBeChecked();
   await dialog.getByRole('radio', { name: /Privé/ }).check();

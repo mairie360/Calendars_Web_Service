@@ -25,14 +25,6 @@ export function submittedEventValues(values: CreateCalendarEventValues, canRecur
   return { ...values, date, endDate, recurrence };
 }
 
-/** Quarter-hour choices of the time selects (« 08 h 15 »). */
-export const timeOptions = Array.from({ length: 96 }, (_, index) => {
-  const totalMinutes = index * 15;
-  const hours = String(Math.floor(totalMinutes / 60)).padStart(2, '0');
-  const minutes = String(totalMinutes % 60).padStart(2, '0');
-  return { value: `${hours}:${minutes}`, label: `${hours} h ${minutes}` };
-});
-
 /** Days picked for a weekly recurrence, kept sorted. */
 export const toggleDay = (selected: number[] = [], day: number) =>
   selected.includes(day) ? selected.filter((value) => value !== day) : [...selected, day].sort((first, second) => first - second);
