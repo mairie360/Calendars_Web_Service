@@ -154,6 +154,8 @@ export interface CalendarUpcomingItem {
 
 export interface CalendarMonthStats {
   month: string;
+  /** MAIR-1256: 2026, for « N événements en novembre 2026 » (Figma « Mois en cours »). */
+  year?: number;
   total: number;
   items: Array<{ category: string; label: string; value: number }>;
 }
