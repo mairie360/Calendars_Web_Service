@@ -26,7 +26,7 @@
   },
   "dependencies": {
     "@mairie360/bff-calendar-openapi": "0.0.0-dev.94085795bfb1ea4ea04fc514d306ff4ca09e47f2",
-    "@mairie360/lib-components": "2.10.0",
+    "@mairie360/lib-components": "2.11.0",
     "axios": "1.20.0",
     "daisyui": "^5.0.0",
     "lucide-react": "^1.0.0",
