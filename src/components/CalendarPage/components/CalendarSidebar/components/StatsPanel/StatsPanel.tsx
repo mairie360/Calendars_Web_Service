@@ -9,7 +9,8 @@ export type { CalendarMonthStats, StatsPanelProps } from '@/components/CalendarP
 
 /** Icon of each event type, as in the mockup; any other category takes the calendar icon. */
 const STAT_ICONS: Readonly<Record<string, LucideIcon>> = { meeting: Users, activity: PartyPopper, ceremony: Landmark, other: Calendar };
-export const statIconOf = (category: string): LucideIcon => STAT_ICONS[category] ?? Calendar;
+// Own keys only: « toString » and the other inherited names fall back to the calendar icon.
+export const statIconOf = (category: string): LucideIcon => (Object.hasOwn(STAT_ICONS, category) ? STAT_ICONS[category] : Calendar);
 
 const plural = (count: number) => `${count} événement${count > 1 ? 's' : ''}`;
 

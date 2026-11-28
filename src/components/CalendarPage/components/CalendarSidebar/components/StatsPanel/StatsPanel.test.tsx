@@ -56,3 +56,7 @@ it('MAIR-1256 each card carries its type for the calendar-coloured icon chip', (
   // The chip rule of app-overrides.css targets the icon wrapper of the shared card: keep it on the real DOM.
   for (const card of cards) expect(card.querySelector(':scope > span:first-child > span:last-child svg')).not.toBeNull();
 });
+
+it('MAIR-1256 an inherited name such as « toString » takes the calendar icon', () => {
+  for (const name of ['toString', 'constructor', '__proto__', 'hasOwnProperty']) expect(statIconOf(name)).toBe(statIconOf('other'));
+});
