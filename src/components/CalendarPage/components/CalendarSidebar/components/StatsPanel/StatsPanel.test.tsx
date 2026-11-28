@@ -60,3 +60,8 @@ it('MAIR-1256 each card carries its type for the calendar-coloured icon chip', (
 it('MAIR-1256 an inherited name such as « toString » takes the calendar icon', () => {
   for (const name of ['toString', 'constructor', '__proto__', 'hasOwnProperty']) expect(statIconOf(name)).toBe(statIconOf('other'));
 });
+it('MAIR-1256: the panel names the year of the month like the mockup', () => {
+  render(<StatsPanel stats={{ ...stats, total: 13, year: 2026 }} />);
+  expect(screen.getByText('13 événements en novembre 2026')).toBeVisible();
+  expect(screen.getAllByText('En novembre').length).toBeGreaterThan(0);
+});

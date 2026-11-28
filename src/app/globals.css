@@ -4,6 +4,9 @@
 @plugin "daisyui";
 
 @source "../../src/";
+/* MAIR-1256: generate the utilities of the lib components (PageHeader `sm:flex-row`…) in the front sheet, after
+   its own ones, or a front utility such as `flex-col` wins and the header stacks as on a phone. */
+@source "../../node_modules/@mairie360/lib-components/dist/";
 
 /* The shared event form has no recurrence-aware end-date prop. Keep the
    multi-day field out of the active form when recurrence is selected. */

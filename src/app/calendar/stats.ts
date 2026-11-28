@@ -85,6 +85,8 @@ export interface CalendarCategoryStat {
 export interface CalendarMonthStats {
   /** « novembre », for « N événements en novembre » and the « En novembre » trend. */
   month: string;
+  /** MAIR-1256: 2026, for « N événements en novembre 2026 » (Figma « Mois en cours »). */
+  year?: number;
   total: number;
   items: CalendarCategoryStat[];
 }
@@ -145,6 +147,7 @@ export function buildStats(
   }
   return {
     month: new Intl.DateTimeFormat("fr-FR", { month: "long" }).format(monthStart),
+    year: monthStart.getFullYear(),
     total: occurrences.length,
     items: keys.map((key) => ({
       category: key,

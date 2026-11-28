@@ -19,7 +19,7 @@ const plural = (count: number) => `${count} événement${count > 1 ? 's' : ''}`;
  * MAIR-911: skeleton while the calendar loads, « Statistiques indisponibles. » after a failed read.
  */
 export const StatsPanel = ({ stats, state = 'default', className = '', ...props }: StatsPanelProps) => (
-  <Panel title="Statistiques" description={state === 'default' ? `${plural(stats.total)} en ${stats.month}` : undefined}
+  <Panel title="Statistiques" description={state === 'default' ? `${plural(stats.total)} en ${stats.month}${stats.year ? ` ${stats.year}` : ''}` : undefined}
     className={className} state={state === 'unavailable' ? 'unavailable' : 'default'}
     stateProps={{ title: 'Statistiques indisponibles.', description: null }} {...props}>
     {/* The Panel loading state would insert its own status, the page announces the load once. */}
